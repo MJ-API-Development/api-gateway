@@ -69,10 +69,6 @@ def cache_api_keys():
                                     'limit': db_key.limit}
 
 
-# Cache the API Keys on startup
-cache_api_keys()
-
-
 # Define a custom APIRoute subclass to validate API Keys
 class ApiKeyRoute(APIRoute):
     async def get_route_handler(self):

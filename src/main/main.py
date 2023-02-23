@@ -1,12 +1,38 @@
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-
+from fastapi.middleware.cors import CORSMiddleware
 from src.apikeys.keys import cache_api_keys
 from src.ratelimit.limit import auth_and_rate_limit, RATE_LIMIT, RATE_LIMIT_DURATION
 from src.config import config_instance
 
-app = FastAPI()
+description = """
+
+"""
+
+app = FastAPI(
+    title="EOD-STOCK-API - GATEWAY",
+    description=description,
+    version="1.0.0",
+    terms_of_service="https://www.eod-stock-api.site/terms",
+    contact={
+        "name": "EOD-STOCK-API",
+        "url": "https://eod-stock-api.site/contact",
+        "email": "info@eod-stock-api.site"
+    },
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    },
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # Use a background task to periodically update the `api_keys` dict
@@ -17,7 +43,8 @@ async def startup_event():
     async def update_api_keys_background_task():
         while True:
             cache_api_keys()
-            await asyncio.sleep(60)
+            # wait for 3 minutes then update API Keys records
+            await asyncio.sleep(60*3)
 
     asyncio.create_task(update_api_keys_background_task())
 
@@ -26,7 +53,7 @@ api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_insta
 api_server_counter = 0
 
 
-@app.api_route("/{path:path}", methods=["GET"])
+@app.api_route("/api/v1/{path:path}", methods=["GET"])
 @auth_and_rate_limit()
 async def reroute_to_api_endpoint(request: Request, path: str, api_key: str):
     """
@@ -41,7 +68,8 @@ async def reroute_to_api_endpoint(request: Request, path: str, api_key: str):
     api_server_url = api_server_urls[api_server_counter]
     api_server_counter = (api_server_counter + 1) % len(api_server_urls)
 
-    api_url = f'{api_server_url}/{path}'
+    api_url = f'{api_server_url}/api/v1/{path}'
+
     async with httpx.AsyncClient() as client:
         headers = dict(request.headers)
 
