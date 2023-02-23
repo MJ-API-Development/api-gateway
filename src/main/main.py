@@ -73,13 +73,19 @@ async def reroute_to_api_endpoint(request: Request, path: str, api_key: str):
     async with httpx.AsyncClient() as client:
         headers = dict(request.headers)
 
-        headers['X-API-KEY'] = config_instance().API_SERVERS.X_API_KEY
-        headers['X-SECRET-TOKEN'] = config_instance().API_SERVERS.SECRET_TOKEN
-        headers['X-RapidAPI-Proxy-Secret'] = config_instance().X_RAPID_SECRET
+        headers = await set_headers(headers=headers)
 
+        #  the API must only return json data
         response = await client.request(method=request.method, url=api_url, headers=headers,
                                         content=await request.body())
         content = response.content
         status_code = response.status_code
         headers = response.headers.items()
     return JSONResponse(content=content, status_code=status_code, headers=headers)
+
+
+async def set_headers(headers):
+    headers['X-API-KEY'] = config_instance().API_SERVERS.X_API_KEY
+    headers['X-SECRET-TOKEN'] = config_instance().API_SERVERS.SECRET_TOKEN
+    headers['X-RapidAPI-Proxy-Secret'] = config_instance().X_RAPID_SECRET
+    return headers
