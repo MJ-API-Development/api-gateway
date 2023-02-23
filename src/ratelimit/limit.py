@@ -6,9 +6,6 @@ from starlette import status
 
 from src.apikeys.keys import api_keys, cache_api_keys
 
-RATE_LIMIT = 5000
-RATE_LIMIT_DURATION = 60 * 60 * 24
-
 
 def auth_and_rate_limit():
     def decorator(func):
