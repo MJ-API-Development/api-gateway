@@ -29,6 +29,13 @@ api_server_counter = 0
 @app.api_route("/{path:path}", methods=["GET"])
 @auth_and_rate_limit()
 async def reroute_to_api_endpoint(request: Request, path: str, api_key: str):
+    """
+        master router
+    :param request:
+    :param path:
+    :param api_key:
+    :return:
+    """
     global api_server_counter
 
     api_server_url = api_server_urls[api_server_counter]
