@@ -11,6 +11,22 @@ from src.config import config_instance
 from src.ratelimit.limit import auth_and_rate_limit
 from src.views_cache.cache import cached
 
+api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_instance().API_SERVERS.SLAVE_API_SERVER]
+api_server_counter = 0
+
+# Prefetch endpoints
+PREFETCH_ENDPOINTS = [
+    '/api/v1/exchanges',
+    '/api/v1/stocks']
+
+@jit
+async def prefetch_endpoints():
+    for api_server_url in api_server_urls:
+        for endpoint in PREFETCH_ENDPOINTS:
+            api_url = f'{api_server_url}{endpoint}'
+            response = await _request(api_url)
+
+
 description = """
 
 **Stock Marketing & Financial News API**,
@@ -58,8 +74,7 @@ async def http_exception_handler(request, exc):
 async def generic_exception_handler(request, exc):
     return JSONResponse(
         status_code=500,
-        content={"message": "Internal server error"},
-    )
+        content={"message": "Internal server error"},)
 
 
 @app.get("/test-error-handling")
@@ -68,37 +83,29 @@ async def test_error_handling():
     return response.json()
 
 
-# Use a background task to periodically update the `api_keys` dict
+# On Start Up Run the following Tasks
 @app.on_event('startup')
 async def startup_event():
-    import asyncio
 
     async def update_api_keys_background_task():
         while True:
             cache_api_keys()
+
             # wait for 3 minutes then update API Keys records
             await asyncio.sleep(60 * 3)
 
+    async def prefetch():
+        """
+            Will pre populate common routes with data
+        :return:
+        """
+        while True:
+            await prefetch_endpoints()
+            #  wait for one hour then prefetch urls again
+            await asyncio.sleep(60*60*1)
+
     asyncio.create_task(update_api_keys_background_task())
-
-
-api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_instance().API_SERVERS.SLAVE_API_SERVER]
-api_server_counter = 0
-
-# Prefetch endpoints
-PREFETCH_ENDPOINTS = [
-    '/api/v1/exchanges',
-    '/api/v1/stocks']
-
-@jit
-async def prefetch_endpoints():
-    while True:
-        for api_server_url in api_server_urls:
-            for endpoint in PREFETCH_ENDPOINTS:
-                api_url = f'{api_server_url}{endpoint}'
-                response = await _request(api_url)
-        # Sleep for PREFETCH_INTERVAL seconds before running the loop again
-        await asyncio.sleep(config_instance().PREFETCH_INTERVAL)
+    asyncio.create_task(prefetch())
 
 
 @app.api_route("/api/v1/{path:path}", methods=["GET"])
