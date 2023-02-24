@@ -11,7 +11,7 @@ from src.config import config_instance
 from src.ratelimit.limit import auth_and_rate_limit
 
 config = {
-    "eod_gateway": {
+    "default": {
         "cache": "aiocache.SimpleMemoryCache",
         "serializer": {
             "class": "aiocache.serializers.PickleSerializer"
@@ -21,7 +21,7 @@ config = {
 }
 
 caches.set_config(config)
-cache = caches.get("eod_gateway")
+cache = caches.get("default")
 
 
 def async_cache(function):
@@ -115,12 +115,15 @@ async def reroute_to_api_endpoint(request: Request, path: str):
     return JSONResponse(content=content, status_code=status_code, headers=headers)
 
 
+# Use the connection pool limits in the AsyncClient
+async_client = httpx.AsyncClient(http2=True)
+
+
 @async_cache
 async def _request(api_url: str):
-    async with httpx.AsyncClient() as client:
-        headers = await set_headers()
-        #  the API must only return json data
-        response = await client.request(method="GET", url=api_url, headers=headers)
+    headers = await set_headers()
+    #  the API must only return json data
+    response = await async_client.get(api_url, headers=headers)
     return response
 
 
