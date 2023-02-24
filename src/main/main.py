@@ -1,14 +1,45 @@
-import functools
-import json
-from json import JSONDecodeError
+from functools import wraps
 
 import httpx
+from aiocache import caches
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
 from src.apikeys.keys import cache_api_keys
-from src.ratelimit.limit import auth_and_rate_limit
 from src.config import config_instance
+from src.ratelimit.limit import auth_and_rate_limit
+
+config = {
+    "default": {
+        "cache": "aiocache.SimpleMemoryCache",
+        "serializer": {
+            "class": "aiocache.serializers.PickleSerializer"
+        },
+        "ttl": 60 * 60 # One Hour
+    }
+}
+
+caches.set_config(config)
+
+
+def async_cache(function):
+    @wraps(function)
+    async def wrapper(*args, **kwargs):
+        key = str(args) + str(kwargs)
+        cache = caches.get("default")
+        data = await cache.get(key)
+        if data is None:
+            # If data is not in the cache, execute the function to retrieve it
+            data = await function(*args, **kwargs)
+
+            # Store the data in the cache
+            await cache.set(key, data)
+
+        return data
+
+    return wrapper
+
 
 description = """
 
@@ -56,27 +87,11 @@ api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_insta
 api_server_counter = 0
 
 
-async def async_get_request(_url: str, args: dict[str, str], headers: dict[str, str]):
-    """creates an async request and executes it"""
-    # Get the current time
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url=_url, params=args, headers=headers)
-            if 'application/json' in response.headers['Content-Type']:
-                return response.json()
-            return []
-        except httpx.RequestError as e:
-
-            return []
-        except JSONDecodeError as e:
-
-            return []
-
-
 @app.api_route("/api/v1/{path:path}", methods=["GET"])
 @auth_and_rate_limit()
 async def reroute_to_api_endpoint(request: Request, path):
     """
+    NOTE: In order for the gateway server to work properly it needs at least 2 GIG or RAM
         master router
     :param request:
     :param path:
@@ -87,14 +102,7 @@ async def reroute_to_api_endpoint(request: Request, path):
     api_server_counter = (api_server_counter + 1) % len(api_server_urls)
     api_url = f'{api_server_url}/api/v1/{path}'
 
-    async with httpx.AsyncClient() as client:
-        # headers = dict(request.headers)
-
-        # creating request headers
-        headers = await set_headers(headers={})
-        #  the API must only return json data
-        response = await client.request(method=request.method, url=api_url, headers=headers,
-                                        content=await request.body())
+    response = await _request(api_url)
     # creating response
     headers = {"Content-Type": "application/json"}
 
@@ -109,10 +117,18 @@ async def reroute_to_api_endpoint(request: Request, path):
     return JSONResponse(content=content, status_code=status_code, headers=headers)
 
 
-async def set_headers(headers):
-    headers['X-API-KEY'] = config_instance().API_SERVERS.X_API_KEY
-    headers['X-SECRET-TOKEN'] = config_instance().API_SERVERS.X_SECRET_TOKEN
-    headers['X-RapidAPI-Proxy-Secret'] = config_instance().API_SERVERS.X_RAPID_SECRET
-    headers['Content-Type'] = "application/json"
-    headers['Host'] = "gateway.eod-stock-api.site"
-    return headers
+@async_cache
+async def _request(api_url: str):
+    async with httpx.AsyncClient() as client:
+        headers = await set_headers()
+        #  the API must only return json data
+        response = await client.request(method="GET", url=api_url, headers=headers)
+    return response
+
+
+@async_cache
+async def set_headers():
+    return {'X-API-KEY': config_instance().API_SERVERS.X_API_KEY,
+            'X-SECRET-TOKEN': config_instance().API_SERVERS.X_SECRET_TOKEN,
+            'X-RapidAPI-Proxy-Secret': config_instance().API_SERVERS.X_RAPID_SECRET,
+            'Content-Type': "application/json", 'Host': "gateway.eod-stock-api.site"}
