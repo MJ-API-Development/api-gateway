@@ -31,6 +31,38 @@ class Logging(BaseSettings):
         env_file_encoding = 'utf-8'
 
 
+class RedisSettings(BaseSettings):
+    """
+    # NOTE: maybe should use Internal pydantic Settings
+    # TODO: please finalize Redis Cache Settings """
+    CACHE_TYPE: str = Field(..., env="CACHE_TYPE")
+    CACHE_REDIS_HOST: str = Field(..., env="CACHE_REDIS_HOST")
+    CACHE_REDIS_PORT: int = Field(..., env="CACHE_REDIS_PORT")
+    REDIS_PASSWORD: str = Field(..., env="REDIS_PASSWORD")
+    REDIS_USERNAME: str = Field(..., env="REDIS_USERNAME")
+    CACHE_REDIS_DB: str = Field(..., env="CACHE_REDIS_DB")
+    CACHE_REDIS_URL: str = Field(..., env="MICROSOFT_REDIS_URL")
+    CACHE_DEFAULT_TIMEOUT: int = Field(default=60 * 60 * 6)
+
+    class Config:
+        env_file = '.env.development'
+        env_file_encoding = 'utf-8'
+
+class CacheSettings(BaseSettings):
+    """Google Mem Cache Settings"""
+    # NOTE: TO USE Flask_cache with redis set Cache type to redis and setup CACHE_REDIS_URL
+    CACHE_TYPE: str = Field(..., env="CACHE_TYPE")
+    CACHE_DEFAULT_TIMEOUT: int = Field(default=60 * 60 * 24)
+    MEM_CACHE_SERVER_URI: str = Field(default="")
+    CACHE_REDIS_URL: str = Field(..., env="CACHE_REDIS_URL")
+    MAX_CACHE_SIZE: int = Field(default=1024 * 8 * 32)
+    USE_CLOUDFLARE_CACHE: bool = Field(default=True)
+
+    class Config:
+        env_file = '.env.development'
+        env_file_encoding = 'utf-8'
+
+
 class Settings(BaseSettings):
     SECRET_KEY: str = Field(..., env="SECRET_TOKEN")
     DATABASE_SETTINGS: DatabaseSettings = DatabaseSettings()
@@ -38,6 +70,9 @@ class Settings(BaseSettings):
     DEVELOPMENT_SERVER_NAME: str = Field(default="DESKTOP-T9V7F59")
     LOGGING: Logging = Logging()
     DEBUG: bool = True
+    PREFETCH_INTERVAL: int = 5
+    REDIS_CACHE: RedisSettings = RedisSettings()
+    CACHE_SETTINGS: CacheSettings = CacheSettings()
 
     class Config:
         case_sensitive = True

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-
+from numba import jit
 from src.config import config_instance
 
 # Define a dict to store API Keys and their rate limit data
@@ -68,7 +68,7 @@ def cache_api_keys():
                                           'duration': db_key.duration,
                                           'limit': db_key.limit} for db_key in db_keys})
 
-
+@jit
 def create_uuid(size: int = 16):
     return ''.join(random.choices(CHAR_MAP, k=size))
 

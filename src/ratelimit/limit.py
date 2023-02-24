@@ -3,8 +3,9 @@ from functools import wraps
 from fastapi import HTTPException
 from starlette import status
 from src.apikeys.keys import api_keys, cache_api_keys
+from numba import jit
 
-
+@jit
 def auth_and_rate_limit():
     def decorator(func):
         # noinspection PyTypeChecker
