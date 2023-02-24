@@ -1,9 +1,13 @@
+import functools
+import json
+from json import JSONDecodeError
+
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from src.apikeys.keys import cache_api_keys
-from src.ratelimit.limit import auth_and_rate_limit, RATE_LIMIT, RATE_LIMIT_DURATION
+from src.ratelimit.limit import auth_and_rate_limit
 from src.config import config_instance
 
 description = """
@@ -29,8 +33,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET"],
     allow_headers=["*"],
 )
 
@@ -53,39 +56,63 @@ api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_insta
 api_server_counter = 0
 
 
+async def async_get_request( _url: str, args: dict[str, str], headers: dict[str, str]):
+    """creates an async request and executes it"""
+    # Get the current time
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url=_url, params=args, headers=headers)
+            if 'application/json' in response.headers['Content-Type']:
+                return response.json()
+            return []
+        except httpx.RequestError as e:
+
+            return []
+        except JSONDecodeError as e:
+
+            return []
+
+
 @app.api_route("/api/v1/{path:path}", methods=["GET"])
 @auth_and_rate_limit()
-async def reroute_to_api_endpoint(request: Request, path: str, api_key: str):
+async def reroute_to_api_endpoint(request: Request, path):
     """
         master router
     :param request:
     :param path:
-    :param api_key:
     :return:
     """
     global api_server_counter
 
     api_server_url = api_server_urls[api_server_counter]
+    # api_server_url = 'http://eod-stocks-api.uksouth.cloudapp.azure.com'
     api_server_counter = (api_server_counter + 1) % len(api_server_urls)
 
     api_url = f'{api_server_url}/api/v1/{path}'
-
+    print(api_url)
     async with httpx.AsyncClient() as client:
-        headers = dict(request.headers)
+        # headers = dict(request.headers)
 
-        headers = await set_headers(headers=headers)
+        headers = await set_headers(headers={})
 
         #  the API must only return json data
+
         response = await client.request(method=request.method, url=api_url, headers=headers,
                                         content=await request.body())
-        content = response.content
+
+    if 'application/json' in response.headers['Content-Type']:
+        data = response.json()
+        content = data
         status_code = response.status_code
-        headers = response.headers.items()
-    return JSONResponse(content=content, status_code=status_code, headers=headers)
+        headers = {"Content-Type": "application/json"}
+        return JSONResponse(content=content, status_code=status_code, headers=headers)
+    print(response.status_code)
 
 
 async def set_headers(headers):
     headers['X-API-KEY'] = config_instance().API_SERVERS.X_API_KEY
-    headers['X-SECRET-TOKEN'] = config_instance().API_SERVERS.SECRET_TOKEN
-    headers['X-RapidAPI-Proxy-Secret'] = config_instance().X_RAPID_SECRET
+    headers['X-SECRET-TOKEN'] = config_instance().API_SERVERS.X_SECRET_TOKEN
+    headers['X-RapidAPI-Proxy-Secret'] = config_instance().API_SERVERS.X_RAPID_SECRET
+    headers['Content-Type'] = "application/json"
+    headers['Host'] = "postman"
     return headers

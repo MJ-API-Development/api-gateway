@@ -1,14 +1,20 @@
+import random
+import string
+
 from fastapi import Request, HTTPException, status
 from fastapi.routing import APIRoute
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from src.config import config_instance
 
 # Define a dict to store API Keys and their rate limit data
+# Cache tp store API KEys
 api_keys: dict[str, dict[str, int]] = {}
+
+ONE_MINUTE = 60 * 60
 UUID_LEN: int = 16
 STR_LEN: int = 255
 NAME_LEN: int = 128
@@ -16,6 +22,15 @@ EMAIL_LEN: int = 255
 CELL_LEN: int = 13
 API_KEY_LEN: int = 64
 DATABASE_URL = config_instance().DATABASE_SETTINGS.SQL_DB_URL
+CHAR_MAP = string.ascii_letters + string.digits
+# Define a SQLAlchemy model for API Keys
+Base = declarative_base()
+
+
+def get_session():
+    engine = create_engine(DATABASE_URL)
+    Base.metadata.create_all(engine)
+    return sessionmaker(bind=engine)
 
 
 # Define a Pydantic model for API Key validation
@@ -25,10 +40,6 @@ class ApiKey(BaseModel):
     subscription_id: str
     duration: int
     limit: int
-
-
-# Define a SQLAlchemy model for API Keys
-Base = declarative_base()
 
 
 class ApiKeyModel(Base):
@@ -49,24 +60,26 @@ class ApiKeyModel(Base):
             "limit": self.limit}
 
 
-def get_session():
-    engine = create_engine(DATABASE_URL)
-    Base.metadata.create_all(engine)
-    return sessionmaker(bind=engine)
-
-
-# Define a function to retrieve API Keys from the database and cache them in memory
 def cache_api_keys():
-    session = get_session()()
-    db_keys = session.query(ApiKeyModel).all()
-    print(f" API KEYS : {db_keys} ")
-    session.close()
-    for db_key in db_keys:
-        # setting counters for api_keys
-        api_keys[db_key.api_key] = {'requests_count': 0,
-                                    'last_request_timestamp': 0,
-                                    'duration': db_key.duration,
-                                    'limit': db_key.limit}
+    with get_session()() as session:
+        db_keys = session.query(ApiKeyModel).all()
+        api_keys.update({db_key.api_key: {'requests_count': 0,
+                                          'last_request_timestamp': 0,
+                                          'duration': db_key.duration,
+                                          'limit': db_key.limit} for db_key in db_keys})
+
+
+def create_uuid(size: int = 16):
+    return ''.join(random.choices(CHAR_MAP, k=size))
+
+
+def create_admin_key():
+    with get_session()() as session:
+        api_key = ApiKeyModel(uuid=create_uuid(), api_key=create_uuid(), subscription_id=create_uuid(),
+                              duration=ONE_MINUTE,
+                              limit=30, is_active=True)
+        session.add(api_key)
+        session.commit()
 
 
 # Define a custom APIRoute subclass to validate API Keys
