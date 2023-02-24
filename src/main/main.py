@@ -47,7 +47,7 @@ async def startup_event():
         while True:
             cache_api_keys()
             # wait for 3 minutes then update API Keys records
-            await asyncio.sleep(60*3)
+            await asyncio.sleep(60 * 3)
 
     asyncio.create_task(update_api_keys_background_task())
 
@@ -56,7 +56,7 @@ api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_insta
 api_server_counter = 0
 
 
-async def async_get_request( _url: str, args: dict[str, str], headers: dict[str, str]):
+async def async_get_request(_url: str, args: dict[str, str], headers: dict[str, str]):
     """creates an async request and executes it"""
     # Get the current time
     async with httpx.AsyncClient() as client:
@@ -83,30 +83,30 @@ async def reroute_to_api_endpoint(request: Request, path):
     :return:
     """
     global api_server_counter
-
     api_server_url = api_server_urls[api_server_counter]
-    # api_server_url = 'http://eod-stocks-api.uksouth.cloudapp.azure.com'
     api_server_counter = (api_server_counter + 1) % len(api_server_urls)
-
     api_url = f'{api_server_url}/api/v1/{path}'
-    print(api_url)
+
     async with httpx.AsyncClient() as client:
         # headers = dict(request.headers)
 
+        # creating request headers
         headers = await set_headers(headers={})
-
         #  the API must only return json data
-
         response = await client.request(method=request.method, url=api_url, headers=headers,
                                         content=await request.body())
+    # creating response
+    headers = {"Content-Type": "application/json"}
 
-    if 'application/json' in response.headers['Content-Type']:
-        data = response.json()
-        content = data
-        status_code = response.status_code
-        headers = {"Content-Type": "application/json"}
-        return JSONResponse(content=content, status_code=status_code, headers=headers)
-    print(response.status_code)
+    if 'application/json' not in response.headers['Content-Type']:
+        message = "there was an error accessing server please tru again later, if this error persists please " \
+                  "contact admin@eod-stock-api.site"
+        return JSONResponse(content=dict(status=False, message=message), status_code=404, headers=headers)
+
+    data = response.json()
+    content = data
+    status_code = response.status_code
+    return JSONResponse(content=content, status_code=status_code, headers=headers)
 
 
 async def set_headers(headers):
@@ -114,5 +114,5 @@ async def set_headers(headers):
     headers['X-SECRET-TOKEN'] = config_instance().API_SERVERS.X_SECRET_TOKEN
     headers['X-RapidAPI-Proxy-Secret'] = config_instance().API_SERVERS.X_RAPID_SECRET
     headers['Content-Type'] = "application/json"
-    headers['Host'] = "postman"
+    headers['Host'] = "gateway.eod-stock-api.site"
     return headers
