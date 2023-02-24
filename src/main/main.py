@@ -89,7 +89,7 @@ api_server_counter = 0
 
 @app.api_route("/api/v1/{path:path}", methods=["GET"])
 @auth_and_rate_limit()
-async def reroute_to_api_endpoint(request: Request, path):
+async def reroute_to_api_endpoint(request: Request, path: str):
     """
     NOTE: In order for the gateway server to work properly it needs at least 2 GIG or RAM
         master router
