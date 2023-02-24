@@ -9,8 +9,10 @@ from numba import jit
 from src.apikeys.keys import cache_api_keys
 from src.config import config_instance
 from src.ratelimit.limit import auth_and_rate_limit
+from src.utils.my_logger import init_logger
 from src.views_cache.cache import cached
 
+# API Servers
 api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_instance().API_SERVERS.SLAVE_API_SERVER]
 api_server_counter = 0
 
@@ -18,6 +20,10 @@ api_server_counter = 0
 PREFETCH_ENDPOINTS = [
     '/api/v1/exchanges',
     '/api/v1/stocks']
+
+# used to logging debug information for the application
+app_logger = init_logger("eod_stock_api_gateway")
+
 
 @jit
 async def prefetch_endpoints():
@@ -28,14 +34,12 @@ async def prefetch_endpoints():
 
 
 description = """
-
 **Stock Marketing & Financial News API**,
 
     provides end-of-day stock information for multiple exchanges around the world. 
     With this API, you can retrieve data for a specific stock at a given date, or for a range of dates. and also get access
     to companies fundamental data, financial statements, social media trending stocks by sentiment, and also the ability to create a summary of the Financial 
     News Related to a certain stock or company and its sentiment.
-
 """
 
 app = FastAPI(
@@ -64,6 +68,18 @@ app.add_middleware(
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
+    """HTTP Error Handler Will display HTTP Errors in JSON Format to the client"""
+    app_logger.error(msg=f"""
+    HTTP Exception Occurred 
+
+    Debug Information
+        request_url: {request.url}
+        request_method: {request.method}
+        
+        error_detail: {exc.detail}
+        status_code: {exc.status_code}
+    """)
+
     return JSONResponse(
         status_code=exc.status_code,
         content={"message": exc.detail},
@@ -72,6 +88,18 @@ async def http_exception_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request, exc):
+    """Will display A  simple message for all other errors"""
+    app_logger.error(msg=f"""
+    Server Exception Occurred
+    Debug Information
+
+        request_url: {request.url}
+        request_method: {request.method}
+        
+        error_detail: {exc.detail}
+        status_code: {exc.status_code}
+ 
+    """)
     return JSONResponse(
         status_code=500,
         content={"message": "Internal server error"},)
