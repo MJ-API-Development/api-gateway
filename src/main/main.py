@@ -11,31 +11,29 @@ from src.config import config_instance
 from src.ratelimit.limit import auth_and_rate_limit
 
 config = {
-    "default": {
+    "eod_gateway": {
         "cache": "aiocache.SimpleMemoryCache",
         "serializer": {
             "class": "aiocache.serializers.PickleSerializer"
         },
-        "ttl": 60 * 60 # One Hour
+        "ttl": 3600  # One Hour
     }
 }
 
 caches.set_config(config)
+cache = caches.get("eod_gateway")
 
 
 def async_cache(function):
     @wraps(function)
     async def wrapper(*args, **kwargs):
         key = str(args) + str(kwargs)
-        cache = caches.get("default")
         data = await cache.get(key)
         if data is None:
             # If data is not in the cache, execute the function to retrieve it
             data = await function(*args, **kwargs)
-
             # Store the data in the cache
             await cache.set(key, data)
-
         return data
 
     return wrapper
