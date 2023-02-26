@@ -1,16 +1,16 @@
-import random
 import string
+from typing import Self
 
-from fastapi import Request, HTTPException, status
-from fastapi.routing import APIRoute
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from numba import jit
-from src.config import config_instance
+from sqlalchemy.orm import sessionmaker, Session, relationship
 
-# Define a dict to store API Keys and their rate limit data
+from src.config import config_instance
+from src.plans.plans import Subscriptions
+from src.utils.utils import create_id
+
+# Define a dict to store API Keys and their rate rate_limit data
 # Cache tp store API KEys
 api_keys: dict[str, dict[str, int]] = {}
 
@@ -21,10 +21,12 @@ NAME_LEN: int = 128
 EMAIL_LEN: int = 255
 CELL_LEN: int = 13
 API_KEY_LEN: int = 64
+
 DATABASE_URL = config_instance().DATABASE_SETTINGS.SQL_DB_URL
 CHAR_MAP = string.ascii_letters + string.digits
 # Define a SQLAlchemy model for API Keys
 Base = declarative_base()
+sessionType = Session
 
 
 def get_session():
@@ -39,17 +41,17 @@ class ApiKey(BaseModel):
     api_key: str
     subscription_id: str
     duration: int
-    limit: int
+    rate_limit: int
 
 
 class ApiKeyModel(Base):
     __tablename__ = 'eod_api_keys'
-    uuid: str = Column(String(UUID_LEN), index=True)
+    uuid: str = Column(String(UUID_LEN), ForeignKey("accounts.uuid"), index=True)
     api_key: str = Column(String(API_KEY_LEN), primary_key=True, index=True)
-    subscription_id: str = Column(String(UUID_LEN))
     duration: int = Column(Integer)
-    limit: int = Column(Integer)
+    rate_limit: int = Column(Integer)
     is_active: bool = Column(Boolean, default=True)
+    subscription = relationship("Subscriptions", uselist=False, foreign_keys=[Subscriptions.uuid])
 
     def to_dict(self) -> dict[str, str]:
         return {
@@ -57,7 +59,17 @@ class ApiKeyModel(Base):
             "api_key": self.api_key,
             "subscription_id": self.subscription_id,
             "duration": self.duration,
-            "limit": self.limit}
+            "rate_limit": self.rate_limit}
+
+    @classmethod
+    async def get_by_apikey(cls, api_key: str, session: sessionType) -> Self:
+        """
+
+        :param api_key:
+        :param session:
+        :return:
+        """
+        return session.query(cls).filter(cls.api_key == api_key).first()
 
 
 def cache_api_keys():
@@ -66,42 +78,15 @@ def cache_api_keys():
         api_keys.update({db_key.api_key: {'requests_count': 0,
                                           'last_request_timestamp': 0,
                                           'duration': db_key.duration,
-                                          'limit': db_key.limit} for db_key in db_keys})
-
-@jit
-def create_uuid(size: int = 16):
-    return ''.join(random.choices(CHAR_MAP, k=size))
+                                          'rate_limit': db_key.rate_limit} for db_key in db_keys})
 
 
 def create_admin_key():
     with get_session()() as session:
-        api_key = ApiKeyModel(uuid=create_uuid(), api_key=create_uuid(), subscription_id=create_uuid(),
+        api_key = ApiKeyModel(uuid=create_id(size=UUID_LEN),
+                              api_key=create_id(size=UUID_LEN),
+                              subscription_id=create_id(size=UUID_LEN),
                               duration=ONE_MINUTE,
                               limit=30, is_active=True)
         session.add(api_key)
         session.commit()
-
-
-# Define a custom APIRoute subclass to validate API Keys
-class ApiKeyRoute(APIRoute):
-    async def get_route_handler(self):
-        handler = await super().get_route_handler()
-
-        async def api_key_handler(request: Request, **kwargs):
-            api_key = kwargs.get('api_key')
-            if api_key is None:
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='API Key missing')
-            if api_key not in api_keys:
-                session = get_session()()
-                api_key_model = session.query(ApiKeyModel).filter(ApiKeyModel.api_key == api_key).first()
-                if api_key_model is None:
-                    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid API Key')
-                api_keys[api_key] = {'requests_count': 0,
-                                     'last_request_timestamp': 0,
-                                     'duration': api_key_model.duration,
-                                     'limit': api_key_model.limit}
-
-                session.close()
-            return await handler(request, **kwargs)
-
-        return api_key_handler

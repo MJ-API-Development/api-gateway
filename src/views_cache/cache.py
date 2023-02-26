@@ -11,12 +11,18 @@ from redis import ConnectionError
 from src.config import config_instance
 from src.utils.my_logger import init_logger
 from src.utils.utils import camel_to_snake
-from numba import jit, jitclass
+from numba import njit, int32, float32, generated_jit, jit, typed
+from numba.typed import Dict
+from numba import types
 
 MEM_CACHE_SIZE = config_instance().CACHE_SETTINGS.MAX_CACHE_SIZE
 EXPIRATION_TIME = config_instance().CACHE_SETTINGS.CACHE_DEFAULT_TIMEOUT
+spec = [
+    ('value', int32),  # a simple scalar field
+    ('array', float32[:]),  # an array field
+]
 
-@jitclass
+
 class Cache:
     """
         A class to handle caching of data, both in-memory and in Redis.
@@ -169,18 +175,6 @@ class Cache:
     def clear_mem_cache(self):
         self._cache = {}
 
-    @classmethod
-    @jit
-    def create_key(cls, method: str, kwargs: dict[str, str | int]) -> str:
-        """
-            used to create keys for cache redis handler
-        """
-        if not isinstance(kwargs, dict):
-            _key = "all"
-        else:
-            _key = ".".join(f"{key}={str(value)}" for key, value in kwargs.items() if value).lower()
-        return f"{method}.{_key}"
-
 
 # Set Use redis to false temporarily
 
@@ -188,19 +182,17 @@ redis_cache = Cache(cache_name="redis", use_redis=True)
 mem_cache = Cache(cache_name="mem_cache", use_redis=False)
 
 
-@jit
 def create_key(method: str, kwargs: dict[str, str | int]) -> str:
     """
         used to create keys for cache redis handler
     """
-    if not isinstance(kwargs, dict):
+    if not kwargs:
         _key = "all"
     else:
         _key = ".".join(f"{key}={str(value)}" for key, value in kwargs.items() if value).lower()
     return f"{method}.{_key}"
 
 
-@jit
 def cached(func):
     async def wrapper(*args, **kwargs):
         new_kwargs = kwargs.copy()
@@ -214,8 +206,9 @@ def cached(func):
         if _data is None:
             result = await func(*args, **kwargs)
             if result:
-                mem_cache.set(key=_key, value=_data, expiration_time=60*60*1)
+                mem_cache.set(key=_key, value=_data, expiration_time=60 * 60 * 1)
                 # redis_cache.set(key=_key, value=result, expiration_time=60*60*1)
             return result
         return _data
+
     return wrapper
