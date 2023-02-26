@@ -121,8 +121,8 @@ async def startup_event():
             await prefetch_endpoints()
             app_logger.info("Done Pre Fetching End Points")
 
-            #  wait for one hour then prefetch urls again
-            await asyncio.sleep(60*60*1)
+            #  wait for one hour 30 minutes then prefetch urls again
+            await asyncio.sleep(60*60*1.5)
 
     asyncio.create_task(update_api_keys_background_task())
     asyncio.create_task(prefetch())

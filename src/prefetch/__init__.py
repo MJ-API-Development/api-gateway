@@ -8,4 +8,4 @@ async def prefetch_endpoints():
     """will fetch the endpoints causing the endpoints to be cached"""
     for endpoint in build_dynamic_urls():
         response = await requester(endpoint)
-        await asyncio.sleep(5)
+        # await asyncio.sleep(5)
