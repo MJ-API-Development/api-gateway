@@ -79,56 +79,56 @@ resource_name_request_size: dict[str, int] = {
 
     "stocks.code": 1,
     "stocks.options": 1,
-    "stocks.complete": 250,
-    "stocks.currency": 250,
-    "stocks.country": 250,
+    "stocks.complete": 25,
+    "stocks.currency": 25,
+    "stocks.country": 25,
 
     "exchange.code": 1,
     "exchange.id": 1,
     "options.contracts": 5,
-    "exchange.with_tickers.code": 150,
-    "exchange.complete": 15,
-    "exchange.companies": 150,
-    "exchange.stocks": 100,
-    "exchange.stocks.code": 100,
-    "exchange.stocks.id": 100,
+    "exchange.with_tickers.code": 15,
+    "exchange.complete": 2,
+    "exchange.companies": 3,
+    "exchange.stocks": 10,
+    "exchange.stocks.code": 10,
+    "exchange.stocks.id": 10,
 
-    "eod.all": 150,
+    "eod.all": 15,
 
-    "financial_statements.balance_sheet.annual": 150,
-    "financial_statements.balance_sheet.quarterly": 150,
-    "financial_statements.tech_indicators.exchange_code": 250,
-    "financial_statements.term": 250,
-    "financial_statements.year": 250,
+    "financial_statements.balance_sheet.annual": 15,
+    "financial_statements.balance_sheet.quarterly": 15,
+    "financial_statements.tech_indicators.exchange_code": 25,
+    "financial_statements.term": 25,
+    "financial_statements.year": 25,
     "financial_statements.stock_code.date": 25,
     "financial_statements.income_statement.id": 5,
-    "financial_statements.stock_code.date_range": 150,  # X result size
-    "financial_statements.company": 125,
+    "financial_statements.stock_code.date_range": 15,  # X result size
+    "financial_statements.company": 12,
 
-    "fundamentals.general": 100,
-    "fundamentals.complete": 150,
-    "fundamentals.analyst_ranks": 250,
-    "fundamentals.insider.stock_code": 25,
-    "fundamentals.tech_indicators.stock_code": 25,
-    "fundamentals.valuations.stock_code": 25,
-    "fundamentals.tech-indicators.exchange": 250,
-    "fundamentals.company": 125,
-    "fundamentals.highlights.id": 25,
+    "fundamentals.general": 10,
+    "fundamentals.complete": 15,
+    "fundamentals.analyst_ranks": 25,
+    "fundamentals.insider.stock_code": 3,
+    "fundamentals.tech_indicators.stock_code": 3,
+    "fundamentals.valuations.stock_code": 3,
+    "fundamentals.tech-indicators.exchange": 25,
+    "fundamentals.company": 12,
+    "fundamentals.highlights.id": 3,
     "fundamentals.company_address.id": 1,
-    "fundamentals.company_details": 50,
-    "fundamentals.highlights.stock_code": 5,
+    "fundamentals.company_details": 5,
+    "fundamentals.highlights.stock_code": 2,
     "fundamentals.company_address.stock_code": 1,
-    "fundamentals.valuations.exchange": 250,
+    "fundamentals.valuations.exchange": 25,
 
     "news.article": 1,
     "news.articles.bound": 1,  # 1 x bound size
-    "news.articles.date": 25,
-    "news.articles.publisher": 50,
-    "news.articles.stock_code": 50,
+    "news.articles.date": 3,
+    "news.articles.publisher": 5,
+    "news.articles.stock_code": 5,
 
-    "sentiment_analysis.stock_code": 25,  # X result size
-    "sentiment_analysis.tweeter.stock_code": 25,  # x result size
-    "social.trend_setters.stock_code": 25,  # X result size,
+    "sentiment_analysis.stock_code": 3,  # X result size
+    "sentiment_analysis.tweeter.stock_code": 3,  # x result size
+    "social.trend_setters.stock_code": 3,  # X result size,
 }
 
 # TODO need to create a passive method which will automatically substract the credit
