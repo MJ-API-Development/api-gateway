@@ -5,8 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.apikeys.keys import cache_api_keys
+from src.authentication import authenticate_admin
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue
 from src.config import config_instance
+from src.plans.init_plans import create_plans
 
 from src.requests import requester
 from src.utils.my_logger import init_logger
@@ -18,7 +20,6 @@ api_server_counter = 0
 
 # used to logging debug information for the application
 app_logger = init_logger("eod_stock_api_gateway")
-
 
 description = """
 **Stock Marketing & Financial News API**,
@@ -88,7 +89,7 @@ async def generic_exception_handler(request, exc):
      """)
     return JSONResponse(
         status_code=500,
-        content={"message": "Internal server error"},)
+        content={"message": "Internal server error"}, )
 
 
 @app.get("/test-error-handling")
@@ -97,10 +98,24 @@ async def test_error_handling():
     return response.json()
 
 
+@app.post("/_bootstrap")
+@authenticate_admin
+async def _create_plans():
+    """
+        this should only be run once by admin
+        afterwards plans can be updated
+    :return:
+    """
+    response = await create_plans()
+    status_code = 201
+    content = dict(payload=response, status=True)
+    headers = {"Content-Type": "application/json"}
+    return JSONResponse(content=content, status_code=status_code, headers=headers)
+
+
 # On Start Up Run the following Tasks
 @app.on_event('startup')
 async def startup_event():
-
     async def update_api_keys_background_task():
         while True:
             app_logger.info("Started Pre Fetching API Keys")
@@ -121,7 +136,7 @@ async def startup_event():
             app_logger.info("Done Pre Fetching End Points")
 
             #  wait for one hour 30 minutes then prefetch urls again
-            await asyncio.sleep(60*60*1.5)
+            await asyncio.sleep(60 * 60 * 1.5)
 
     asyncio.create_task(update_api_keys_background_task())
     asyncio.create_task(prefetch())
@@ -150,7 +165,6 @@ async def v1_gateway(request: Request, path: str):
     headers = {"Content-Type": "application/json"}
 
     if 'application/json' not in response.headers['Content-Type']:
-
         message = "there was an error accessing server please tru again later, if this error persists please " \
                   "contact admin@eod-stock-api.site"
 
@@ -164,5 +178,3 @@ async def v1_gateway(request: Request, path: str):
     # if request is here it means the api request was authorized and valid
     await create_take_credit_args(api_key=api_key, path=path)
     return JSONResponse(content=content, status_code=status_code, headers=headers)
-
-

@@ -8,7 +8,7 @@ from starlette import status
 from src.apikeys.keys import api_keys, cache_api_keys, get_session, ApiKeyModel
 from src.authorize.resources import get_resource_name, resource_name_request_size
 from src.plans.plans import Subscriptions, Plans
-from src.views_cache.cache import cached_ttl
+from src.cache.cache import cached_ttl
 
 api_keys_lookup = api_keys.get
 cache_api_keys_func = cache_api_keys

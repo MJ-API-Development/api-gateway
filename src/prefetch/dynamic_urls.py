@@ -5,7 +5,7 @@ from httpx import HTTPError
 from src.config import config_instance
 from src.prefetch.exchange_lists import cached_exchange_lists
 from src.requests import requester
-from src.views_cache.cache import cached_ttl
+from src.cache.cache import cached_ttl
 
 ONE_DAY = 60 * 60 * 24
 

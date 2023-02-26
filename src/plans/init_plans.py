@@ -199,7 +199,7 @@ class RateLimits(Enum):
     ENTERPRISE: tuple[int, int, int] = (750, 50_000, 1)
 
 
-def create_plans() -> None:
+async def create_plans() -> None:
     """
         run once on setup
     :return:
