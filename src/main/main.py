@@ -150,8 +150,10 @@ async def v1_gateway(request: Request, path: str):
     headers = {"Content-Type": "application/json"}
 
     if 'application/json' not in response.headers['Content-Type']:
+
         message = "there was an error accessing server please tru again later, if this error persists please " \
                   "contact admin@eod-stock-api.site"
+
         return JSONResponse(content=dict(status=False, message=message), status_code=404, headers=headers)
 
     # create an ijson parser for the response content

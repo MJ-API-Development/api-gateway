@@ -1,4 +1,4 @@
-import pickle
+import functools
 import threading
 import time
 from json import JSONDecodeError
@@ -6,14 +6,12 @@ from typing import Any
 
 import redis
 import ujson
+from numba import int32, float32
 from redis import ConnectionError
 
 from src.config import config_instance
 from src.utils.my_logger import init_logger
 from src.utils.utils import camel_to_snake
-from numba import njit, int32, float32, generated_jit, jit, typed
-from numba.typed import Dict
-from numba import types
 
 MEM_CACHE_SIZE = config_instance().CACHE_SETTINGS.MAX_CACHE_SIZE
 EXPIRATION_TIME = config_instance().CACHE_SETTINGS.CACHE_DEFAULT_TIMEOUT
@@ -176,12 +174,7 @@ class Cache:
         self._cache = {}
 
 
-# Set Use redis to false temporarily
-
-redis_cache = Cache(cache_name="redis", use_redis=True)
-mem_cache = Cache(cache_name="mem_cache", use_redis=False)
-
-
+@functools.cache
 def create_key(method: str, kwargs: dict[str, str | int]) -> str:
     """
         used to create keys for cache redis handler
@@ -215,8 +208,8 @@ def cached(func):
 
 
 def cached_ttl(ttl: int = 60 * 60 * 1):
-    def cached(func):
-        async def wrapper(*args, **kwargs):
+    def _cached(func):
+        async def _wrapper(*args, **kwargs):
             new_kwargs = kwargs.copy()
             for key, value in kwargs.items():
                 if key == 'session':
@@ -233,6 +226,12 @@ def cached_ttl(ttl: int = 60 * 60 * 1):
                 return result
             return _data
 
-        return wrapper
+        return _wrapper
 
-    return cached
+    return _cached
+
+
+# Set Use redis to false temporarily
+
+redis_cache = Cache(cache_name="redis", use_redis=True)
+mem_cache = Cache(cache_name="mem_cache", use_redis=False)

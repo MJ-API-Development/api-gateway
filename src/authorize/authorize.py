@@ -8,12 +8,14 @@ from starlette import status
 from src.apikeys.keys import api_keys, cache_api_keys, get_session, ApiKeyModel
 from src.authorize.resources import get_resource_name, resource_name_request_size
 from src.plans.plans import Subscriptions, Plans
-from src.views_cache.cache import cached
+from src.views_cache.cache import cached_ttl
 
 api_keys_lookup = api_keys.get
 cache_api_keys_func = cache_api_keys
 
 take_credit_queue = []
+
+ONE_DAY: int = 60 * 60 * 24
 
 
 class NotAuthorized(Exception):
@@ -22,54 +24,7 @@ class NotAuthorized(Exception):
         self.status_code = 403
 
 
-def auth_and_rate_limit(func):
-    # noinspection PyTypeChecker
-    @wraps(func)
-    async def wrapper(*args, **kwargs):
-        api_key = kwargs.get('api_key')
-        path = kwargs.get('path')
-        if api_key is not None:
-            if api_key not in api_keys:
-                cache_api_keys_func()  # Update api_keys if the key is not found
-                if api_key not in api_keys:
-                    # user not authorized to access this routes
-                    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid API Key')
-
-            now = time.time()
-            duration: int = api_keys_lookup(api_key, {}).get('duration')
-            limit: int = api_keys_lookup(api_key, {}).get('rate_limit')
-
-            if now - api_keys_lookup(api_key, {}).get('last_request_timestamp') > duration:
-                api_keys[api_key]['requests_count'] = 0
-
-            if api_keys_lookup(api_key, {}).get('requests_count') >= limit:
-                # TODO consider returning a JSON String with data on the rate rate_limit and how long to wait
-                raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                                    detail='Rate rate_limit exceeded')
-
-            # updating number of requests and timestamp
-            api_keys[api_key]['requests_count'] += 1
-            # noinspection PyTypeChecker
-            api_keys[api_key]['last_request_timestamp'] = now
-
-        # verifying if user can access this resource
-        if await is_resource_authorized(path_param=path, api_key=api_key):
-            if await monthly_credit_available(api_key=api_key):
-                # will execute the api if monthly credit is available or monthly limit
-                # is a soft limit, in which case the client will incur extra charges
-                return await func(*args, **kwargs)
-            mess: str = """
-                Your Monthly plan request limit has been reached.
-                 please upgrade your plan 
-            """
-            raise NotAuthorized(message=mess)
-
-        raise NotAuthorized(message="Request not Authorized for this plan")
-
-    return wrapper
-
-
-@cached
+@cached_ttl(ttl=ONE_DAY)
 async def is_resource_authorized(path_param: str, api_key: str) -> bool:
     """
         given a url and api_key check if the user can access the resource
@@ -97,6 +52,7 @@ async def monthly_credit_available(api_key: str) -> bool:
     :param api_key: used to identify the user plan
     :return: True if credit is available
     """
+    # Need to speed this function up considerably
     with get_session()() as session:
         client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
         subscription_instance: Subscriptions = client_api_model.subscription
@@ -149,3 +105,50 @@ async def process_credit_queue():
         if args:
             await take_credit_method(**args)
         await asyncio.sleep(5)
+
+
+def auth_and_rate_limit(func):
+    # noinspection PyTypeChecker
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        api_key = kwargs.get('api_key')
+        path = kwargs.get('path')
+        if api_key is not None:
+            if api_key not in api_keys:
+                cache_api_keys_func()  # Update api_keys if the key is not found
+                if api_key not in api_keys:
+                    # user not authorized to access this routes
+                    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid API Key')
+
+            now = time.time()
+            duration: int = api_keys_lookup(api_key, {}).get('duration')
+            limit: int = api_keys_lookup(api_key, {}).get('rate_limit')
+
+            if now - api_keys_lookup(api_key, {}).get('last_request_timestamp') > duration:
+                api_keys[api_key]['requests_count'] = 0
+
+            if api_keys_lookup(api_key, {}).get('requests_count') >= limit:
+                # TODO consider returning a JSON String with data on the rate rate_limit and how long to wait
+                raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                                    detail='Rate rate_limit exceeded')
+
+            # updating number of requests and timestamp
+            api_keys[api_key]['requests_count'] += 1
+            # noinspection PyTypeChecker
+            api_keys[api_key]['last_request_timestamp'] = now
+
+        # verifying if user can access this resource
+        if await is_resource_authorized(path_param=path, api_key=api_key):
+            if await monthly_credit_available(api_key=api_key):
+                # will execute the api if monthly credit is available or monthly limit
+                # is a soft limit, in which case the client will incur extra charges
+                return await func(*args, **kwargs)
+            mess: str = """
+                Your Monthly plan request limit has been reached.
+                 please upgrade your plan 
+            """
+            raise NotAuthorized(message=mess)
+
+        raise NotAuthorized(message="Request not Authorized for this plan")
+
+    return wrapper
