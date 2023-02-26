@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Self
 
 from numba import jit
@@ -16,6 +17,7 @@ class Subscriptions(Base):
     time_subscribed: float = Column(Float)
     payment_day: str = Column(String(NAME_LEN))
     _is_active: bool = Column(Boolean)
+    api_requests_balance: int = Column(Integer)
 
     def to_dict(self):
         return {
@@ -24,7 +26,8 @@ class Subscriptions(Base):
             "plan_id": self.plan_id,
             "time_subscribed": self.time_subscribed,
             "payment_day": self.payment_day,
-            "is_active": self._is_active
+            "is_active": self._is_active,
+            "api_requests_balance": self.api_requests_balance
         }
 
     async def is_active(self, session: sessionType):
@@ -52,7 +55,15 @@ class Subscriptions(Base):
             Plans.plan_id == self.plan_id).first().resource_exist(resource_name=resource_name)
 
 
+class PlanType(Enum):
+    hard_limit: str = "hard_limit"
+    soft_limit: str = "soft_limit"
+
+
 class Plans(Base):
+    """
+        Subscription Plans
+    """
     __tablename__ = "plans"
     plan_id: str = Column(String(UUID_LEN), primary_key=True, index=True)
     plan_name: str = Column(String(NAME_LEN), index=True, unique=True)
@@ -61,7 +72,7 @@ class Plans(Base):
     _resource_str: str = Column(Text)
     rate_limit: int = Column(Integer)
     plan_limit: int = Column(Integer)
-    plan_limit_type: int = Column(String(8))  # Hard or Soft Limit
+    plan_limit_type: PlanType = Column(String(10))  # Hard or Soft Limit
     rate_per_request: int = Column(Integer, default=0)  # in Cents
     subscriptions = relationship("Subscriptions", uselist=True, foreign_keys=[Subscriptions.plan_id])
 
@@ -104,6 +115,9 @@ class Plans(Base):
         :return:
         """
         return session.query(cls).filter(cls.plan_id == plan_id).first()
+
+    def is_hard_limit(self) -> bool:
+        return self.plan_limit_type == PlanType.hard_limit
 
 
 class Payments(Base):

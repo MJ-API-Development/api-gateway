@@ -1,3 +1,4 @@
+import asyncio
 import time
 from functools import wraps
 
@@ -5,12 +6,14 @@ from fastapi import HTTPException
 from starlette import status
 
 from src.apikeys.keys import api_keys, cache_api_keys, get_session, ApiKeyModel
-from src.authorize.resources import get_resource_name
-from src.plans.plans import Subscriptions, Plans
+from src.authorize.resources import get_resource_name, resource_name_request_size
+from src.plans.plans import Subscriptions, Plans, PlanType
 from src.views_cache.cache import cached
 
 api_keys_lookup = api_keys.get
 cache_api_keys_func = cache_api_keys
+
+take_credit_queue = []
 
 
 class NotAuthorized(Exception):
@@ -57,7 +60,13 @@ def auth_and_rate_limit():
 
             # verifying if user can access this resource
             if await is_resource_authorized(path_param=path, api_key=api_key):
-                return await func(*args, **kwargs)
+                if await monthly_credit_available(path_param=path, api_key=api_key):
+                    return await func(*args, **kwargs)
+                mess: str = """
+                    Your Monthly plan request limit has been reached.
+                     please upgrade your plan 
+                """
+                raise NotAuthorized(message=mess)
 
             raise NotAuthorized(message="Request not Authorized for this plan")
 
@@ -86,7 +95,7 @@ async def is_resource_authorized(path_param: str, api_key: str) -> bool:
     return is_active and can_access_resource
 
 
-async def monthly_plan_limit(path_param: str, api_key: str) -> bool:
+async def monthly_credit_available(path_param: str, api_key: str) -> bool:
     """
         **monthly_plan_limit**
             Check the subscribed plan check the monthly plan limit
@@ -100,6 +109,50 @@ async def monthly_plan_limit(path_param: str, api_key: str) -> bool:
         subscription_instance: Subscriptions = client_api_model.subscription
         resource_name = await get_resource_name(path=path_param)
         plan_instance: Plans = await Plans.get_plan_by_plan_id(plan_id=subscription_instance.plan_id, session=session)
-        
+        if plan_instance.plan_limit <= subscription_instance.api_requests_balance:
+            # if hard_limit is true then monthly credit is not available
+            return not plan_instance.is_hard_limit()
+        return True
 
 
+async def create_take_credit_method(api_key: str, path: str):
+    """
+    **take_credit**
+        this method will go to plans and subtract request credit from subscription
+        monthly plan size
+    :param path:
+    :param api_key:
+    :return:
+    """
+    resource_name: str = await get_resource_name(path=path)
+    request_size: int = resource_name_request_size[resource_name]
+    args = dict(api_key=api_key, request_size=request_size)
+    take_credit_queue.append(args)
+
+
+async def take_credit_method(api_key: str, request_size: int):
+    """
+
+    :param request_size:
+    :param api_key:
+    :return:
+    """
+    # TODO need to speed this up considerably
+    with get_session()() as session:
+        client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
+        subscription_instance: Subscriptions = client_api_model.subscription
+        subscription_instance.api_requests_balance -= request_size
+        session.commit(subscription_instance)
+
+
+async def process_credit_queue():
+    """
+        will run on the main app, as a separate thread to process
+        request credit continuously
+    :return:
+    """
+    while True:
+        args = take_credit_queue.pop()
+        if args:
+            await take_credit_method(**args)
+        await asyncio.sleep(5)

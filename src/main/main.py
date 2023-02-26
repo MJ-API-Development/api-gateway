@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.apikeys.keys import cache_api_keys
-from src.authorize.authorize import auth_and_rate_limit
+from src.authorize.authorize import auth_and_rate_limit, create_take_credit_method, process_credit_queue
 from src.config import config_instance
 
 from src.requests import requester
@@ -126,6 +126,7 @@ async def startup_event():
 
     asyncio.create_task(update_api_keys_background_task())
     asyncio.create_task(prefetch())
+    asyncio.create_task(process_credit_queue())
 
 
 @app.api_route("/api/v1/{path:path}", methods=["GET"])
@@ -142,7 +143,7 @@ async def v1_gateway(request: Request, path: str):
     api_server_url = api_server_urls[api_server_counter]
     api_server_counter = (api_server_counter + 1) % len(api_server_urls)
     api_url = f'{api_server_url}/api/v1/{path}'
-    api_key: dict = request.path_params
+    api_key: dict = request.path_params.get('api_key')
 
     response = await requester(api_url)
 
@@ -159,6 +160,7 @@ async def v1_gateway(request: Request, path: str):
     headers = {"Content-Type": "application/json"}
     content = response.json()
     status_code = response.status_code
+    await create_take_credit_method(api_key=api_key, path=path)
     return JSONResponse(content=content, status_code=status_code, headers=headers)
 
 

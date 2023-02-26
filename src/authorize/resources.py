@@ -68,5 +68,57 @@ async def get_resource_name(path: str) -> str:
     return path_to_resource[path]
 
 
+resource_name_request_size: dict[str, int] = {
+    "fundamentals.general": 100,
+    "financial_statements.term": 50,
+    "financial_statements.year": 100,
+    "fundamentals.complete": 50,
+    "stocks.complete": 250,
+    "exchange.complete": 25,
+    "exchange.companies": 250,
+    "exchange.stocks": 100,
+    "exchange.stocks.code": 100,
+    "exchange.stocks.id": 100,
+    "stocks.currency": 250,
+    "stocks.country": 250,
+    "financial_statements.balance_sheet.annual": 150,
+    "financial_statements.balance_sheet.quarterly": 150,
+    "financial_statements.tech_indicators.exchange_code": 250,
+    "eod.all": 100,
+    "fundamentals.analyst_ranks": 250,
+    "financial_statements.company": 25,
+    "fundamentals.insider.stock_code": 25,
+    "fundamentals.tech_indicators.stock_code": 25,
+    "fundamentals.valuations.stock_code": 25,
+    "options.contracts": 1,
+    "exchange.code": 1,
+    "exchange.id": 1,
+    "exchange.with_tickers.code": 150,
+    "fundamentals.tech-indicators.exchange": 250,
+    "news.article": 1,
+    "news.articles.bound": 1,  # 1 x bound size
+    "news.articles.date": 25,
+    "news.articles.publisher": 50,
+    "news.articles.stock_code": 50,
+    "stocks.code": 1,
+    "stocks.options": 1,
+    "fundamentals.company": 5,
+    "fundamentals.highlights.id": 5,
+    "fundamentals.company_address.id": 1,
+    "fundamentals.company_details": 50,
+    "fundamentals.highlights.stock_code": 5,
+    "fundamentals.company_address.stock_code": 1,
+    "fundamentals.valuations.exchange": 150,
+    "financial_statements.stock_code.date": 25,
+    "financial_statements.income_statement.id": 5,
+    "financial_statements.stock_code.date_range": 50,  # X result size
+    "sentiment_analysis.stock_code": 5,  # X result size
+    "social.trend_setters.stock_code": 5,  # X result size,
+    "sentiment_analysis.tweeter.stock_code": 5  # x result size
+}
+
+# TODO need to create a passive method which will automatically substract the credit
+# from plan limit
+
 if __name__ == "__main__":
     print(path_to_resource())
