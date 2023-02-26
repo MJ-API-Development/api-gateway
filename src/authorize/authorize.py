@@ -118,8 +118,7 @@ async def monthly_credit_available(path_param: str, api_key: str) -> bool:
 async def create_take_credit_method(api_key: str, path: str):
     """
     **take_credit**
-        this method will go to plans and subtract request credit from subscription
-        monthly plan size
+        will add the arguments to the processing queue for the take_credit method
     :param path:
     :param api_key:
     :return:
@@ -142,6 +141,8 @@ async def take_credit_method(api_key: str, request_size: int):
         client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
         subscription_instance: Subscriptions = client_api_model.subscription
         subscription_instance.api_requests_balance -= request_size
+        # The Purpose here is to update the subscription model so it reflects the most
+        # recent api_requests_balance
         session.commit(subscription_instance)
 
 
