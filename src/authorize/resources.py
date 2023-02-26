@@ -64,7 +64,7 @@ def path_to_resource() -> dict[str, str]:
 
 
 @cached
-def get_resource_name(path: str) -> str:
+async def get_resource_name(path: str) -> str:
     return path_to_resource[path]
 
 

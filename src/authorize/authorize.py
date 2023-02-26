@@ -81,7 +81,7 @@ async def is_resource_authorized(path_param: str, api_key: str) -> bool:
         client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
         subscription: Subscriptions = client_api_model.subscription
         is_active = await subscription.is_active(session=session)
-        resource_name = get_resource_name(path=path_param)
+        resource_name = await get_resource_name(path=path_param)
         can_access_resource = await subscription.can_access_resource(resource_name=path_param, session=session)
     return is_active and can_access_resource
 
@@ -91,8 +91,11 @@ async def monthly_plan_limit(path_param: str, api_key: str) -> bool:
         **monthly_plan_limit**
             Check the subscribed plan check the monthly plan limit
             check if there are still requests left
-    :param api_key:
+    :param path_param: used to find the name of the resource
+    :param api_key: used to identify the user plan
     :return:
     """
     with get_session()() as session:
-        pass
+        client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
+        subscription: Subscriptions = client_api_model.subscription
+        resource_name = await get_resource_name(path=path_param)
