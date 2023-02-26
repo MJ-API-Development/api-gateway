@@ -1,8 +1,8 @@
-from sqlalchemy import Column, String, Text, Integer, Date, Float, Boolean, ForeignKey
+from numba import jit
+from sqlalchemy import Column, String, Text, Integer, Float, Boolean, ForeignKey
 
 from src.apikeys.keys import Base, sessionType
 from src.const import UUID_LEN, NAME_LEN
-from numba import jit
 
 
 class Plans(Base):
@@ -19,29 +19,31 @@ class Plans(Base):
 
     @property
     def resource_set(self) -> set[str]:
-        return set([res.lower() for res in self._resource_str.split(",")])
+        return {res.lower() for res in self._resource_str.split(",")}
 
     @resource_set.setter
     def resource_set(self, rs_set: set[str]):
         self._resource_str = ",".join(rs_set)
 
-    def to_dict(self) -> dict[str, str | list[str]]:
+    def to_dict(self) -> dict[str, str | set[str]]:
         return {
-            "subscription_id": self.subscription_id,
-            "screen_name": self.screen_name,
-            "plan": self.plan,
-            "resources": self.resource_list
+            "plan_id": self.plan_id,
+            "plan_name": self.plan_name,
+            "Amount": self.charge_amount,
+            "description": self.description,
+            "resources": self.resource_set,
+            "rate_limit": self.rate_limit,
+            "plan_limit": self.plan_limit
         }
 
     @jit
-    def resource_exist(self, resource_path: str) -> bool:
+    def resource_exist(self, resource_name: str) -> bool:
         """
 
-        :param resource_path:
+        :param resource_name:
         :return:
         """
-        _resource_path = resource_path.lower()
-        return _resource_path in self.resource_set
+        return resource_name in self.resource_set
 
 
 class Subscriptions(Base):
@@ -66,15 +68,16 @@ class Subscriptions(Base):
                 return False
         return self._is_active
 
-    async def can_access_resource(self, resource_path: str, session: sessionType) -> bool:
+    async def can_access_resource(self, resource_name: str, session: sessionType) -> bool:
         """
-
-        :param resource_path:
+            with a resource name checks if it can be accessed
+            by the subscribed plan
+        :param resource_name:
         :param session:
         :return:
         """
         return session.query(Plans).filter(
-            Plans.plan_id == self.plan_id).first().resource_exist(resource_path=resource_path)
+            Plans.plan_id == self.plan_id).first().resource_exist(resource_name=resource_name)
 
 
 class Payments(Base):
