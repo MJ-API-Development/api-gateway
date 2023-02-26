@@ -10,12 +10,11 @@ from src.config import config_instance
 
 from src.requests import requester
 from src.utils.my_logger import init_logger
+from src.prefetch import prefetch_endpoints
 
 # API Servers
 api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_instance().API_SERVERS.SLAVE_API_SERVER]
 api_server_counter = 0
-
-from src.prefetch import prefetch_endpoints
 
 # used to logging debug information for the application
 app_logger = init_logger("eod_stock_api_gateway")

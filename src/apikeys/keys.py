@@ -45,6 +45,9 @@ class ApiKey(BaseModel):
 
 
 class ApiKeyModel(Base):
+    """
+        api key model
+    """
     __tablename__ = 'eod_api_keys'
     uuid: str = Column(String(UUID_LEN), ForeignKey("accounts.uuid"), index=True)
     api_key: str = Column(String(API_KEY_LEN), primary_key=True, index=True)
