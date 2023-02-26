@@ -3,8 +3,9 @@
 """
 from enum import Enum
 
+from src.apikeys.keys import get_session
 from src.const import UUID_LEN
-from src.plans.plans import Plans
+from src.plans.plans import Plans, PlanType
 from src.utils.utils import create_id
 
 
@@ -191,14 +192,72 @@ class PlanResources(Enum):
     }
 
 
-def create_plans(plan_name: str):
+class RateLimits(Enum):
+    BASIC: tuple[int, int, int] = (60, 500, 0)
+    PROFESSIONAL: tuple[int, int, int] = (250, 10_000, 1)
+    BUSINESS: tuple[int, int, int] = (500, 25_000, 1)
+    ENTERPRISE: tuple[int, int, int] = (750, 50_000, 1)
+
+
+def create_plans(plan_name: str) -> None:
     """
 
     :param plan_name:
     :return:
     """
-    base_plan = Plans(plan_id=create_id(size=UUID_LEN),
-                      plan_name=PlanNames.BASIC,
-                      charge_amount=ChargeAmounts.BASIC,
-                      description=PlanDescriptions.BASIC,
-                      resource_set=PlanResources.BASIC)
+
+    with get_session()() as session:
+        session.add(create_basic())
+        session.add(create_professional())
+        session.add(create_business())
+        session.add(create_enterprise())
+
+    return None
+
+
+def create_enterprise() -> Plans:
+    return Plans(plan_id=create_id(size=UUID_LEN),
+                 plan_name=PlanNames.ENTERPRISE,
+                 charge_amount=ChargeAmounts.ENTERPRISE,
+                 description=PlanDescriptions.ENTERPRISE,
+                 resource_set=PlanResources.ENTERPRISE,
+                 rate_limit=RateLimits.ENTERPRISE[0],
+                 plan_limit=RateLimits.ENTERPRISE[1],
+                 plan_limit_type=PlanType.soft_limit,
+                 rate_per_request=RateLimits.ENTERPRISE[2])
+
+
+def create_business() -> Plans:
+    return Plans(plan_id=create_id(size=UUID_LEN),
+                 plan_name=PlanNames.BUSINESS,
+                 charge_amount=ChargeAmounts.BUSINESS,
+                 description=PlanDescriptions.BUSINESS,
+                 resource_set=PlanResources.BUSINESS,
+                 rate_limit=RateLimits.BUSINESS[0],
+                 plan_limit=RateLimits.BUSINESS[1],
+                 plan_limit_type=PlanType.soft_limit,
+                 rate_per_request=RateLimits.BUSINESS[2])
+
+
+def create_professional() -> Plans:
+    return Plans(plan_id=create_id(size=UUID_LEN),
+                 plan_name=PlanNames.PROFESSIONAL,
+                 charge_amount=ChargeAmounts.PROFESSIONAL,
+                 description=PlanDescriptions.PROFESSIONAL,
+                 resource_set=PlanResources.PROFESSIONAL,
+                 rate_limit=RateLimits.PROFESSIONAL[0],
+                 plan_limit=RateLimits.PROFESSIONAL[1],
+                 plan_limit_type=PlanType.soft_limit,
+                 rate_per_request=RateLimits.PROFESSIONAL[2])
+
+
+def create_basic() -> Plans:
+    return Plans(plan_id=create_id(size=UUID_LEN),
+                 plan_name=PlanNames.BASIC,
+                 charge_amount=ChargeAmounts.BASIC,
+                 description=PlanDescriptions.BASIC,
+                 resource_set=PlanResources.BASIC,
+                 rate_limit=RateLimits.BASIC[0],
+                 plan_limit=RateLimits.BASIC[1],
+                 plan_limit_type=PlanType.hard_limit,
+                 rate_per_request=RateLimits.BASIC[2])

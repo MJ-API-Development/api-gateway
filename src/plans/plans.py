@@ -70,8 +70,8 @@ class Plans(Base):
     charge_amount: int = Column(Integer)  # Payment Amount for this plan in Cents
     description: str = Column(Text)
     _resource_str: str = Column(Text)
-    rate_limit: int = Column(Integer)
-    plan_limit: int = Column(Integer)
+    rate_limit: int = Column(Integer)  # Limit per Hour
+    plan_limit: int = Column(Integer)  # Monthly Limit
     plan_limit_type: PlanType = Column(String(10))  # Hard or Soft Limit
     rate_per_request: int = Column(Integer, default=0)  # in Cents
     subscriptions = relationship("Subscriptions", uselist=True, foreign_keys=[Subscriptions.plan_id])
