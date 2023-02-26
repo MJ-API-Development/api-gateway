@@ -1,49 +1,11 @@
+from typing import Self
+
 from numba import jit
 from sqlalchemy import Column, String, Text, Integer, Float, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 
 from src.apikeys.keys import Base, sessionType
 from src.const import UUID_LEN, NAME_LEN
-
-
-class Plans(Base):
-    __tablename__ = "plans"
-    plan_id: str = Column(String(UUID_LEN), primary_key=True, index=True)
-    plan_name: str = Column(String(NAME_LEN), index=True, unique=True)
-    charge_amount: int = Column(Integer)  # Payment Amount for this plan in Cents
-    description: str = Column(Text)
-    _resource_str: str = Column(Text)
-    rate_limit: int = Column(Integer)
-    plan_limit: int = Column(Integer)
-    plan_limit_type: int = Column(String(8))  # Hard or Soft Limit
-    rate_per_request: int = Column(Integer)  # in Cents
-
-    @property
-    def resource_set(self) -> set[str]:
-        return {res.lower() for res in self._resource_str.split(",")}
-
-    @resource_set.setter
-    def resource_set(self, rs_set: set[str]):
-        self._resource_str = ",".join(rs_set)
-
-    def to_dict(self) -> dict[str, str | set[str]]:
-        return {
-            "plan_id": self.plan_id,
-            "plan_name": self.plan_name,
-            "Amount": self.charge_amount,
-            "description": self.description,
-            "resources": self.resource_set,
-            "rate_limit": self.rate_limit,
-            "plan_limit": self.plan_limit
-        }
-
-    @jit
-    def resource_exist(self, resource_name: str) -> bool:
-        """
-
-        :param resource_name:
-        :return:
-        """
-        return resource_name in self.resource_set
 
 
 class Subscriptions(Base):
@@ -54,6 +16,16 @@ class Subscriptions(Base):
     time_subscribed: float = Column(Float)
     payment_day: str = Column(String(NAME_LEN))
     _is_active: bool = Column(Boolean)
+
+    def to_dict(self):
+        return {
+            "subscription_id": self.subscription_id,
+            "uuid": self.uuid,
+            "plan_id": self.plan_id,
+            "time_subscribed": self.time_subscribed,
+            "payment_day": self.payment_day,
+            "is_active": self._is_active
+        }
 
     async def is_active(self, session: sessionType):
         """
@@ -78,6 +50,60 @@ class Subscriptions(Base):
         """
         return session.query(Plans).filter(
             Plans.plan_id == self.plan_id).first().resource_exist(resource_name=resource_name)
+
+
+class Plans(Base):
+    __tablename__ = "plans"
+    plan_id: str = Column(String(UUID_LEN), primary_key=True, index=True)
+    plan_name: str = Column(String(NAME_LEN), index=True, unique=True)
+    charge_amount: int = Column(Integer)  # Payment Amount for this plan in Cents
+    description: str = Column(Text)
+    _resource_str: str = Column(Text)
+    rate_limit: int = Column(Integer)
+    plan_limit: int = Column(Integer)
+    plan_limit_type: int = Column(String(8))  # Hard or Soft Limit
+    rate_per_request: int = Column(Integer, default=0)  # in Cents
+    subscriptions = relationship("Subscriptions", uselist=True, foreign_keys=[Subscriptions.plan_id])
+
+    @property
+    def resource_set(self) -> set[str]:
+        return {res.lower() for res in self._resource_str.split(",")}
+
+    @resource_set.setter
+    def resource_set(self, rs_set: set[str]):
+        self._resource_str = ",".join(rs_set)
+
+    def to_dict(self) -> dict[str, str | int | set[str]]:
+        return {
+            "plan_id": self.plan_id,
+            "plan_name": self.plan_name,
+            "Amount": self.charge_amount,
+            "description": self.description,
+            "resources": self.resource_set,
+            "rate_limit": self.rate_limit,
+            "plan_limit": self.plan_limit,
+            "plan_limit_type": self.plan_limit_type,
+            "rate_per_request": self.rate_per_request,
+        }
+
+    @jit
+    def resource_exist(self, resource_name: str) -> bool:
+        """
+
+        :param resource_name:
+        :return:
+        """
+        return resource_name in self.resource_set
+
+    @classmethod
+    async def get_plan_by_plan_id(cls, plan_id: str, session: sessionType) -> Self:
+        """
+            given plan_id will return subscribed Plan
+        :param session:
+        :param plan_id:
+        :return:
+        """
+        return session.query(cls).filter(cls.plan_id == plan_id).first()
 
 
 class Payments(Base):
@@ -106,6 +132,20 @@ class Invoices(Base):
     invoice_from_date: float = Column(Float)
     invoice_to_date: float = Column(Float)
     time_issued: float = Column(Float)
+
+    def to_dict(self) -> dict[str, str | int | float]:
+        """
+
+        :return:
+        """
+        return {
+            "invoice_id": self.invoice_id,
+            "subscription_id": self.subscription_id,
+            "invoiced_amount": self.invoiced_amount,
+            "invoice_from_date": self.invoice_from_date,
+            "invoice_to_date": self.invoice_to_date,
+            "time_issued": self.time_issued
+        }
 
     def is_paid(self, session: sessionType) -> bool:
         """

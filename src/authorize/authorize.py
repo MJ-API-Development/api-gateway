@@ -6,7 +6,7 @@ from starlette import status
 
 from src.apikeys.keys import api_keys, cache_api_keys, get_session, ApiKeyModel
 from src.authorize.resources import get_resource_name
-from src.plans.plans import Subscriptions
+from src.plans.plans import Subscriptions, Plans
 from src.views_cache.cache import cached
 
 api_keys_lookup = api_keys.get
@@ -97,5 +97,9 @@ async def monthly_plan_limit(path_param: str, api_key: str) -> bool:
     """
     with get_session()() as session:
         client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
-        subscription: Subscriptions = client_api_model.subscription
+        subscription_instance: Subscriptions = client_api_model.subscription
         resource_name = await get_resource_name(path=path_param)
+        plan_instance: Plans = await Plans.get_plan_by_plan_id(plan_id=subscription_instance.plan_id, session=session)
+        
+
+
