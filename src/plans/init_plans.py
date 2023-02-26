@@ -199,10 +199,9 @@ class RateLimits(Enum):
     ENTERPRISE: tuple[int, int, int] = (750, 50_000, 1)
 
 
-def create_plans(plan_name: str) -> None:
+def create_plans() -> None:
     """
-
-    :param plan_name:
+        run once on setup
     :return:
     """
 
