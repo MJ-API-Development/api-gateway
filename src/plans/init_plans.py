@@ -211,6 +211,7 @@ def create_plans(plan_name: str) -> None:
         session.add(create_professional())
         session.add(create_business())
         session.add(create_enterprise())
+        session.commit()
 
     return None
 
