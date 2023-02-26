@@ -14,7 +14,6 @@ from src.utils.utils import create_id
 # Cache tp store API KEys
 api_keys: dict[str, dict[str, int]] = {}
 
-
 ONE_MINUTE = 60 * 60
 UUID_LEN: int = 16
 STR_LEN: int = 255
@@ -33,6 +32,22 @@ sessionType = Session
 
 def get_session():
     return sessionmaker(bind=engine)
+
+
+class Account(Base):
+    """
+        User Account ORM
+    """
+    __tablename__ = "accounts"
+    uuid: str = Column(String(UUID_LEN), primary_key=True, index=True)
+    api_key: str = Column(String(UUID_LEN), ForeignKey("eod_api_keys.api_key"))
+    first_name: str = Column(String(NAME_LEN), index=True)
+    second_name: str = Column(String(NAME_LEN), index=True)
+    surname: str = Column(String(NAME_LEN), index=True)
+    email: str = Column(String(EMAIL_LEN), index=True, unique=True)
+    cell: str = Column(String(CELL_LEN), index=True, unique=True)
+    password_hash: str = Column(String(STR_LEN), index=True)
+    is_admin: bool = Column(Boolean, default=False)
 
 
 # Define a Pydantic model for API Key validation
@@ -55,6 +70,7 @@ class ApiKeyModel(Base):
     rate_limit: int = Column(Integer)
     is_active: bool = Column(Boolean, default=True)
     subscription = relationship("Subscriptions", uselist=False, foreign_keys=[Subscriptions.uuid])
+    account = relationship("Account", uselist=False, foreign_keys=[Account.uuid])
 
     def to_dict(self) -> dict[str, str]:
         return {
