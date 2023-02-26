@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.apikeys.keys import cache_api_keys
-from src.authorize.authorize import auth_and_rate_limit, create_take_credit_method, process_credit_queue
+from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue
 from src.config import config_instance
 
 from src.requests import requester
@@ -130,7 +130,7 @@ async def startup_event():
 
 
 @app.api_route("/api/v1/{path:path}", methods=["GET"])
-@auth_and_rate_limit()
+@auth_and_rate_limit
 async def v1_gateway(request: Request, path: str):
     """
     NOTE: In order for the gateway server to work properly it needs at least 2 GIG or RAM
@@ -160,7 +160,8 @@ async def v1_gateway(request: Request, path: str):
     headers = {"Content-Type": "application/json"}
     content = response.json()
     status_code = response.status_code
-    await create_take_credit_method(api_key=api_key, path=path)
+    # if request is here it means the api request was authorized and valid
+    await create_take_credit_args(api_key=api_key, path=path)
     return JSONResponse(content=content, status_code=status_code, headers=headers)
 
 

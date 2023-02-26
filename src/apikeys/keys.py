@@ -14,6 +14,7 @@ from src.utils.utils import create_id
 # Cache tp store API KEys
 api_keys: dict[str, dict[str, int]] = {}
 
+
 ONE_MINUTE = 60 * 60
 UUID_LEN: int = 16
 STR_LEN: int = 255
@@ -23,15 +24,14 @@ CELL_LEN: int = 13
 API_KEY_LEN: int = 64
 
 DATABASE_URL = config_instance().DATABASE_SETTINGS.SQL_DB_URL
-CHAR_MAP = string.ascii_letters + string.digits
+engine = create_engine(DATABASE_URL)
+
 # Define a SQLAlchemy model for API Keys
 Base = declarative_base()
 sessionType = Session
 
 
 def get_session():
-    engine = create_engine(DATABASE_URL)
-    Base.metadata.create_all(engine)
     return sessionmaker(bind=engine)
 
 
