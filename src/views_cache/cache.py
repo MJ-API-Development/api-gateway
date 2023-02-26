@@ -212,3 +212,27 @@ def cached(func):
         return _data
 
     return wrapper
+
+
+def cached_ttl(ttl: int = 60 * 60 * 1):
+    def cached(func):
+        async def wrapper(*args, **kwargs):
+            new_kwargs = kwargs.copy()
+            for key, value in kwargs.items():
+                if key == 'session':
+                    # removing session from keys
+                    _ = new_kwargs.pop(key)
+
+            _key = create_key(method=func.__name__, kwargs=new_kwargs)
+            _data = mem_cache.get(_key)
+            if _data is None:
+                result = await func(*args, **kwargs)
+                if result:
+                    mem_cache.set(key=_key, value=_data, expiration_time=ttl)
+                    # redis_cache.set(key=_key, value=result, expiration_time=60*60*1)
+                return result
+            return _data
+
+        return wrapper
+
+    return cached
