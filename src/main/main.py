@@ -71,8 +71,7 @@ async def http_exception_handler(request, exc):
 
     return JSONResponse(
         status_code=exc.status_code,
-        content={"message": exc.detail},
-    )
+        content={"message": exc.detail})
 
 
 @app.exception_handler(NotAuthorized)
@@ -87,10 +86,7 @@ async def handle_not_authorized(request, exc):
     status_code: {exc.status_code}
     
     """)
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={exc.message}
-    )
+    return JSONResponse(status_code=exc.status_code, content={"message" : exc.message})
 
 
 @app.get("/test-error-handling")
