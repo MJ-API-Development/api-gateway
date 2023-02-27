@@ -1,12 +1,8 @@
-import string
-from typing import Self
+from __future__ import annotations
 
-from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session, relationship
-
-from src.config import config_instance
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
+from src.database.database_sessions import sessions, Base, sessionType
 from src.plans.plans import Subscriptions
 from src.utils.utils import create_id
 
@@ -21,22 +17,6 @@ NAME_LEN: int = 128
 EMAIL_LEN: int = 255
 CELL_LEN: int = 13
 API_KEY_LEN: int = 64
-
-DATABASE_URL = config_instance().DATABASE_SETTINGS.SQL_DB_URL
-engine = create_engine(DATABASE_URL)
-
-# Define a SQLAlchemy model for API Keys
-Base = declarative_base()
-sessionType = Session
-
-
-def get_session():
-    while True:
-        for session in [sessionmaker(bind=engine) for _ in range(50)]:
-            yield session()
-
-
-sessions = get_session()
 
 
 class Account(Base):
@@ -91,7 +71,7 @@ class ApiKeyModel(Base):
             "account": self.account}
 
     @classmethod
-    async def get_by_apikey(cls, api_key: str, session: sessionType) -> Self:
+    async def get_by_apikey(cls, api_key: str, session: sessionType) -> ApiKeyModel:
         """
         :param api_key:
         :param session:

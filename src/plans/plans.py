@@ -1,12 +1,12 @@
+from __future__ import annotations
 from enum import Enum
-from typing import Self
-
 from numba import jit
 from sqlalchemy import Column, String, Text, Integer, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 
-from src.apikeys.keys import Base, sessionType
+
 from src.const import UUID_LEN, NAME_LEN
+from src.database.database_sessions import sessionType, Base
 
 
 class Subscriptions(Base):
@@ -107,7 +107,7 @@ class Plans(Base):
         return resource_name in self.resource_set
 
     @classmethod
-    async def get_plan_by_plan_id(cls, plan_id: str, session: sessionType) -> Self:
+    async def get_plan_by_plan_id(cls, plan_id: str, session: sessionType) -> Plans:
         """
             given plan_id will return subscribed Plan
         :param session:

@@ -3,8 +3,9 @@
 """
 from enum import Enum
 
-from src.apikeys.keys import sessions
+
 from src.const import UUID_LEN
+from src.database.database_sessions import sessions
 from src.plans.plans import Plans, PlanType
 from src.utils.utils import create_id
 

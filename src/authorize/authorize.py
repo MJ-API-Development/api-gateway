@@ -5,8 +5,9 @@ from functools import wraps
 from fastapi import HTTPException
 from starlette import status
 
-from src.apikeys.keys import api_keys, cache_api_keys, get_session, ApiKeyModel, sessions
+from src.apikeys.keys import api_keys, cache_api_keys, ApiKeyModel
 from src.authorize.resources import get_resource_name, resource_name_request_size
+from src.database.database_sessions import sessions
 from src.plans.plans import Subscriptions, Plans
 from src.cache.cache import cached_ttl
 
@@ -101,8 +102,8 @@ async def process_credit_queue():
     :return:
     """
     while True:
-        args = take_credit_queue.pop()
-        if args:
+        if take_credit_queue:
+            args = take_credit_queue.pop()
             await take_credit_method(**args)
         await asyncio.sleep(5)
 
