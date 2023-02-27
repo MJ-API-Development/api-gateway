@@ -71,7 +71,7 @@ async def monthly_credit_available(api_key: str) -> bool:
             return not plan_instance.is_hard_limit()
         return True
 
-
+@jit
 async def create_take_credit_args(api_key: str, path: str):
     """
     **take_credit**
@@ -115,7 +115,7 @@ async def process_credit_queue():
             await take_credit_method(**args)
         await asyncio.sleep(5)
 
-@jit
+
 def auth_and_rate_limit(func):
     # noinspection PyTypeChecker
     @wraps(func)
