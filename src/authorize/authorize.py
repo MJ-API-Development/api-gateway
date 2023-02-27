@@ -3,6 +3,7 @@ import time
 from functools import wraps
 
 from fastapi import HTTPException, Request
+from numba import jit
 from starlette import status
 
 from src.apikeys.keys import api_keys, cache_api_keys, ApiKeyModel
@@ -114,7 +115,7 @@ async def process_credit_queue():
             await take_credit_method(**args)
         await asyncio.sleep(5)
 
-
+@jit
 def auth_and_rate_limit(func):
     # noinspection PyTypeChecker
     @wraps(func)
@@ -129,16 +130,15 @@ def auth_and_rate_limit(func):
         path = f"/api/v1/{path}"
 
         if api_key is None:
-            mess: str = """Provide an API Key in order to access this resources, 
-            please subscribe to our services to get one if you already have an API Key 
-            please read our docs for instructions"""
+            mess: str = "Provide an API Key in order to access this resources, please subscribe to our services to " \
+                        "get one if you already have an API Key please read our docs for instructions, on using our API"
             raise NotAuthorized(message=mess)
 
         if api_key not in api_keys:
             cache_api_keys_func()  # Update api_keys if the key is not found
             if api_key not in api_keys:
                 # user not authorized to access this routes
-                mess = 'Invalid API Key, or Cancelled API Key please subscribe to get a valid API Key'
+                mess = "EOD Stock API - Invalid API Key, or Cancelled API Key please subscribe to get a valid API Key"
                 raise NotAuthorized(message=mess)
 
         now = time.time()
@@ -150,19 +150,20 @@ def auth_and_rate_limit(func):
 
         if api_keys_lookup(api_key, {}).get('requests_count') >= limit:
             # TODO consider returning a JSON String with data on the rate rate_limit and how long to wait
+            mess: str = "EOD Stock API - rate limit exceeded, please upgrade your plan to better take advantage " \
+                        "of extra resources available on better plans."
             raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                                detail='Rate Limit exceeded')
+                                detail=mess)
 
         # verifying if user can access this resource
         if not await is_resource_authorized(path_param=path, api_key=api_key):
-            raise NotAuthorized(message="Request not Authorized, Either you are not subscribed to any plan or you need "
-                                        "to upgrade your subscription")
+            mess: str = "EOD Stock API - Request not Authorized, Either you are not subscribed to any plan or you " \
+                        "need to upgrade your subscription"
+            raise NotAuthorized(message=mess)
 
         if not await monthly_credit_available(api_key=api_key):
-            mess: str = """
-                Your Monthly plan request limit has been reached.
-                 please upgrade your plan 
-            """
+            mess: str = f"EOD Stock API - Your Monthly plan request limit has been reached. " \
+                        f"please upgrade your plan, to take advantage of our soft limits"
             raise NotAuthorized(message=mess)
 
         # updating number of requests and timestamp
