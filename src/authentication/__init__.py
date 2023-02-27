@@ -1,7 +1,7 @@
 from functools import wraps
 from fastapi import requests
 
-from src.apikeys.keys import ApiKeyModel, get_session
+from src.apikeys.keys import ApiKeyModel, sessions
 from src.cache.cache import cached_ttl
 
 
@@ -15,7 +15,7 @@ def authenticate_admin(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         api_key = kwargs.get("x-api-key")
-        with get_session()() as session:
+        with next(sessions) as session:
             api_keys_model = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
             if api_keys_model.account.is_admin:
                 return await func(*args, **kwargs)

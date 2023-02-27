@@ -139,7 +139,6 @@ class Payments(Base):
 
     def to_dict(self) -> dict[str, str | int | float]:
         """
-
         :return:
         """
         return {

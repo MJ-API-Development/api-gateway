@@ -5,7 +5,7 @@ from functools import wraps
 from fastapi import HTTPException
 from starlette import status
 
-from src.apikeys.keys import api_keys, cache_api_keys, get_session, ApiKeyModel
+from src.apikeys.keys import api_keys, cache_api_keys, get_session, ApiKeyModel, sessions
 from src.authorize.resources import get_resource_name, resource_name_request_size
 from src.plans.plans import Subscriptions, Plans
 from src.cache.cache import cached_ttl
@@ -35,7 +35,7 @@ async def is_resource_authorized(path_param: str, api_key: str) -> bool:
     :param api_key:
     :return: True if Authorized
     """
-    with get_session()() as session:
+    with next(sessions) as session:
         client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
         subscription: Subscriptions = client_api_model.subscription
         is_active = await subscription.is_active(session=session)
@@ -53,7 +53,7 @@ async def monthly_credit_available(api_key: str) -> bool:
     :return: True if credit is available
     """
     # Need to speed this function up considerably
-    with get_session()() as session:
+    with next(sessions) as session:
         client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
         subscription_instance: Subscriptions = client_api_model.subscription
         plan_instance: Plans = await Plans.get_plan_by_plan_id(plan_id=subscription_instance.plan_id, session=session)
@@ -84,7 +84,7 @@ async def take_credit_method(api_key: str, request_credit: int):
     :return: None
     """
     # TODO need to speed this up considerably
-    with get_session()() as session:
+    with next(sessions) as session:
         client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
         subscription_instance: Subscriptions = client_api_model.subscription
         subscription_instance.api_requests_balance -= request_credit
