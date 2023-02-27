@@ -1,6 +1,6 @@
 import httpx
 from src.config import config_instance
-from src.views_cache.cache import cached
+from src.cache.cache import cached
 
 # Use the connection pool limits in the AsyncClient
 async_client = httpx.AsyncClient(http2=True)
