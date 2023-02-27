@@ -4,9 +4,10 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.apikeys.keys import cache_api_keys
+from src.apikeys.keys import cache_api_keys, ApiKeyModel
 from src.authentication import authenticate_admin
-from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue
+from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized
+
 from src.config import config_instance
 from src.plans.init_plans import create_plans
 
@@ -74,6 +75,24 @@ async def http_exception_handler(request, exc):
     )
 
 
+@app.exception_handler(NotAuthorized)
+async def handle_not_authorized(request, exc):
+    app_logger.error(f"""
+    Not Authorized Error
+    
+    Debug Information
+    request_url: {request.url}
+    request_method: {request.method}
+    error_detail: {exc.message}
+    status_code: {exc.status_code}
+    
+    """)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={exc.message}
+    )
+
+
 @app.exception_handler(Exception)
 async def generic_exception_handler(request, exc):
     """Will display A  simple message for all other errors"""
@@ -84,12 +103,12 @@ async def generic_exception_handler(request, exc):
         request_url: {request.url}
         request_method: {request.method}
         
-        error_detail: {str(exc)}
+        error_detail: {exc.message}
         status_code: {exc.status_code}
      """)
     return JSONResponse(
-        status_code=500,
-        content={"message": "Internal server error"}, )
+        status_code=exc.status_code,
+        content={"message": exc.message}, )
 
 
 @app.get("/test-error-handling")
@@ -98,17 +117,18 @@ async def test_error_handling():
     return response.json()
 
 
-@app.post("/_bootstrap")
+@app.post("/_bootstrap/create-plans")
 @authenticate_admin
-async def _create_plans():
+async def _create_plans(request: Request):
     """
         this should only be run once by admin
         afterwards plans can be updated
     :return:
     """
-    response = await create_plans()
+    plans_response = await create_plans()
+
     status_code = 201
-    content = dict(payload=response, status=True)
+    content = dict(payload=plans_response, status=True)
     headers = {"Content-Type": "application/json"}
     return JSONResponse(content=content, status_code=status_code, headers=headers)
 
@@ -122,8 +142,8 @@ async def startup_event():
             cache_api_keys()
             app_logger.info("Done Pre Fetching API Keys")
 
-            # wait for 3 minutes then update API Keys records
-            await asyncio.sleep(60 * 3)
+            # wait for 15 minutes then update API Keys records
+            await asyncio.sleep(60 * 15)
 
     async def prefetch():
         """
@@ -176,5 +196,6 @@ async def v1_gateway(request: Request, path: str):
     content = response.json()
     status_code = response.status_code
     # if request is here it means the api request was authorized and valid
-    await create_take_credit_args(api_key=api_key, path=path)
+    _path = f"/api/v1/{path}"
+    await create_take_credit_args(api_key=api_key, path=_path)
     return JSONResponse(content=content, status_code=status_code, headers=headers)

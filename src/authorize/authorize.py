@@ -2,7 +2,7 @@ import asyncio
 import time
 from functools import wraps
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from starlette import status
 
 from src.apikeys.keys import api_keys, cache_api_keys, ApiKeyModel
@@ -10,6 +10,7 @@ from src.authorize.resources import get_resource_name, resource_name_request_siz
 from src.database.database_sessions import sessions
 from src.plans.plans import Subscriptions, Plans
 from src.cache.cache import cached_ttl
+from src.utils.my_logger import init_logger
 
 api_keys_lookup = api_keys.get
 cache_api_keys_func = cache_api_keys
@@ -17,12 +18,14 @@ cache_api_keys_func = cache_api_keys
 take_credit_queue = []
 
 ONE_DAY: int = 60 * 60 * 24
+auth_logger = init_logger("auth-logger")
 
 
 class NotAuthorized(Exception):
     def __init__(self, message):
         super().__init__(message)
         self.status_code = 403
+        self.message = message
 
 
 @cached_ttl(ttl=ONE_DAY)
@@ -39,6 +42,8 @@ async def is_resource_authorized(path_param: str, api_key: str) -> bool:
     with next(sessions) as session:
         client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
         subscription: Subscriptions = client_api_model.subscription
+        if not subscription:
+            return False
         is_active = await subscription.is_active(session=session)
         resource_name = await get_resource_name(path=path_param)
         can_access_resource = await subscription.can_access_resource(resource_name=resource_name, session=session)
@@ -57,6 +62,8 @@ async def monthly_credit_available(api_key: str) -> bool:
     with next(sessions) as session:
         client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
         subscription_instance: Subscriptions = client_api_model.subscription
+        if not subscription_instance:
+            return False
         plan_instance: Plans = await Plans.get_plan_by_plan_id(plan_id=subscription_instance.plan_id, session=session)
         if plan_instance.plan_limit <= subscription_instance.api_requests_balance:
             # if hard_limit is true then monthly credit is not available
@@ -112,44 +119,60 @@ def auth_and_rate_limit(func):
     # noinspection PyTypeChecker
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        api_key = kwargs.get('api_key')
-        path = kwargs.get('path')
-        if api_key is not None:
+        request: Request = kwargs.get('request')
+        api_key = request.query_params.get('api_key')
+        path = request.path_params.get('path')
+        if not path:
+            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                                detail='Please Provide a Valid path to the resource you want to access')
+
+        path = f"/api/v1/{path}"
+
+        if api_key is None:
+            mess: str = """Provide an API Key in order to access this resources, 
+            please subscribe to our services to get one if you already have an API Key 
+            please read our docs for instructions"""
+            raise NotAuthorized(message=mess)
+
+        if api_key not in api_keys:
+            cache_api_keys_func()  # Update api_keys if the key is not found
             if api_key not in api_keys:
-                cache_api_keys_func()  # Update api_keys if the key is not found
-                if api_key not in api_keys:
-                    # user not authorized to access this routes
-                    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid API Key')
+                # user not authorized to access this routes
+                mess = 'Invalid API Key, or Cancelled API Key please subscribe to get a valid API Key'
+                raise NotAuthorized(message=mess)
 
-            now = time.time()
-            duration: int = api_keys_lookup(api_key, {}).get('duration')
-            limit: int = api_keys_lookup(api_key, {}).get('rate_limit')
+        now = time.time()
+        duration: int = api_keys_lookup(api_key, {}).get('duration')
+        limit: int = api_keys_lookup(api_key, {}).get('rate_limit')
 
-            if now - api_keys_lookup(api_key, {}).get('last_request_timestamp') > duration:
-                api_keys[api_key]['requests_count'] = 0
+        if now - api_keys_lookup(api_key, {}).get('last_request_timestamp') > duration:
+            api_keys[api_key]['requests_count'] = 0
 
-            if api_keys_lookup(api_key, {}).get('requests_count') >= limit:
-                # TODO consider returning a JSON String with data on the rate rate_limit and how long to wait
-                raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                                    detail='Rate rate_limit exceeded')
-
-            # updating number of requests and timestamp
-            api_keys[api_key]['requests_count'] += 1
-            # noinspection PyTypeChecker
-            api_keys[api_key]['last_request_timestamp'] = now
+        if api_keys_lookup(api_key, {}).get('requests_count') >= limit:
+            # TODO consider returning a JSON String with data on the rate rate_limit and how long to wait
+            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                                detail='Rate Limit exceeded')
 
         # verifying if user can access this resource
-        if await is_resource_authorized(path_param=path, api_key=api_key):
-            if await monthly_credit_available(api_key=api_key):
-                # will execute the api if monthly credit is available or monthly limit
-                # is a soft limit, in which case the client will incur extra charges
-                return await func(*args, **kwargs)
+        if not await is_resource_authorized(path_param=path, api_key=api_key):
+            raise NotAuthorized(message="Request not Authorized, Either you are not subscribed to any plan or you need "
+                                        "to upgrade your subscription")
+
+        if not await monthly_credit_available(api_key=api_key):
             mess: str = """
                 Your Monthly plan request limit has been reached.
                  please upgrade your plan 
             """
             raise NotAuthorized(message=mess)
 
-        raise NotAuthorized(message="Request not Authorized for this plan")
+        # updating number of requests and timestamp
+        api_keys[api_key]['requests_count'] += 1
+        # noinspection PyTypeChecker
+        api_keys[api_key]['last_request_timestamp'] = now
+
+        # will execute the api if monthly credit is available or monthly limit
+        # is a soft limit, in which case the client will incur extra charges
+
+        return await func(*args, **kwargs)
 
     return wrapper

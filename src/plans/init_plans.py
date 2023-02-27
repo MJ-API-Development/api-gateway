@@ -1,38 +1,46 @@
 """
 
 """
+from dataclasses import field
 from enum import Enum
-
-
+from pydantic.dataclasses import dataclass
 from src.const import UUID_LEN
 from src.database.database_sessions import sessions
 from src.plans.plans import Plans, PlanType
 from src.utils.utils import create_id
 
 
-class PlanNames(Enum):
+@dataclass(frozen=True)
+class PlanNames:
     BASIC: str = "BASIC"
     PROFESSIONAL: str = "PROFESSIONAL"
     BUSINESS: str = "BUSINESS"
     ENTERPRISE: str = "ENTERPRISE"
 
 
-class ChargeAmounts(Enum):
+@dataclass(frozen=True)
+class ChargeAmounts:
     BASIC: int = 0
     PROFESSIONAL: int = 1999
     BUSINESS: int = 4999
     ENTERPRISE: int = 9999
 
 
-class PlanDescriptions(Enum):
+@dataclass(frozen=True)
+class PlanDescriptions:
     BASIC: str = "Entry Level plan for development purposes"
     PROFESSIONAL: str = "For a Professional project with modest traffic you can use our professional plan"
     BUSINESS: str = "Preferred plan for a business solutions"
     ENTERPRISE: str = "Enterprise level solution intended for high availability and very low latency"
 
 
-class PlanResources(Enum):
-    BASIC: set[str] = {
+def get_basic_resources() -> set[str]:
+    """
+        should have an options of looking into the database to determine if overriding resource parameters
+        are not stored
+    :return:
+    """
+    return {
         "stocks.code",
         "stocks.options",
         "exchange.complete",
@@ -43,7 +51,14 @@ class PlanResources(Enum):
         "news.articles.stock_code"
     }
 
-    PROFESSIONAL: set[str] = {
+
+def get_professional_resources() -> set[str]:
+    """
+        should add an ability to retrieve professional resources from
+        the database
+    :return:
+    """
+    return {
         "stocks.code",
         "stocks.options",
         "stocks.currency",
@@ -82,7 +97,9 @@ class PlanResources(Enum):
         "sentiment_analysis.stock_code"
     }
 
-    BUSINESS: set[str] = {
+
+def get_business_resources():
+    return {
         "stocks.complete",
         "stocks.code",
         "stocks.options",
@@ -137,7 +154,9 @@ class PlanResources(Enum):
         "sentiment_analysis.tweeter.stock_code"
     }
 
-    ENTERPRISE: set[str] = {
+
+def get_enterprise_resources():
+    return {
         "stocks.complete",
         "stocks.code",
         "stocks.options",
@@ -193,7 +212,16 @@ class PlanResources(Enum):
     }
 
 
-class RateLimits(Enum):
+@dataclass(frozen=True)
+class PlanResources:
+    BASIC: set[str] = field(default_factory=lambda: get_basic_resources())
+    PROFESSIONAL: set[str] = field(default_factory=lambda: get_professional_resources())
+    BUSINESS: set[str] = field(default_factory=lambda: get_business_resources())
+    ENTERPRISE: set[str] = field(default_factory=lambda: get_enterprise_resources())
+
+
+@dataclass(frozen=True)
+class RateLimits:
     # TODO Propagate the plan limits to the APIModel & Subscriptions
     BASIC: tuple[int, int, int] = (30, 1_500, 0)
     PROFESSIONAL: tuple[int, int, int] = (250, 10_000, 1)
@@ -218,48 +246,52 @@ async def create_plans() -> None:
 
 
 def create_enterprise() -> Plans:
+    rate_limit, plan_limit, rate_per_request = RateLimits.ENTERPRISE
     return Plans(plan_id=create_id(size=UUID_LEN),
                  plan_name=PlanNames.ENTERPRISE,
                  charge_amount=ChargeAmounts.ENTERPRISE,
                  description=PlanDescriptions.ENTERPRISE,
-                 resource_set=PlanResources.ENTERPRISE,
-                 rate_limit=RateLimits.ENTERPRISE[0],
-                 plan_limit=RateLimits.ENTERPRISE[1],
+                 resource_set=PlanResources().ENTERPRISE,
+                 rate_limit=rate_limit,
+                 plan_limit=plan_limit,
                  plan_limit_type=PlanType.soft_limit,
-                 rate_per_request=RateLimits.ENTERPRISE[2])
+                 rate_per_request=rate_per_request)
 
 
 def create_business() -> Plans:
+    rate_limit, plan_limit, rate_per_request = RateLimits.BUSINESS
     return Plans(plan_id=create_id(size=UUID_LEN),
                  plan_name=PlanNames.BUSINESS,
                  charge_amount=ChargeAmounts.BUSINESS,
                  description=PlanDescriptions.BUSINESS,
-                 resource_set=PlanResources.BUSINESS,
-                 rate_limit=RateLimits.BUSINESS[0],
-                 plan_limit=RateLimits.BUSINESS[1],
+                 resource_set=PlanResources().BUSINESS,
+                 rate_limit=rate_limit,
+                 plan_limit=plan_limit,
                  plan_limit_type=PlanType.soft_limit,
-                 rate_per_request=RateLimits.BUSINESS[2])
+                 rate_per_request=rate_per_request)
 
 
 def create_professional() -> Plans:
+    rate_limit, plan_limit, rate_per_request = RateLimits.PROFESSIONAL
     return Plans(plan_id=create_id(size=UUID_LEN),
                  plan_name=PlanNames.PROFESSIONAL,
                  charge_amount=ChargeAmounts.PROFESSIONAL,
                  description=PlanDescriptions.PROFESSIONAL,
-                 resource_set=PlanResources.PROFESSIONAL,
-                 rate_limit=RateLimits.PROFESSIONAL[0],
-                 plan_limit=RateLimits.PROFESSIONAL[1],
+                 resource_set=PlanResources().PROFESSIONAL,
+                 rate_limit=rate_limit,
+                 plan_limit=plan_limit,
                  plan_limit_type=PlanType.soft_limit,
-                 rate_per_request=RateLimits.PROFESSIONAL[2])
+                 rate_per_request=rate_per_request)
 
 
 def create_basic() -> Plans:
+    rate_limit, plan_limit, rate_per_request = RateLimits.BASIC
     return Plans(plan_id=create_id(size=UUID_LEN),
                  plan_name=PlanNames.BASIC,
                  charge_amount=ChargeAmounts.BASIC,
                  description=PlanDescriptions.BASIC,
-                 resource_set=PlanResources.BASIC,
-                 rate_limit=RateLimits.BASIC[0],
-                 plan_limit=RateLimits.BASIC[1],
-                 plan_limit_type=PlanType.hard_limit,
-                 rate_per_request=RateLimits.BASIC[2])
+                 resource_set=PlanResources().BASIC,
+                 rate_limit=rate_limit,
+                 plan_limit=plan_limit,
+                 rate_per_request=rate_per_request,
+                 plan_limit_type=PlanType.hard_limit)

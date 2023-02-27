@@ -1,12 +1,11 @@
 from __future__ import annotations
 from enum import Enum
 from numba import jit
-from sqlalchemy import Column, String, Text, Integer, Float, Boolean, ForeignKey
+from sqlalchemy import Column, String, Text, Integer, Float, Boolean, ForeignKey, inspect
 from sqlalchemy.orm import relationship
 
-
 from src.const import UUID_LEN, NAME_LEN
-from src.database.database_sessions import sessionType, Base
+from src.database.database_sessions import sessionType, Base, engine
 
 
 class Subscriptions(Base):
@@ -18,6 +17,11 @@ class Subscriptions(Base):
     payment_day: str = Column(String(NAME_LEN))
     _is_active: bool = Column(Boolean)
     api_requests_balance: int = Column(Integer)
+
+    @classmethod
+    def create_if_not_exists(cls):
+        if not inspect(engine).has_table(cls.__tablename__):
+            Base.metadata.create_all(bind=engine)
 
     def to_dict(self):
         return {
@@ -74,7 +78,13 @@ class Plans(Base):
     plan_limit: int = Column(Integer)  # Monthly Limit
     plan_limit_type: PlanType = Column(String(10))  # Hard or Soft Limit
     rate_per_request: int = Column(Integer, default=0)  # in Cents
+    is_visible: bool = Column(Boolean, default=True)  # Only visible plans are shown in the interface
     subscriptions = relationship("Subscriptions", uselist=True, foreign_keys=[Subscriptions.plan_id])
+
+    @classmethod
+    def create_if_not_exists(cls):
+        if not inspect(engine).has_table(cls.__tablename__):
+            Base.metadata.create_all(bind=engine)
 
     @property
     def resource_set(self) -> set[str]:
@@ -137,6 +147,11 @@ class Payments(Base):
     is_success: bool = Column(Boolean)
     time_paid: float = Column(Float)
 
+    @classmethod
+    def create_if_not_exists(cls):
+        if not inspect(engine).has_table(cls.__tablename__):
+            Base.metadata.create_all(bind=engine)
+
     def to_dict(self) -> dict[str, str | int | float]:
         """
         :return:
@@ -161,6 +176,11 @@ class Invoices(Base):
     invoice_to_date: float = Column(Float)
     time_issued: float = Column(Float)
 
+    @classmethod
+    def create_if_not_exists(cls):
+        if not inspect(engine).has_table(cls.__tablename__):
+            Base.metadata.create_all(bind=engine)
+
     def to_dict(self) -> dict[str, str | int | float]:
         """
         :return:
@@ -182,3 +202,9 @@ class Invoices(Base):
         """
         return session.query(Payments).filter(Payments.invoice_id == self.invoice_id).filter(
             Payments.payment_amount >= self.invoiced_amount).first() is not None
+
+
+Subscriptions.create_if_not_exists()
+Plans.create_if_not_exists()
+Payments.create_if_not_exists()
+Invoices.create_if_not_exists()

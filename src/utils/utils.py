@@ -43,7 +43,7 @@ def _retry(delay: int = 3, exception: Exception = None):
 
 # Creates an ID for use as a unique ID
 # noinspection PyArgumentList
-@jit
+@jit(forceobj=True)
 def create_id(size: int = 16, chars: str = _char_set) -> str:
     """
         **create_id**
@@ -53,9 +53,10 @@ def create_id(size: int = 16, chars: str = _char_set) -> str:
     :param chars: character set to create Unique identifier from leave as default
     :return: uuid -> randomly generated id
     """
-    return ''.join(random.choices(chars, K=size))
+    return ''.join(random.choices(chars, k=size))
 
 
+@jit(forceobj=True)
 def camel_to_snake(name: str) -> str:
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()

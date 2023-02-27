@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
+
 import pymysql
 import sqlalchemy
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, inspect
 from sqlalchemy.orm import relationship
-from src.database.database_sessions import sessions, Base, sessionType
+from src.database.database_sessions import sessions, Base, sessionType, engine
 from src.plans.plans import Subscriptions
 from src.utils.utils import create_id
 
@@ -47,6 +49,25 @@ class Account(Base):
             "is_admin": self.is_admin
         }
 
+    @classmethod
+    def create_if_not_exists(cls):
+        if not inspect(engine).has_table(cls.__tablename__):
+            Base.metadata.create_all(bind=engine)
+
+    @property
+    def password(self) -> str:
+        """
+        Raises an AttributeError if someone tries to get the password directly
+        """
+        return self.password_hash
+
+    @password.setter
+    def password(self, plaintext_password: str) -> None:
+        """
+        Hashes and sets the user's password
+        """
+        self.password_hash = hashlib.sha256(plaintext_password.encode()).hexdigest()
+
 
 class ApiKeyModel(Base):
     """
@@ -60,6 +81,11 @@ class ApiKeyModel(Base):
     is_active: bool = Column(Boolean, default=True)
     subscription = relationship("Subscriptions", uselist=False, foreign_keys=[Subscriptions.uuid])
     account = relationship("Account", uselist=False, foreign_keys=[Account.api_key])
+
+    @classmethod
+    def create_if_not_exists(cls):
+        if not inspect(engine).has_table(cls.__tablename__):
+            Base.metadata.create_all(bind=engine)
 
     def to_dict(self) -> dict[str, str]:
         return {
@@ -98,14 +124,33 @@ def cache_api_keys():
 
 def create_admin_key():
     with next(sessions) as session:
-        api_key = ApiKeyModel(uuid=create_id(size=UUID_LEN),
-                              api_key=create_id(size=UUID_LEN),
-                              subscription_id=create_id(size=UUID_LEN),
-                              duration=ONE_MINUTE,
-                              limit=30, is_active=True)
+        _uuid = create_id(size=UUID_LEN)
+        _api_key = create_id(size=UUID_LEN)
+        first_name = "John"
+        second_name = "Peters"
+        surname = "Smith"
+        email = "info@eod-stock-api.site"
+        cell = "0711863234"
+        is_admin = True
+        admin_user = Account(uuid=_uuid, api_key=_api_key, first_name=first_name,
+                             second_name=second_name, surname=surname, email=email,
+                             cell=cell, is_admin=is_admin, password="MobiusCrypt5627084@")
+
+        api_key = ApiKeyModel(uuid=_uuid,
+                              api_key=_api_key,
+                              duration=ONE_MINUTE * 60,
+                              rate_limit=30,
+                              is_active=True)
         try:
+            session.add(admin_user)
+            session.commit()
             session.add(api_key)
             session.commit()
         except pymysql.err.OperationalError as e:
             # TODO log errors
             pass
+
+
+ApiKeyModel.create_if_not_exists()
+# create_admin_key()
+Account.create_if_not_exists()
