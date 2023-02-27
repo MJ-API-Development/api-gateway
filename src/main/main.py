@@ -155,7 +155,7 @@ async def v1_gateway(request: Request, path: str):
     api_server_counter = (api_server_counter + 1) % len(api_server_urls)
     api_url = f'{api_server_url}/api/v1/{path}'
     api_key: dict = request.path_params.get('api_key')
-
+    app_logger.info(f"API URL : {api_url}" )
     response = await requester(api_url)
 
     # creating response

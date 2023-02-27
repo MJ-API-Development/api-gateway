@@ -123,15 +123,13 @@ def auth_and_rate_limit(func):
     # noinspection PyTypeChecker
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        request: Request = kwargs.get('request')
-        api_key = request.query_params.get('api_key')
-        path = request.path_params.get('path')
+        api_key, path = await return_kwargs(kwargs)
         if not path:
             raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                                 detail='Please Provide a Valid path to the resource you want to access')
 
         path = f"/api/v1/{path}"
-        await create_take_credit_args(api_key=api_key, path=path)
+        auth_logger.info(f"Request Path: {path}")
         if api_key is None:
             mess: str = "Provide an API Key in order to access this resources, please subscribe to our services to " \
                         "get one if you already have an API Key please read our docs for instructions, on using our API"
@@ -178,5 +176,11 @@ def auth_and_rate_limit(func):
         # is a soft limit, in which case the client will incur extra charges
 
         return await func(*args, **kwargs)
+
+    async def return_kwargs(kwargs):
+        request: Request = kwargs.get('request')
+        api_key = request.query_params.get('api_key')
+        path = kwargs.get('path')
+        return api_key, path
 
     return wrapper
