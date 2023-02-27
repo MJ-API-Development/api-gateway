@@ -93,24 +93,6 @@ async def handle_not_authorized(request, exc):
     )
 
 
-@app.exception_handler(Exception)
-async def generic_exception_handler(request, exc):
-    """Will display A  simple message for all other errors"""
-    app_logger.error(msg=f"""
-    Server Exception Occurred
-    Debug Information
-
-        request_url: {request.url}
-        request_method: {request.method}
-        
-        error_detail: {exc.message}
-        status_code: {exc.status_code}
-     """)
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"message": exc.message}, )
-
-
 @app.get("/test-error-handling")
 async def test_error_handling():
     response = await requester("https://example.com/non-existent-url")
