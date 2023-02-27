@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pymysql
+import sqlalchemy
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from src.database.database_sessions import sessions, Base, sessionType
@@ -57,7 +59,7 @@ class ApiKeyModel(Base):
     rate_limit: int = Column(Integer)
     is_active: bool = Column(Boolean, default=True)
     subscription = relationship("Subscriptions", uselist=False, foreign_keys=[Subscriptions.uuid])
-    account = relationship("Account", uselist=False, foreign_keys=[Account.uuid])
+    account = relationship("Account", uselist=False, foreign_keys=[Account.api_key])
 
     def to_dict(self) -> dict[str, str]:
         return {
@@ -82,11 +84,16 @@ class ApiKeyModel(Base):
 
 def cache_api_keys():
     with next(sessions) as session:
-        db_keys = session.query(ApiKeyModel).all()
-        api_keys.update({db_key.api_key: {'requests_count': 0,
-                                          'last_request_timestamp': 0,
-                                          'duration': db_key.duration,
-                                          'rate_limit': db_key.rate_limit} for db_key in db_keys})
+        try:
+            db_keys = session.query(ApiKeyModel).all()
+            api_keys.update({db_key.api_key: {'requests_count': 0,
+                                              'last_request_timestamp': 0,
+                                              'duration': db_key.duration,
+                                              'rate_limit': db_key.rate_limit} for db_key in db_keys})
+
+        except pymysql.err.OperationalError as e:
+            # TODO log errors
+            pass
 
 
 def create_admin_key():
@@ -96,5 +103,9 @@ def create_admin_key():
                               subscription_id=create_id(size=UUID_LEN),
                               duration=ONE_MINUTE,
                               limit=30, is_active=True)
-        session.add(api_key)
-        session.commit()
+        try:
+            session.add(api_key)
+            session.commit()
+        except pymysql.err.OperationalError as e:
+            # TODO log errors
+            pass

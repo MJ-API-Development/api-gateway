@@ -174,7 +174,6 @@ class Cache:
         self._cache = {}
 
 
-@functools.cache
 def create_key(method: str, kwargs: dict[str, str | int]) -> str:
     """
         used to create keys for cache redis handler
