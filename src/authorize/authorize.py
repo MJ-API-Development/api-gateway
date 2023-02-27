@@ -71,7 +71,8 @@ async def monthly_credit_available(api_key: str) -> bool:
             return not plan_instance.is_hard_limit()
         return True
 
-@jit
+
+@cached_ttl(ttl=ONE_DAY)
 async def create_take_credit_args(api_key: str, path: str):
     """
     **take_credit**
@@ -96,10 +97,12 @@ async def take_credit_method(api_key: str, request_credit: int):
     with next(sessions) as session:
         client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
         subscription_instance: Subscriptions = client_api_model.subscription
-        subscription_instance.api_requests_balance -= request_credit
-        # The Purpose here is to update the subscription model so it reflects the most
-        # recent api_requests_balance
-        session.commit(subscription_instance)
+        if subscription_instance:
+            subscription_instance.api_requests_balance -= request_credit
+            # The Purpose here is to update the subscription model so it reflects the most
+            # recent api_requests_balance
+            session.commit(subscription_instance)
+        # Log something here its an error if execution comes and user has no subscription
 
 
 async def process_credit_queue():
@@ -128,7 +131,7 @@ def auth_and_rate_limit(func):
                                 detail='Please Provide a Valid path to the resource you want to access')
 
         path = f"/api/v1/{path}"
-
+        await create_take_credit_args(api_key=api_key, path=path)
         if api_key is None:
             mess: str = "Provide an API Key in order to access this resources, please subscribe to our services to " \
                         "get one if you already have an API Key please read our docs for instructions, on using our API"

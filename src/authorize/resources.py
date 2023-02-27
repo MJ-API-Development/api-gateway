@@ -1,3 +1,5 @@
+from numba import jit
+
 from src.cache.cache import cached, cached_ttl
 
 ONE_DAY = 60 * 60 * 24
@@ -58,6 +60,7 @@ resource_paths: dict[str, str] = {
     "sentiment_analysis.tweeter.stock_code": "/api/v1/sentiment/tweet/stock/"}
 
 
+
 def path_to_resource() -> dict[str, str]:
     """
         reverses the resource to path dictionary
@@ -69,6 +72,7 @@ def path_to_resource() -> dict[str, str]:
     for key, value in resource_paths.items():
         _dict.update({value: key})
     return _dict
+
 
 
 async def get_resource_name(path: str) -> str:
