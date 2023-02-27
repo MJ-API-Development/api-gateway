@@ -3,6 +3,7 @@ from enum import Enum
 from numba import jit
 from sqlalchemy import Column, String, Text, Integer, Float, Boolean, ForeignKey, inspect
 from sqlalchemy.orm import relationship
+from typing_extensions import Self
 
 from src.const import UUID_LEN, NAME_LEN
 from src.database.database_sessions import sessionType, Base, engine
@@ -15,7 +16,7 @@ class Subscriptions(Base):
     plan_id: str = Column(String(UUID_LEN), ForeignKey("plans.plan_id"))
     time_subscribed: float = Column(Float)
     payment_day: str = Column(String(NAME_LEN))
-    _is_active: bool = Column(Boolean)
+    _is_active: bool = Column(Boolean, default=False)
     api_requests_balance: int = Column(Integer)
 
     @classmethod
@@ -23,7 +24,7 @@ class Subscriptions(Base):
         if not inspect(engine).has_table(cls.__tablename__):
             Base.metadata.create_all(bind=engine)
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, str | float| int | bool]:
         return {
             "subscription_id": self.subscription_id,
             "uuid": self.uuid,
@@ -34,7 +35,7 @@ class Subscriptions(Base):
             "api_requests_balance": self.api_requests_balance
         }
 
-    async def is_active(self, session: sessionType):
+    async def is_active(self, session: sessionType) -> bool:
         """
 
             Subscription is Active if _is_active is True, and plan fully paid
@@ -42,10 +43,8 @@ class Subscriptions(Base):
         :return:
         """
         invoices = session.query(Invoices).filter(Invoices.subscription_id == self.subscription_id).all()
-        for invoice in invoices:
-            if not invoice.is_paid(session=session):
-                return False
-        return self._is_active
+        return False if any([invoice for invoice in invoices
+                             if not invoice.is_paid(session=session)]) else self._is_active
 
     async def can_access_resource(self, resource_name: str, session: sessionType) -> bool:
         """
@@ -57,6 +56,32 @@ class Subscriptions(Base):
         """
         return session.query(Plans).filter(
             Plans.plan_id == self.plan_id).first().resource_exist(resource_name=resource_name)
+
+    @classmethod
+    async def subscribe(cls, _data: dict[str, str | bool | int], session: sessionType) -> Self:
+        """
+            will subscribe a client to a specific plan and then
+            return True
+        :param session:
+        :param _data:
+        :return:
+        """
+        instance = cls(**_data)
+        invoiced = await Invoices.create_invoice(_data=_data, session=session)
+        return instance if invoiced else None
+
+    @classmethod
+    async def activate(cls, subscription_id: str, session: sessionType) -> bool:
+        """
+
+        :param session:
+        :param subscription_id:
+        :return: 
+        """
+        subscription = session.query(cls).filter(cls.subscription_id == subscription_id).first()
+        subscription._is_active = True
+        session.add(subscription)
+        session.commit()
 
 
 class PlanType(Enum):
@@ -126,6 +151,15 @@ class Plans(Base):
         """
         return session.query(cls).filter(cls.plan_id == plan_id).first()
 
+    @classmethod
+    async def get_all_plans(cls, session: sessionType) -> list[Self]:
+        """
+
+        :param session:
+        :return:
+        """
+        return session.query(cls).all()
+
     def is_hard_limit(self) -> bool:
         return self.plan_limit_type == PlanType.hard_limit
 
@@ -166,8 +200,36 @@ class Payments(Base):
             "time_paid": self.time_paid
         }
 
+    async def on_payment(self, _data: dict[str, str | int], session: sessionType):
+        """
+            on payment notification
+                notifications will be sent by the payment gateway
+                verify payment and then activate subscription
+
+        :param session:
+        :param _data:
+        :return:
+        """
+        if await self.verify_payment(_data=_data, session=session):
+            await Subscriptions.activate(self.subscription_id, session=session)
+
+    async def verify_payment(self, _data: dict[str, str | int | bool], session: sessionType):
+        """
+        **verify payment **
+            this method will be dependent on the payment method used to process payment
+            once payment is verified success will be set to true
+            payment amount rechecked, and time_paid adjusted to match receipt data
+        :param session:
+        :param _data:
+        :return:
+        """
+        pass
+
 
 class Invoices(Base):
+    """
+        Invoices
+    """
     __tablename__ = "invoices"
     invoice_id: str = Column(String(UUID_LEN), primary_key=True)
     subscription_id: str = Column(String(UUID_LEN), ForeignKey("subscriptions.subscription_id"))
@@ -203,8 +265,17 @@ class Invoices(Base):
         return session.query(Payments).filter(Payments.invoice_id == self.invoice_id).filter(
             Payments.payment_amount >= self.invoiced_amount).first() is not None
 
+    @classmethod
+    async def create_invoice(cls, _data: dict[str, str | int | bool], session: sessionType):
+        """
+            **create_invoice**
+                given subscription data create an invoice and send to
+                client with email.
 
-Subscriptions.create_if_not_exists()
-Plans.create_if_not_exists()
-Payments.create_if_not_exists()
-Invoices.create_if_not_exists()
+                wait for payment notification then activate subscription upon receipt of
+                payment
+        :param session:
+        :param _data:
+        :return:
+        """
+        pass

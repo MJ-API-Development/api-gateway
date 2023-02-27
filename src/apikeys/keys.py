@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import asyncio
+import datetime
 import hashlib
 
 import pymysql
 import sqlalchemy
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, inspect
 from sqlalchemy.orm import relationship
+from typing_extensions import Self
+
 from src.database.database_sessions import sessions, Base, sessionType, engine
-from src.plans.plans import Subscriptions
+from src.plans.init_plans import create_plans
+from src.plans.plans import Subscriptions, Plans
 from src.utils.utils import create_id
 
 # Define a dict to store API Keys and their rate rate_limit data
@@ -107,6 +112,17 @@ class ApiKeyModel(Base):
         """
         return session.query(cls).filter(cls.api_key == api_key).first()
 
+    async def update_rate_limits_from_plan(self, plan_data: dict[str, str | bool | int]) -> Self:
+        """
+
+        :param plan_data:
+        :return:
+        """
+        self.rate_limit = plan_data.get("rate_limit")
+        self.duration = 60 * 60 * 1  # ONE hOUR FOR ALL PLANS
+        self.subscription.api_requests_balance = plan_data.get("plan_limit")
+        return self
+
 
 def cache_api_keys():
     with next(sessions) as session:
@@ -122,7 +138,11 @@ def cache_api_keys():
             pass
 
 
-def create_admin_key():
+async def create_admin_key():
+    """
+        this is only for the purposes of testing
+    :return:
+    """
     with next(sessions) as session:
         _uuid = create_id(size=UUID_LEN)
         _api_key = create_id(size=UUID_LEN)
@@ -141,9 +161,17 @@ def create_admin_key():
                               duration=ONE_MINUTE * 60,
                               rate_limit=30,
                               is_active=True)
+        sub_id = create_id(UUID_LEN)
+        await create_plans()
+        plans = await Plans.get_all_plans(session=session)
+        _enterprise_plan: Plans = [plan for plan in plans if plan.plan_name == "ENTERPRISE"][0]
+        subscription = Subscriptions(uuid=_uuid, subscription_id=sub_id, plan_id=_enterprise_plan.plan_id,
+                                     time_subscribed=datetime.datetime.now().timestamp(), payment_day="31",
+                                     api_requests_balance=_enterprise_plan.plan_limit)
         try:
             session.add(admin_user)
             session.commit()
+            session.add(subscription)
             session.add(api_key)
             session.commit()
         except pymysql.err.OperationalError as e:
@@ -151,6 +179,3 @@ def create_admin_key():
             pass
 
 
-ApiKeyModel.create_if_not_exists()
-# create_admin_key()
-Account.create_if_not_exists()

@@ -4,16 +4,14 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.apikeys.keys import cache_api_keys, ApiKeyModel
+from src.apikeys.keys import cache_api_keys
 from src.authentication import authenticate_admin
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized
-
 from src.config import config_instance
 from src.plans.init_plans import create_plans
-
+from src.prefetch import prefetch_endpoints
 from src.requests import requester
 from src.utils.my_logger import init_logger
-from src.prefetch import prefetch_endpoints
 
 # API Servers
 api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_instance().API_SERVERS.SLAVE_API_SERVER]

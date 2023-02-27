@@ -3,14 +3,13 @@ import time
 from functools import wraps
 
 from fastapi import HTTPException, Request
-from numba import jit
 from starlette import status
 
 from src.apikeys.keys import api_keys, cache_api_keys, ApiKeyModel
 from src.authorize.resources import get_resource_name, resource_name_request_size
+from src.cache.cache import cached_ttl
 from src.database.database_sessions import sessions
 from src.plans.plans import Subscriptions, Plans
-from src.cache.cache import cached_ttl
 from src.utils.my_logger import init_logger
 
 api_keys_lookup = api_keys.get
@@ -72,7 +71,6 @@ async def monthly_credit_available(api_key: str) -> bool:
         return True
 
 
-@cached_ttl(ttl=ONE_DAY)
 async def create_take_credit_args(api_key: str, path: str):
     """
     **take_credit**
