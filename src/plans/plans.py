@@ -137,6 +137,21 @@ class Payments(Base):
     is_success: bool = Column(Boolean)
     time_paid: float = Column(Float)
 
+    def to_dict(self) -> dict[str, str | int | float]:
+        """
+
+        :return:
+        """
+        return {
+            "subscription_id": self.subscription_id,
+            "payment_id": self.payment_id,
+            "invoice_id": self.invoice_id,
+            "payment_method": self.payment_method,
+            "payment_amount": self.payment_amount,
+            "is_success": self.is_success,
+            "time_paid": self.time_paid
+        }
+
 
 class Invoices(Base):
     __tablename__ = "invoices"
@@ -149,7 +164,6 @@ class Invoices(Base):
 
     def to_dict(self) -> dict[str, str | int | float]:
         """
-
         :return:
         """
         return {

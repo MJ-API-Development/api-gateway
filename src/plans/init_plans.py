@@ -3,7 +3,7 @@
 """
 from enum import Enum
 
-from src.apikeys.keys import get_session
+from src.apikeys.keys import sessions
 from src.const import UUID_LEN
 from src.plans.plans import Plans, PlanType
 from src.utils.utils import create_id
@@ -193,7 +193,8 @@ class PlanResources(Enum):
 
 
 class RateLimits(Enum):
-    BASIC: tuple[int, int, int] = (60, 500, 0)
+    # TODO Propagate the plan limits to the APIModel & Subscriptions
+    BASIC: tuple[int, int, int] = (30, 1_500, 0)
     PROFESSIONAL: tuple[int, int, int] = (250, 10_000, 1)
     BUSINESS: tuple[int, int, int] = (500, 25_000, 1)
     ENTERPRISE: tuple[int, int, int] = (750, 50_000, 1)
@@ -205,7 +206,7 @@ async def create_plans() -> None:
     :return:
     """
 
-    with get_session()() as session:
+    with next(sessions) as session:
         session.add(create_basic())
         session.add(create_professional())
         session.add(create_business())

@@ -31,7 +31,12 @@ sessionType = Session
 
 
 def get_session():
-    return sessionmaker(bind=engine)
+    while True:
+        for session in [sessionmaker(bind=engine) for _ in range(50)]:
+            yield session()
+
+
+sessions = get_session()
 
 
 class Account(Base):
@@ -49,14 +54,16 @@ class Account(Base):
     password_hash: str = Column(String(STR_LEN), index=True)
     is_admin: bool = Column(Boolean, default=False)
 
-
-# Define a Pydantic model for API Key validation
-class ApiKey(BaseModel):
-    uuid: str
-    api_key: str
-    subscription_id: str
-    duration: int
-    rate_limit: int
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "uuid": self.uuid,
+            "first_name": self.first_name,
+            "second_name": self.second_name,
+            "surname": self.surname,
+            "email": self.email,
+            "cell": self.cell,
+            "is_admin": self.is_admin
+        }
 
 
 class ApiKeyModel(Base):
@@ -78,12 +85,14 @@ class ApiKeyModel(Base):
             "api_key": self.api_key,
             "subscription_id": self.subscription_id,
             "duration": self.duration,
-            "rate_limit": self.rate_limit}
+            "rate_limit": self.rate_limit,
+            "is_active": self.is_active,
+            "subscription": self.subscription,
+            "account": self.account}
 
     @classmethod
     async def get_by_apikey(cls, api_key: str, session: sessionType) -> Self:
         """
-
         :param api_key:
         :param session:
         :return:
@@ -92,7 +101,7 @@ class ApiKeyModel(Base):
 
 
 def cache_api_keys():
-    with get_session()() as session:
+    with next(sessions) as session:
         db_keys = session.query(ApiKeyModel).all()
         api_keys.update({db_key.api_key: {'requests_count': 0,
                                           'last_request_timestamp': 0,
@@ -101,7 +110,7 @@ def cache_api_keys():
 
 
 def create_admin_key():
-    with get_session()() as session:
+    with next(sessions) as session:
         api_key = ApiKeyModel(uuid=create_id(size=UUID_LEN),
                               api_key=create_id(size=UUID_LEN),
                               subscription_id=create_id(size=UUID_LEN),
