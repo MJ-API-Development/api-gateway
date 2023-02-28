@@ -33,7 +33,7 @@ admin_app = FastAPI(
 
 
 @authenticate_admin
-def paypal_payment_gateway_ipn(request: Request, path: str):
+async def paypal_payment_gateway_ipn(request: Request, path: str):
     """
         accept incoming payment notifications for
         the api and then process them
@@ -43,7 +43,7 @@ def paypal_payment_gateway_ipn(request: Request, path: str):
 
 
 @authenticate_admin
-def create_update_user(request: Request, user_data: dict[str, str | int | bool]):
+async def create_update_user(request: Request, user_data: dict[str, str | int | bool]):
     """
         used to create new user record
     :param user_data:
@@ -74,7 +74,7 @@ def create_update_user(request: Request, user_data: dict[str, str | int | bool])
 
 
 @authenticate_admin
-def get_delete_user(request: Request, path: str):
+async def get_delete_user(request: Request, path: str):
     """
         used to update a user
     :param request:
@@ -102,7 +102,7 @@ def get_delete_user(request: Request, path: str):
 
 
 @authenticate_client_app
-def subscriptions(request: Request, subscription_data: dict[str, str | int | bool]):
+async def subscriptions(request: Request, subscription_data: dict[str, str | int | bool]):
     """
         create and update subscriptions
     :param request:
@@ -168,7 +168,7 @@ def subscriptions(request: Request, subscription_data: dict[str, str | int | boo
 
 
 @authenticate_admin
-def get_delete_subscriptions(request: Request, path: str):
+async def get_delete_subscriptions(request: Request, path: str):
     """
         retrieve or delete subscriptions
         the delete action may usually mark records as deleted
