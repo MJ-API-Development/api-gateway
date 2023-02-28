@@ -1,11 +1,14 @@
+import datetime
+
 from fastapi import Request, FastAPI, HTTPException
 from starlette.responses import JSONResponse
 
-from src.authentication import authenticate_admin
-from src.authorize.authorize import NotAuthorized
-from src.database.apikeys.keys import Account
+from src.authentication import authenticate_admin, authenticate_client_app
+from src.database.apikeys.keys import Account, UUID_LEN
 from src.database.database_sessions import sessions
+from src.database.plans.plans import Subscriptions, Plans, Invoices
 from src.utils.my_logger import init_logger
+from src.utils.utils import create_id, calculate_invoice_date_range
 
 management_logger = init_logger("management_aoi")
 admin_app = FastAPI(
@@ -86,6 +89,9 @@ def get_delete_user(request: Request, path: str):
             user_instance.is_deleted = True
             session.merge(user_instance)
             session.commit()
+            return JSONResponse(content={'message': 'successfully deleted user'},
+                                status_code=201,
+                                headers=headers)
 
         elif request.method == "GET":
             return JSONResponse(content=user_instance.to_dict(),
@@ -93,7 +99,7 @@ def get_delete_user(request: Request, path: str):
                                 headers=headers)
 
 
-@authenticate_admin
+@authenticate_client_app
 def subscriptions(request: Request, subscription_data: dict[str, str | int | bool]):
     """
         create and update subscriptions
@@ -102,13 +108,50 @@ def subscriptions(request: Request, subscription_data: dict[str, str | int | boo
     :return:
     """
     management_logger.info("Subscriptions")
+    headers = {'Content-Type': 'application:json'}
+
+    with next(sessions) as session:
+
+        if request.method == "POST":
+
+            plan_id = subscription_data.get('plan_id')
+            plan = await Plans.get_plan_by_plan_id(plan_id=plan_id, session=session)
+
+            subscription_data.update({
+                'subscription_id': create_id(UUID_LEN),
+                'api_requests_balance': plan.plan_limit,
+                'time_subscribed': datetime.datetime.now().timestamp()}
+            )
+
+            subscription_instance = await Subscriptions.subscribe(_data=subscription_data, session=session)
+            from_date, to_date = calculate_invoice_date_range(today=datetime.datetime.now().timestamp())
+            today = datetime.datetime.now().timestamp()
+
+            invoice_data = {
+                'subscription_id': subscription_data.get('subscription_id'),
+                'invoice_id': create_id(UUID_LEN),
+                'invoiced_amount': plan.charge_amount,
+                'invoice_from_date': from_date,
+                'invoice_to_date': to_date,
+                'time_issued': today
+            }
+
+            invoiced = await Invoices.create_invoice(_data=invoice_data, session=session)
+
+            session.add(subscription_instance)
+            session.add(invoiced)
+
+            session.commit()
+
+        elif request.method == "PUT":
+            pass
 
 
 @authenticate_admin
 def get_delete_subscriptions(request: Request, path: str):
     """
         retrieve or delete subscriptions
-        the delete action may ussually mark records as deleted
+        the delete action may usually mark records as deleted
     :param path:
     :param request:
     :return:
@@ -123,3 +166,12 @@ admin_app.add_route(path="/user", route=create_update_user, methods=["POST", "PU
 admin_app.add_route(path="/subscription/<path:path>", route=get_delete_subscriptions, methods=["GET", "DELETE"],
                     include_in_schema=True)
 admin_app.add_route(path="/subscriptions", route=subscriptions, methods=["POST", "PUT"], include_in_schema=True),
+
+
+@admin_app.on_event("startup")
+async def admin_startup():
+    """
+    **admin_startup**
+        :return:
+    """
+    pass

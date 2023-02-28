@@ -12,6 +12,7 @@ import random
 import re
 import string
 import time
+from datetime import date
 from functools import wraps
 from numba import jit
 
@@ -40,6 +41,14 @@ def _retry(delay: int = 3, exception: Exception = None):
 
     return decorator
 
+
+def calculate_invoice_date_range(today: float) -> tuple[float, float]:
+    """
+
+    :param today:
+    :return:
+    """
+    pass
 
 # Creates an ID for use as a unique ID
 # noinspection PyArgumentList

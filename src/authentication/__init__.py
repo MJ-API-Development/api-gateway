@@ -19,3 +19,18 @@ def authenticate_admin(func):
         raise NotAuthorized(message="This Resource is only Accessible to Admins")
 
     return wrapper
+
+
+def authenticate_client_app(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        request: Request = kwargs.get('request')
+        api_key = request.query_params.get('api_key')
+        with next(sessions) as session:
+            api_keys_model = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
+            if api_keys_model.account.is_admin:
+                return await func(*args, **kwargs)
+
+        raise NotAuthorized(message="This Resource is only Accessible to Admins")
+
+    return wrapper

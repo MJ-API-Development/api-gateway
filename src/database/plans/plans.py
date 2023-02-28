@@ -67,7 +67,7 @@ class Subscriptions(Base):
         :return:
         """
         instance = cls(**_data)
-        invoiced = await Invoices.create_invoice(_data=_data, session=session)
+
         return instance if invoiced else None
 
     @classmethod
