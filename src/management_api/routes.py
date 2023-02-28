@@ -8,7 +8,8 @@ from src.authentication import authenticate_admin, authenticate_app
 from src.database.apikeys.keys import Account, UUID_LEN
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions, Plans, Invoices
-from src.event_queues.invoice import process_invoice_queues, add_invoice_to_send
+from src.event_queues.invoice_queue import add_invoice_to_send, process_invoice_queues
+
 from src.utils.my_logger import init_logger
 from src.utils.utils import create_id, calculate_invoice_date_range
 
@@ -37,6 +38,10 @@ async def paypal_payment_gateway_ipn(request: Request, path: str):
     """
         accept incoming payment notifications for
         the api and then process them
+
+        TODO if paid then create API Key
+
+    :param request:
     :return:
     """
     management_logger.info("paypal IPN")
@@ -149,7 +154,7 @@ async def subscriptions(request: Request, subscription_data: dict[str, str | int
 
         elif request.method == "PUT":
             """
-                Upgrade or Dongrade Plan, thi only affect the net invoice
+                Upgrade or Downgrade Plan, thi only affect the net invoice
             """
             plan_id = subscription_data.get('plan_id')
             plan = await Plans.get_plan_by_plan_id(plan_id=plan_id, session=session)

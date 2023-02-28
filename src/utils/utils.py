@@ -50,6 +50,7 @@ def calculate_invoice_date_range(today: float) -> tuple[float, float]:
     """
     pass
 
+
 # Creates an ID for use as a unique ID
 # noinspection PyArgumentList
 @jit(forceobj=True)
@@ -69,6 +70,10 @@ def create_id(size: int = 16, chars: str = _char_set) -> str:
 def camel_to_snake(name: str) -> str:
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+
+def create_api_key() -> str:
+    return f"{create_id(6)}-{create_id(4)}-{create_id(4)}-{create_id(4)}-{create_id(12)}"
 
 
 if __name__ == '__main__':
