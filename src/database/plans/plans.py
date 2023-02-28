@@ -266,7 +266,7 @@ class Invoices(Base):
             Payments.payment_amount >= self.invoiced_amount).first() is not None
 
     @classmethod
-    async def create_invoice(cls, _data: dict[str, str | int | bool], session: sessionType) -> bool:
+    async def create_invoice(cls, _data: dict[str, str | int | bool], session: sessionType) -> Self:
         """
             **create_invoice**
                 given subscription data create an invoice and send to
