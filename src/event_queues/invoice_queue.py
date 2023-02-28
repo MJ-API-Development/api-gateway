@@ -42,7 +42,11 @@ async def add_invoice_to_send(invoice: dict, account: dict):
     first_name = account.get("first_name")
     second_name = account.get("second_name")
     surname = account.get("surname")
-    _account = dict(email=email, cell=cell, first_name=first_name, second_name=second_name,
+
+    _account = dict(email=email, cell=cell,
+                    first_name=first_name,
+                    second_name=second_name,
                     surname=surname)
+
     add_argument(dict(account=_account, invoice=invoice))
 
