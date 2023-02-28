@@ -8,6 +8,7 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, inspect
 from sqlalchemy.orm import relationship
 from typing_extensions import Self
 
+from src.database.account.account import Account
 from src.database.database_sessions import sessions, Base, sessionType, engine
 from src.database.plans.init_plans import create_plans
 from src.database.plans.plans import Subscriptions, Plans
@@ -24,52 +25,6 @@ NAME_LEN: int = 128
 EMAIL_LEN: int = 255
 CELL_LEN: int = 13
 API_KEY_LEN: int = 64
-
-
-class Account(Base):
-    """
-        User Account ORM
-    """
-    __tablename__ = "accounts"
-    uuid: str = Column(String(UUID_LEN), primary_key=True, index=True)
-    api_key: str = Column(String(UUID_LEN), ForeignKey("eod_api_keys.api_key"))
-    first_name: str = Column(String(NAME_LEN), index=True)
-    second_name: str = Column(String(NAME_LEN), index=True)
-    surname: str = Column(String(NAME_LEN), index=True)
-    email: str = Column(String(EMAIL_LEN), index=True, unique=True)
-    cell: str = Column(String(CELL_LEN), index=True, unique=True)
-    password_hash: str = Column(String(STR_LEN), index=True)
-    is_admin: bool = Column(Boolean, default=False)
-
-    def to_dict(self) -> dict[str, str]:
-        return {
-            "uuid": self.uuid,
-            "first_name": self.first_name,
-            "second_name": self.second_name,
-            "surname": self.surname,
-            "email": self.email,
-            "cell": self.cell,
-            "is_admin": self.is_admin
-        }
-
-    @classmethod
-    def create_if_not_exists(cls):
-        if not inspect(engine).has_table(cls.__tablename__):
-            Base.metadata.create_all(bind=engine)
-
-    @property
-    def password(self) -> str:
-        """
-        Raises an AttributeError if someone tries to get the password directly
-        """
-        return self.password_hash
-
-    @password.setter
-    def password(self, plaintext_password: str) -> None:
-        """
-        Hashes and sets the user's password
-        """
-        self.password_hash = hashlib.sha256(plaintext_password.encode()).hexdigest()
 
 
 class ApiKeyModel(Base):
@@ -175,5 +130,3 @@ async def create_admin_key():
         except pymysql.err.OperationalError as e:
             # TODO log errors
             pass
-
-

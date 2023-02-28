@@ -53,6 +53,7 @@ def get_basic_resources() -> set[str]:
         "news.articles.stock_code"
     }
 
+
 @jit
 def get_professional_resources() -> set[str]:
     """
@@ -98,6 +99,7 @@ def get_professional_resources() -> set[str]:
 
         "sentiment_analysis.stock_code"
     }
+
 
 @jit
 def get_business_resources():
@@ -155,6 +157,7 @@ def get_business_resources():
         "sentiment_analysis.stock_code",
         "sentiment_analysis.tweeter.stock_code"
     }
+
 
 @jit
 def get_enterprise_resources():

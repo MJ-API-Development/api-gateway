@@ -1,4 +1,5 @@
 from fastapi import Request, FastAPI
+from starlette.responses import JSONResponse
 
 from src.authentication import authenticate_admin
 from src.database.apikeys.keys import Account
@@ -43,11 +44,20 @@ def create_user(request: Request, user_data: dict[str, str | int | bool]):
     :param request:
     :return:
     """
-    with next(sessions) as session:
-        management_logger.info("create user")
-        user_instance = Account(**user_data)
-        session.add(user_instance)
-        session.commit()
+    if request.method == "post":
+
+        # TODO check if input data is valid
+        with next(sessions) as session:
+            management_logger.info("create user")
+            user_instance = Account(**user_data)
+            session.add(user_instance)
+            session.commit()
+        return JSONResponse(content=user_instance.to_dict(), status_code=201)
+
+    elif request.method == "put":
+        with next(sessions) as session:
+            pass
+
 
 
 @authenticate_admin
