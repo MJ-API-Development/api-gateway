@@ -1,11 +1,12 @@
 """
     invoice queues
 """
+from typing import Callable
 import asyncio
 
 _outgoing_invoices_queues: list[dict[str, str | int]] = list()
-get_argument = _outgoing_invoices_queues.pop
-add_argument = _outgoing_invoices_queues.append
+get_argument: Callable = _outgoing_invoices_queues.pop
+add_argument: Callable = _outgoing_invoices_queues.append
 
 
 async def process_invoice_queues():

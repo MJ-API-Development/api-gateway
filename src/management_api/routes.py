@@ -8,7 +8,7 @@ from src.authentication import authenticate_admin, authenticate_client_app
 from src.database.apikeys.keys import Account, UUID_LEN
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions, Plans, Invoices
-from src.queue.invoice import process_invoice_queues, add_invoice_to_send
+from src.event_queues.invoice import process_invoice_queues, add_invoice_to_send
 from src.utils.my_logger import init_logger
 from src.utils.utils import create_id, calculate_invoice_date_range
 
@@ -60,7 +60,7 @@ def create_update_user(request: Request, user_data: dict[str, str | int | bool])
                 user_instance = Account(**user_data)
                 session.add(user_instance)
             else:
-                raise HTTPException(detail="User already exist")
+                raise HTTPException(detail="User already exist", status_code=401)
 
         elif request.method == "put":
             uuid = user_data.get('uuid')
@@ -138,14 +138,14 @@ def subscriptions(request: Request, subscription_data: dict[str, str | int | boo
                 'time_issued': today
             }
 
-            invoiced: Invoices = await Invoices.create_invoice(_data=invoice_data, session=session)
+            invoice: Invoices = await Invoices.create_invoice(_data=invoice_data, session=session)
 
             session.add(subscription_instance)
-            session.add(invoiced)
+            session.add(invoice)
+            account = await Account.get_by_uuid(uuid=subscription_data.get("uuid"), session=session)
+            await add_invoice_to_send(invoice=invoice.to_dict(), account=account.to_dict())
 
             session.commit()
-            account = await Account.get_by_uuid(uuid=subscription_data.get("uuid"), session=session)
-            await add_invoice_to_send(invoice=invoiced.to_dict(), account=account.to_dict())
 
         elif request.method == "PUT":
             pass
@@ -179,4 +179,4 @@ async def admin_startup():
         :return:
     """
     asyncio.create_task(process_invoice_queues())
-
+    # add more event queue tak here a they become available
