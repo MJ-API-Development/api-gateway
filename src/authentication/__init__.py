@@ -21,7 +21,12 @@ def authenticate_admin(func):
     return wrapper
 
 
-def authenticate_client_app(func):
+def authenticate_app(func):
+    """
+        thi ill only authenticate application eg client and admin app
+    :param func:
+    :return:
+    """
     @wraps(func)
     async def wrapper(*args, **kwargs):
         request: Request = kwargs.get('request')

@@ -4,7 +4,7 @@ import datetime
 from fastapi import Request, FastAPI, HTTPException
 from starlette.responses import JSONResponse
 
-from src.authentication import authenticate_admin, authenticate_client_app
+from src.authentication import authenticate_admin, authenticate_app
 from src.database.apikeys.keys import Account, UUID_LEN
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions, Plans, Invoices
@@ -101,7 +101,7 @@ async def get_delete_user(request: Request, path: str):
                                 headers=headers)
 
 
-@authenticate_client_app
+@authenticate_app
 async def subscriptions(request: Request, subscription_data: dict[str, str | int | bool]):
     """
         create and update subscriptions
@@ -159,12 +159,14 @@ async def subscriptions(request: Request, subscription_data: dict[str, str | int
                 subscription_id=subscription_id,session=session)
 
             if subscription_instance.plan_id != plan_id:
-                # create a method for upgrading or dongrading plan
+                # create a method for upgrading or downgrading plan
                 subscription_instance.api_requests_balance = plan.plan_limit
                 subscription_instance.plan_id = plan_id
                 subscription_instance.time_subscribed = datetime.datetime.now().timestamp()
                 session.merge(subscription_instance)
                 session.commit()
+
+        return JSONResponse(content=subscription_instance.to_dict(), status_code=201, headers=headers)
 
 
 @authenticate_admin

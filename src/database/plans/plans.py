@@ -1,5 +1,5 @@
 from __future__ import annotations
-from enum import Enum
+
 from numba import jit
 from sqlalchemy import Column, String, Text, Integer, Float, Boolean, ForeignKey, inspect
 from sqlalchemy.orm import relationship
