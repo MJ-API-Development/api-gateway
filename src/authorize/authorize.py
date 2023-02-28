@@ -5,11 +5,11 @@ from functools import wraps
 from fastapi import HTTPException, Request
 from starlette import status
 
-from src.apikeys.keys import api_keys, cache_api_keys, ApiKeyModel
+from src.database.apikeys.keys import api_keys, cache_api_keys, ApiKeyModel
 from src.authorize.resources import get_resource_name, resource_name_request_size
 from src.cache.cache import cached_ttl
 from src.database.database_sessions import sessions
-from src.plans.plans import Subscriptions, Plans
+from src.database.plans.plans import Subscriptions, Plans
 from src.utils.my_logger import init_logger
 
 api_keys_lookup = api_keys.get

@@ -1,4 +1,8 @@
 from fastapi import Request, FastAPI
+
+from src.authentication import authenticate_admin
+from src.database.apikeys.keys import Account
+from src.database.database_sessions import sessions
 from src.utils.my_logger import init_logger
 
 management_logger = init_logger("management_aoi")
@@ -21,6 +25,7 @@ admin_app = FastAPI(
 )
 
 
+@authenticate_admin
 def paypal_payment_gateway_ipn(request: Request, path: str):
     """
         accept incoming payment notifications for
@@ -30,19 +35,25 @@ def paypal_payment_gateway_ipn(request: Request, path: str):
     management_logger.info("paypal IPN")
 
 
+@authenticate_admin
 def create_user(request: Request, user_data: dict[str, str | int | bool]):
     """
-
+        used to create new user record
     :param user_data:
     :param request:
     :return:
     """
-    management_logger.info("create user")
+    with next(sessions) as session:
+        management_logger.info("create user")
+        user_instance = Account(**user_data)
+        session.add(user_instance)
+        session.commit()
 
 
+@authenticate_admin
 def get_update_user(request: Request, path: str):
     """
-
+        used to update a user
     :param request:
     :param path:
     :return:
@@ -50,6 +61,7 @@ def get_update_user(request: Request, path: str):
     management_logger.info("Updated USER")
 
 
+@authenticate_admin
 def subscriptions(request: Request, subscription_data: dict[str, str | int | bool]):
     """
         create and update subscriptions
@@ -60,9 +72,11 @@ def subscriptions(request: Request, subscription_data: dict[str, str | int | boo
     management_logger.info("Subscriptions")
 
 
+@authenticate_admin
 def get_delete_subscriptions(request: Request, path: str):
     """
-
+        retrieve or delete subscriptions
+        the delete action may ussually mark records as deleted
     :param path:
     :param request:
     :return:
@@ -70,8 +84,10 @@ def get_delete_subscriptions(request: Request, path: str):
     management_logger.info("Delete Subscriptions")
 
 
-admin_app.add_route(path="/_ipn/payment-gateway/paypal/<path:path>", route=paypal_payment_gateway_ipn, methods=["GET"], include_in_schema=True)
+admin_app.add_route(path="/_ipn/payment-gateway/paypal/<path:path>", route=paypal_payment_gateway_ipn, methods=["GET"],
+                    include_in_schema=True)
 admin_app.add_route(path="/user/<path:path>", route=get_update_user, methods=["GET", "DELETE"], include_in_schema=True)
 admin_app.add_route(path="/user", route=create_user, methods=["POST", "PUT"], include_in_schema=True)
-admin_app.add_route(path="/subscription/<path:path>", route=get_delete_subscriptions, methods=["GET", "DELETE"], include_in_schema=True)
+admin_app.add_route(path="/subscription/<path:path>", route=get_delete_subscriptions, methods=["GET", "DELETE"],
+                    include_in_schema=True)
 admin_app.add_route(path="/subscriptions", route=subscriptions, methods=["POST", "PUT"], include_in_schema=True),

@@ -9,8 +9,8 @@ from sqlalchemy.orm import relationship
 from typing_extensions import Self
 
 from src.database.database_sessions import sessions, Base, sessionType, engine
-from src.plans.init_plans import create_plans
-from src.plans.plans import Subscriptions, Plans
+from src.database.plans.init_plans import create_plans
+from src.database.plans.plans import Subscriptions, Plans
 from src.utils.utils import create_id
 
 # Define a dict to store API Keys and their rate rate_limit data

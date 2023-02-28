@@ -1,5 +1,4 @@
 from numba import jit
-
 from src.cache.cache import cached, cached_ttl
 
 ONE_DAY = 60 * 60 * 24

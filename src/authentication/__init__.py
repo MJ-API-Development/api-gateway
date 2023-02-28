@@ -1,7 +1,7 @@
 from functools import wraps
 from fastapi import FastAPI, Request
 
-from src.apikeys.keys import ApiKeyModel, sessions
+from src.database.apikeys.keys import ApiKeyModel, sessions
 from src.authorize.authorize import NotAuthorized
 from src.cache.cache import cached_ttl
 

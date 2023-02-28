@@ -8,7 +8,7 @@ from pydantic.dataclasses import dataclass
 
 from src.const import UUID_LEN
 from src.database.database_sessions import sessions
-from src.plans.plans import Plans, PlanType
+from src.database.plans.plans import Plans, PlanType
 from src.utils.utils import create_id
 
 
