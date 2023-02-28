@@ -52,7 +52,7 @@ def create_update_user(request: Request, user_data: dict[str, str | int | bool])
     """
     headers = {'Content-Type': 'application/json'}
     with next(sessions) as session:
-        if request.method == "post":
+        if request.method == "POST":
             management_logger.info("create user")
             email = user_data.get("email")
             user_instance = await Account.get_by_email(email=email, session=session)
@@ -62,7 +62,7 @@ def create_update_user(request: Request, user_data: dict[str, str | int | bool])
             else:
                 raise HTTPException(detail="User already exist", status_code=401)
 
-        elif request.method == "put":
+        elif request.method == "PUT":
             uuid = user_data.get('uuid')
             user_instance = await Account.get_by_uuid(uuid=uuid, session=session)
             user_instance = user_instance(**user_data)
@@ -148,7 +148,23 @@ def subscriptions(request: Request, subscription_data: dict[str, str | int | boo
             session.commit()
 
         elif request.method == "PUT":
-            pass
+            """
+                Upgrade or Dongrade Plan, thi only affect the net invoice
+            """
+            plan_id = subscription_data.get('plan_id')
+            plan = await Plans.get_plan_by_plan_id(plan_id=plan_id, session=session)
+
+            subscription_id = subscription_data.get('subscription_id')
+            subscription_instance: Subscriptions = await Subscriptions.get_by_subscription_id(
+                subscription_id=subscription_id,session=session)
+
+            if subscription_instance.plan_id != plan_id:
+                # create a method for upgrading or dongrading plan
+                subscription_instance.api_requests_balance = plan.plan_limit
+                subscription_instance.plan_id = plan_id
+                subscription_instance.time_subscribed = datetime.datetime.now().timestamp()
+                session.merge(subscription_instance)
+                session.commit()
 
 
 @authenticate_admin

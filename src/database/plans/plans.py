@@ -67,8 +67,7 @@ class Subscriptions(Base):
         :return:
         """
         instance = cls(**_data)
-
-        return instance if invoiced else None
+        return instance
 
     @classmethod
     async def activate(cls, subscription_id: str, session: sessionType) -> bool:
@@ -82,6 +81,15 @@ class Subscriptions(Base):
         subscription._is_active = True
         session.add(subscription)
         session.commit()
+
+    @classmethod
+    async def get_by_subscription_id(cls, subscription_id: str, session: sessionType) -> Self:
+        """
+            :param subscription_id:
+            :param session:
+            :return: Self
+        """
+        return session.query(cls).filter(cls.subscription_id == subscription_id).first()
 
 
 class PlanType:
