@@ -50,10 +50,11 @@ def get_update_user(request: Request, path: str):
     management_logger.info("Updated USER")
 
 
-def subscriptions(request: Request):
+def subscriptions(request: Request, subscription_data: dict[str, str | int | bool]):
     """
         create and update subscriptions
     :param request:
+    :param subscription_data:
     :return:
     """
     management_logger.info("Subscriptions")
