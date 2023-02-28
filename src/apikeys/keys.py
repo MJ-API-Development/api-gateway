@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import datetime
 import hashlib
 
 import pymysql
-import sqlalchemy
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, inspect
 from sqlalchemy.orm import relationship
 from typing_extensions import Self

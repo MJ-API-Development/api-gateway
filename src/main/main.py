@@ -8,6 +8,7 @@ from src.apikeys.keys import cache_api_keys
 from src.authentication import authenticate_admin
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized
 from src.config import config_instance
+from src.management_api.routes import admin_app
 from src.plans.init_plans import create_plans
 from src.prefetch import prefetch_endpoints
 from src.requests import requester
@@ -36,20 +37,23 @@ app = FastAPI(
     terms_of_service="https://www.eod-stock-api.site/terms",
     contact={
         "name": "EOD-STOCK-API",
-        "url": "https://eod-stock-api.site/contact",
+        "url": "/contact",
         "email": "info@eod-stock-api.site"
     },
     license_info={
         "name": "Apache 2.0",
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["GET"],
-    allow_headers=["*"])
+    allow_headers=["*"]
+)
 
 
 @app.exception_handler(HTTPException)
@@ -83,7 +87,7 @@ async def handle_not_authorized(request, exc):
     status_code: {exc.status_code}
     
     """)
-    return JSONResponse(status_code=exc.status_code, content={"message" : exc.message})
+    return JSONResponse(status_code=exc.status_code, content={"message": exc.message})
 
 
 @app.get("/test-error-handling")
@@ -138,7 +142,10 @@ async def startup_event():
     asyncio.create_task(process_credit_queue())
 
 
-@app.api_route("/api/v1/{path:path}", methods=["GET"])
+app.mount(path="/_admin", app=admin_app)
+
+
+@app.api_route("/api/v1/{path:path}", methods=["GET"], include_in_schema=True)
 @auth_and_rate_limit
 async def v1_gateway(request: Request, path: str):
     """
@@ -153,7 +160,7 @@ async def v1_gateway(request: Request, path: str):
     api_server_counter = (api_server_counter + 1) % len(api_server_urls)
     api_url = f'{api_server_url}/api/v1/{path}'
     api_key: dict = request.path_params.get('api_key')
-    app_logger.info(f"API URL : {api_url}" )
+    app_logger.info(f"API URL : {api_url}")
     response = await requester(api_url)
 
     # creating response

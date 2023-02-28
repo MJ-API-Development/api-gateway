@@ -2,8 +2,10 @@
 
 """
 from dataclasses import field
-from enum import Enum
+
+from numba import jit
 from pydantic.dataclasses import dataclass
+
 from src.const import UUID_LEN
 from src.database.database_sessions import sessions
 from src.plans.plans import Plans, PlanType
@@ -51,7 +53,7 @@ def get_basic_resources() -> set[str]:
         "news.articles.stock_code"
     }
 
-
+@jit
 def get_professional_resources() -> set[str]:
     """
         should add an ability to retrieve professional resources from
@@ -97,7 +99,7 @@ def get_professional_resources() -> set[str]:
         "sentiment_analysis.stock_code"
     }
 
-
+@jit
 def get_business_resources():
     return {
         "stocks.complete",
@@ -154,7 +156,7 @@ def get_business_resources():
         "sentiment_analysis.tweeter.stock_code"
     }
 
-
+@jit
 def get_enterprise_resources():
     return {
         "stocks.complete",

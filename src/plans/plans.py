@@ -24,7 +24,7 @@ class Subscriptions(Base):
         if not inspect(engine).has_table(cls.__tablename__):
             Base.metadata.create_all(bind=engine)
 
-    def to_dict(self) -> dict[str, str | float| int | bool]:
+    def to_dict(self) -> dict[str, str | float | int | bool]:
         return {
             "subscription_id": self.subscription_id,
             "uuid": self.uuid,
@@ -84,7 +84,7 @@ class Subscriptions(Base):
         session.commit()
 
 
-class PlanType(Enum):
+class PlanType:
     hard_limit: str = "hard_limit"
     soft_limit: str = "soft_limit"
 
@@ -266,7 +266,7 @@ class Invoices(Base):
             Payments.payment_amount >= self.invoiced_amount).first() is not None
 
     @classmethod
-    async def create_invoice(cls, _data: dict[str, str | int | bool], session: sessionType):
+    async def create_invoice(cls, _data: dict[str, str | int | bool], session: sessionType) -> bool:
         """
             **create_invoice**
                 given subscription data create an invoice and send to
@@ -276,6 +276,6 @@ class Invoices(Base):
                 payment
         :param session:
         :param _data:
-        :return:
+        :return: True if invoice was created and scheduled to be sent
         """
         pass
