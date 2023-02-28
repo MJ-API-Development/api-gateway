@@ -1,8 +1,9 @@
 import hashlib
 import secrets
-from typing import Self
+
 
 from sqlalchemy import Column, String, inspect, Boolean, ForeignKey
+from typing_extensions import Self
 
 from src.const import UUID_LEN, NAME_LEN, EMAIL_LEN, STR_LEN, CELL_LEN
 from src.database.database_sessions import Base, sessionType, engine
@@ -22,6 +23,7 @@ class Account(Base):
     cell: str = Column(String(CELL_LEN), index=True, unique=True)
     password_hash: str = Column(String(STR_LEN), index=True)
     is_admin: bool = Column(Boolean, default=False)
+    is_deleted: bool = Column(Boolean, default=False)
 
     @classmethod
     def create_if_not_exists(cls):
@@ -72,11 +74,11 @@ class Account(Base):
     @classmethod
     async def login(cls, username: str, password: str, session: sessionType) -> Self:
         # Get the user with the specified email address
-        user = session.query(cls).filter(cls.email == username).first()
-
+        user: Account = session.query(cls).filter(cls.email == username).first()
+        if user.is_deleted:
+            return None
         # Hash the entered password using a secure hash function (SHA-256 in this example)
         password_hash = hashlib.sha256(password.encode()).hexdigest()
-
         # Compare the hashed password to the stored hash using secrets.compare_digest,
         # and return either the user object or None depending on the result
         return user if user and secrets.compare_digest(password_hash, user.password) else None

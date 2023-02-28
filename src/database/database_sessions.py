@@ -14,7 +14,7 @@ sessionType = Session
 SESSIONS_PRE_CACHE_SIZE = 150
 
 
-def get_session():
+def get_session() -> Session:
     while True:
         for session in [sessionmaker(bind=engine) for _ in range(SESSIONS_PRE_CACHE_SIZE)]:
             yield session()
