@@ -21,7 +21,7 @@ async def process_invoice_queues():
         await asyncio.sleep(60 * 1)
 
 
-async def send_invoice(args: dict[str, str | int]) -> None:
+async def send_invoice(args: dict[str, str | int, dict[str, str | int]]) -> None:
     """
     **send_invoice**
         :param args:
@@ -36,4 +36,7 @@ async def add_invoice_to_send(invoice: dict, account: dict):
 
     :return: None
     """
+    email = account.get("email")
+    cell = account.get("cell")
+    add_argument(dict(email=email, cell=cell, invoice=invoice))
 
