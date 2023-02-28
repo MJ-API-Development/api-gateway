@@ -25,4 +25,7 @@ async def set_headers():
     return {'X-API-KEY': config_instance().API_SERVERS.X_API_KEY,
             'X-SECRET-TOKEN': config_instance().API_SERVERS.X_SECRET_TOKEN,
             'X-RapidAPI-Proxy-Secret': config_instance().API_SERVERS.X_RAPID_SECRET,
-            'Content-Type': "application/json", 'Host': "https://eod-stock-api.site"}
+            'Content-Type': "application/json",
+            'Host': "https://eod-stock-api.site",
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; 64)'}
+# TODO Try random election
