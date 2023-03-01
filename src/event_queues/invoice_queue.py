@@ -42,15 +42,15 @@ async def add_invoice_to_send(invoice: dict[str, str | int], account: dict[str, 
 
     :return: None
     """
+    _account = await get_account_details(account=account)
+    add_argument(dict(account=_account, invoice=invoice))
+
+
+async def get_account_details(account: dict[str, str | int]) -> dict[str, str | int]:
+    """select relevant fields from account dict"""
     email = account.get("email")
     cell = account.get("cell")
     first_name = account.get("first_name")
     second_name = account.get("second_name")
     surname = account.get("surname")
-
-    _account = dict(email=email, cell=cell,
-                    first_name=first_name,
-                    second_name=second_name,
-                    surname=surname)
-
-    add_argument(dict(account=_account, invoice=invoice))
+    return dict(cell=cell, email=email, first_name=first_name, second_name=second_name, surname=surname)
