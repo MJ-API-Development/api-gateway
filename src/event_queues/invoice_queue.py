@@ -22,16 +22,20 @@ async def process_invoice_queues():
         await asyncio.sleep(60 * 1)
 
 
-async def send_invoice(args: dict[str, str | int, dict[str, str | int]]) -> None:
+async def send_invoice(args: dict[str, dict[str, str | int]]) -> None:
     """
     **send_invoice**
         :param args:
         :return:
     """
-    pass
+    invoice: dict[str, str | int] = args.get("invoice", {})
+    account: dict[str, str | int] = args.get("account", {})
+
+    if invoice and account:
+        pass
 
 
-async def add_invoice_to_send(invoice: dict, account: dict):
+async def add_invoice_to_send(invoice: dict[str, str | int], account: dict[str, str | int]):
     """
     **add_invoice_to_send**
 
@@ -49,4 +53,3 @@ async def add_invoice_to_send(invoice: dict, account: dict):
                     surname=surname)
 
     add_argument(dict(account=_account, invoice=invoice))
-
