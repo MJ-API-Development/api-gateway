@@ -22,6 +22,9 @@ class PlanNames:
 
 @dataclass(frozen=True)
 class ChargeAmounts:
+    """
+        load this from database in future
+    """
     BASIC: int = 0
     PROFESSIONAL: int = 1999
     BUSINESS: int = 4999
