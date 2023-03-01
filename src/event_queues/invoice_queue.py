@@ -33,6 +33,7 @@ async def send_invoice(args: dict[str, dict[str, str | int]]) -> None:
 
     if invoice and account:
         pass
+    # TODO  Compile and Email and then send to client here
 
 
 async def add_invoice_to_send(invoice: dict[str, str | int], account: dict[str, str | int]):
