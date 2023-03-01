@@ -22,6 +22,7 @@ auth_logger = init_logger("auth-logger")
 
 
 class NotAuthorized(Exception):
+    """Custom NotAuthorized Class"""
     def __init__(self, message):
         super().__init__(message)
         self.status_code = 403
@@ -119,6 +120,12 @@ async def process_credit_queue():
 
 def auth_and_rate_limit(func):
     # noinspection PyTypeChecker
+    async def return_kwargs(kwargs):
+        request: Request = kwargs.get('request')
+        api_key = request.query_params.get('api_key')
+        path = kwargs.get('path')
+        return api_key, path
+
     @wraps(func)
     async def wrapper(*args, **kwargs):
         api_key, path = await return_kwargs(kwargs)
@@ -174,11 +181,4 @@ def auth_and_rate_limit(func):
         # is a soft limit, in which case the client will incur extra charges
 
         return await func(*args, **kwargs)
-
-    async def return_kwargs(kwargs):
-        request: Request = kwargs.get('request')
-        api_key = request.query_params.get('api_key')
-        path = kwargs.get('path')
-        return api_key, path
-
     return wrapper
