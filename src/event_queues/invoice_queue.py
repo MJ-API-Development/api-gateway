@@ -42,6 +42,7 @@ async def add_invoice_to_send(invoice: dict[str, str | int], account: dict[str, 
 
     :return: None
     """
+    # Note: this step may be unnecessary it may be faster to just add the account dict here
     _account = await get_account_details(account=account)
     add_argument(dict(account=_account, invoice=invoice))
 
