@@ -77,8 +77,10 @@ async def build_dynamic_urls() -> list[str]:
         for _country in await get_countries():
             if _country and _country != "null":
                 expanded_urls.append(f"{server_url}{stocks_by_country_url}{_country}")
+        for _url in PREFETCH_ENDPOINTS:
+            expanded_urls.append(f"{server_url}{_url}")
 
-    return list(chain(*[expanded_urls, PREFETCH_ENDPOINTS]))
+    return expanded_urls
 
 # if __name__ == "__main__":
 #     import asyncio
