@@ -67,7 +67,7 @@ async def is_resource_authorized(path_param: str, api_key: str) -> bool:
         if not subscription:
             return False
         is_active = await subscription.is_active(session=session)
-        print("is_active: %s" % is_active)
+
         resource_name = await get_resource_name(path=path_param)
         can_access_resource = await subscription.can_access_resource(resource_name=resource_name, session=session)
     return is_active and can_access_resource
@@ -124,7 +124,8 @@ async def process_credit_queue():
     while True:
         if take_credit_queue:
             args = take_credit_queue.pop()
-            await take_credit_method(**args)
+            if args:
+                await take_credit_method(**args)
         await asyncio.sleep(5)
 
 
@@ -160,7 +161,7 @@ def auth_and_rate_limit(func):
         now = time.time()
         duration: int = api_keys_lookup(api_key, {}).get('duration')
         limit: int = api_keys_lookup(api_key, {}).get('rate_limit')
-
+        # Note that apikeysmodel must be updated with plan rate_limit
         if now - api_keys_lookup(api_key, {}).get('last_request_timestamp') > duration:
             api_keys[api_key]['requests_count'] = 0
 
@@ -189,7 +190,6 @@ def auth_and_rate_limit(func):
 
         # will execute the api if monthly credit is available or monthly limit
         # is a soft limit, in which case the client will incur extra charges
-
         return await func(*args, **kwargs)
 
     return wrapper

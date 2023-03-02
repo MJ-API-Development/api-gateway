@@ -1,9 +1,13 @@
+import ast
 import asyncio
+import json
 
+import ujson
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.cache.cache import cached
 from src.database.apikeys.keys import cache_api_keys, create_admin_key
 from src.authentication import authenticate_admin
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
@@ -163,8 +167,7 @@ async def v1_gateway(request: Request, path: str):
     api_server_url = api_server_urls[api_server_counter]
     api_server_counter = (api_server_counter + 1) % len(api_server_urls)
     api_url = f'{api_server_url}/api/v1/{path}'
-    api_key: dict = request.path_params.get('api_key')
-    app_logger.info(f"API URL : {api_url}")
+    api_key: dict = request.query_params.get('api_key')
     response = await requester(api_url)
 
     # creating response
@@ -184,4 +187,6 @@ async def v1_gateway(request: Request, path: str):
     # if request is here it means the api request was authorized and valid
     _path = f"/api/v1/{path}"
     await create_take_credit_args(api_key=api_key, path=_path)
-    return JSONResponse(content=response.get("payload"), status_code=status_code, headers=headers)
+    return JSONResponse(content=response.get("payload"),
+                        status_code=status_code,
+                        headers=headers)

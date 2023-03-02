@@ -2,6 +2,7 @@ import httpx
 from src.config import config_instance
 from src.cache.cache import cached
 import requests
+
 # Use the connection pool limits in the AsyncClient
 
 
@@ -19,7 +20,7 @@ async def requester(api_url: str):
         raise err
     return response.json()
 
-@cached
+
 async def set_headers():
     return {'X-API-KEY': config_instance().API_SERVERS.X_API_KEY,
             'X-SECRET-TOKEN': config_instance().API_SERVERS.X_SECRET_TOKEN,
