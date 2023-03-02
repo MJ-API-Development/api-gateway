@@ -1,7 +1,5 @@
 import asyncio
 
-import httpx
-
 from src.prefetch.dynamic_urls import build_dynamic_urls
 from src.requests import requester
 

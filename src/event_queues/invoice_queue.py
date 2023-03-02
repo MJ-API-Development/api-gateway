@@ -6,7 +6,7 @@ import asyncio
 
 _outgoing_invoices_queues: list[dict[str, str | int]] = list()
 get_argument: Callable = _outgoing_invoices_queues.pop
-add_argument: Callable = _outgoing_invoices_queues.append
+add_arguments: Callable = _outgoing_invoices_queues.append
 
 
 async def process_invoice_queues():
@@ -44,7 +44,7 @@ async def add_invoice_to_send(invoice: dict[str, str | int], account: dict[str, 
     """
     # Note: this step may be unnecessary it may be faster to just add the account dict here
     _account = await get_account_details(account=account)
-    add_argument(dict(account=_account, invoice=invoice))
+    add_arguments(dict(account=_account, invoice=invoice))
 
 
 async def get_account_details(account: dict[str, str | int]) -> dict[str, str | int]:

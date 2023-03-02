@@ -112,6 +112,7 @@ async def take_credit_method(api_key: str, request_credit: int):
     :return: None
     """
     cache_api_keys_to_subscriptions.get(api_key)["api_requests_balance"] -= request_credit
+    # TODO update the models in the database
 
 
 async def process_credit_queue():

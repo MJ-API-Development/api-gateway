@@ -48,7 +48,7 @@ async def paypal_payment_gateway_ipn(request: Request, path: str):
     management_logger.info("paypal IPN")
 
 
-@authenticate_admin
+@authenticate_app
 async def create_update_user(request: Request, user_data: dict[str, str | int | bool]):
     """
         used to create new user record
@@ -79,7 +79,7 @@ async def create_update_user(request: Request, user_data: dict[str, str | int | 
     return JSONResponse(content=user_instance.to_dict(), status_code=201, headers=headers)
 
 
-@authenticate_admin
+@authenticate_app
 async def get_delete_user(request: Request, path: str):
     """
         used to update a user
