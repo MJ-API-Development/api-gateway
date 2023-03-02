@@ -1,5 +1,5 @@
 # Prefetch endpoints
-
+import random
 from itertools import chain
 from httpx import HTTPError
 from src.config import config_instance
@@ -21,18 +21,18 @@ PREFETCH_ENDPOINTS = [
 
 @cached_ttl(ONE_DAY)
 async def get_exchange_lists():
-    server_url = api_server_urls[0]
-    api_url = f"{server_url}/api/v1/exchanges"
     try:
+        server_url = random.choice(api_server_urls)
+        api_url = f"{server_url}/api/v1/exchanges"
         data = await requester(api_url=api_url)
         payload = data.get("payload")
         status = data.get("status")
         if status and payload:
             return payload
-        return cached_exchange_lists
     except HTTPError as e:
         pass
-    return cached_exchange_lists
+    else:
+        return cached_exchange_lists
 
 
 async def get_exchange_codes():
