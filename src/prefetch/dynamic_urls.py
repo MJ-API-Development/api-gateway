@@ -6,7 +6,9 @@ from src.config import config_instance
 from src.prefetch.exchange_lists import cached_exchange_lists
 from src.requests import requester
 from src.cache.cache import cached_ttl
+from src.utils.my_logger import init_logger
 
+prefetch_logger = init_logger("prefetching")
 ONE_DAY = 60 * 60 * 24
 
 api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_instance().API_SERVERS.SLAVE_API_SERVER]
@@ -17,15 +19,18 @@ PREFETCH_ENDPOINTS = [
     '/api/v1/fundamental/general']
 
 
+@cached_ttl(ONE_DAY)
 async def get_exchange_lists():
     server_url = api_server_urls[0]
     api_url = f"{server_url}/api/v1/exchanges"
     try:
-        _response = await requester(api_url=api_url)
-        data = _response.json()
-        if data.get("status"):
-            return data.get("payload")
-    except HTTPError:
+        data = await requester(api_url=api_url)
+        payload = data.get("payload")
+        status = data.get("status")
+        if status and payload:
+            return payload
+        return cached_exchange_lists
+    except HTTPError as e:
         pass
     return cached_exchange_lists
 
@@ -75,10 +80,9 @@ async def build_dynamic_urls() -> list[str]:
 
     return list(chain(*[expanded_urls, PREFETCH_ENDPOINTS]))
 
-
-if __name__ == "__main__":
-    import asyncio
-
-    response = asyncio.run(build_dynamic_urls())
-    print(response)
-    print(f"total urls: {len(response)} ")
+# if __name__ == "__main__":
+#     import asyncio
+# 
+#     response = asyncio.run(build_dynamic_urls())
+#     print(response)
+#     print(f"total urls: {len(response)} ")

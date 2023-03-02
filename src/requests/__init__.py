@@ -1,24 +1,23 @@
 import httpx
 from src.config import config_instance
 from src.cache.cache import cached
-
+import requests
 # Use the connection pool limits in the AsyncClient
-async_client = httpx.AsyncClient(http2=True)
+
+
+async_client = httpx.AsyncClient(http2=True, limits=httpx.Limits(max_connections=100, max_keepalive_connections=20))
 
 
 @cached
 async def requester(api_url: str):
     try:
         headers = await set_headers()
-        # response = await async_client.get(api_url, headers=headers)
-        response = await async_client.get(api_url, headers=headers)
-        response.raise_for_status()
+        response = await async_client.get(url=api_url, headers=headers, timeout=360000)
     except httpx.HTTPError as http_err:
         raise http_err
     except Exception as err:
         raise err
-    return response
-
+    return response.json()
 
 @cached
 async def set_headers():
@@ -26,7 +25,6 @@ async def set_headers():
             'X-SECRET-TOKEN': config_instance().API_SERVERS.X_SECRET_TOKEN,
             'X-RapidAPI-Proxy-Secret': config_instance().API_SERVERS.X_RAPID_SECRET,
             'Content-Type': "application/json",
-            'Host': "https://eod-stock-api.site",
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; 64)'}
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'}
 
 # TODO Try random election

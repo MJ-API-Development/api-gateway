@@ -5,13 +5,14 @@ from fastapi import Request, FastAPI, HTTPException
 from starlette.responses import JSONResponse
 
 from src.authentication import authenticate_admin, authenticate_app
-from src.database.apikeys.keys import Account, UUID_LEN
+from src.database.account.account import Account
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions, Plans, Invoices
 from src.event_queues.invoice_queue import add_invoice_to_send, process_invoice_queues
 
 from src.utils.my_logger import init_logger
 from src.utils.utils import create_id, calculate_invoice_date_range
+from src.const import UUID_LEN
 
 management_logger = init_logger("management_aoi")
 admin_app = FastAPI(

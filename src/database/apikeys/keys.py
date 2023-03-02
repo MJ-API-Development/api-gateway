@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import datetime
-import hashlib
 
 import pymysql
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, inspect
 from sqlalchemy.orm import relationship
 from typing_extensions import Self
 
-from src.database.account.account import Account
 from src.database.database_sessions import sessions, Base, sessionType, engine
-from src.database.plans.init_plans import create_plans
 from src.database.plans.plans import Subscriptions, Plans
 from src.utils.utils import create_id
 
@@ -38,7 +35,6 @@ class ApiKeyModel(Base):
     rate_limit: int = Column(Integer)
     is_active: bool = Column(Boolean, default=True)
     subscription = relationship("Subscriptions", uselist=False, foreign_keys=[Subscriptions.uuid])
-    account = relationship("Account", uselist=False, foreign_keys=[Account.api_key])
 
     @classmethod
     def create_if_not_exists(cls):
@@ -77,7 +73,7 @@ class ApiKeyModel(Base):
         return self
 
 
-def cache_api_keys():
+async def cache_api_keys():
     with next(sessions) as session:
         try:
             db_keys = session.query(ApiKeyModel).all()
@@ -96,6 +92,7 @@ async def create_admin_key():
         this is only for the purposes of testing
     :return:
     """
+    from src.database.account.account import Account
     with next(sessions) as session:
         _uuid = create_id(size=UUID_LEN)
         _api_key = create_id(size=UUID_LEN)
@@ -105,7 +102,7 @@ async def create_admin_key():
         email = "info@eod-stock-api.site"
         cell = "0711863234"
         is_admin = True
-        admin_user = Account(uuid=_uuid, api_key=_api_key, first_name=first_name,
+        admin_user = Account(uuid=_uuid, first_name=first_name,
                              second_name=second_name, surname=surname, email=email,
                              cell=cell, is_admin=is_admin, password="MobiusCrypt5627084@")
 
@@ -115,7 +112,7 @@ async def create_admin_key():
                               rate_limit=30,
                               is_active=True)
         sub_id = create_id(UUID_LEN)
-        await create_plans()
+        # await create_plans()
         plans = await Plans.get_all_plans(session=session)
         _enterprise_plan: Plans = [plan for plan in plans if plan.plan_name == "ENTERPRISE"][0]
         subscription = Subscriptions(uuid=_uuid, subscription_id=sub_id, plan_id=_enterprise_plan.plan_id,
@@ -124,9 +121,11 @@ async def create_admin_key():
         try:
             session.add(admin_user)
             session.commit()
+            session.flush()
             session.add(subscription)
             session.add(api_key)
             session.commit()
+            session.flush()
         except pymysql.err.OperationalError as e:
             # TODO log errors
             pass

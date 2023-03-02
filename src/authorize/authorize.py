@@ -9,7 +9,7 @@ from src.database.apikeys.keys import api_keys, cache_api_keys, ApiKeyModel
 from src.authorize.resources import get_resource_name, resource_name_request_size
 from src.cache.cache import cached_ttl
 from src.database.database_sessions import sessions
-from src.database.plans.plans import Subscriptions, Plans
+from src.database.plans.plans import Subscriptions, Plans, PlanType
 from src.utils.my_logger import init_logger
 
 api_keys_lookup = api_keys.get
@@ -20,9 +20,30 @@ take_credit_queue = []
 ONE_DAY: int = 60 * 60 * 24
 auth_logger = init_logger("auth-logger")
 
+cache_api_keys_to_plans = {}
+get_plans_dict = cache_api_keys_to_plans.get
+add_to_api_keys_to_plans_cache = cache_api_keys_to_plans.update
+cache_api_keys_to_subscriptions = {}
+get_subscriptions_dict = cache_api_keys_to_subscriptions.get
+add_to_api_keys_to_subscriptions_cache = cache_api_keys_to_subscriptions.update
+
+
+async def load_plans_by_api_keys() -> None:
+    with next(sessions) as session:
+        for api_key in api_keys:
+            client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
+            subscription_instance: Subscriptions = client_api_model.subscription
+            if not subscription_instance:
+                return False
+            plan_instance: Plans = await Plans.get_plan_by_plan_id(plan_id=subscription_instance.plan_id,
+                                                                   session=session)
+            add_to_api_keys_to_plans_cache({api_key: plan_instance.to_dict()})
+            add_to_api_keys_to_subscriptions_cache({api_key: subscription_instance.to_dict()})
+
 
 class NotAuthorized(Exception):
     """Custom NotAuthorized Class"""
+
     def __init__(self, message):
         super().__init__(message)
         self.status_code = 403
@@ -46,6 +67,7 @@ async def is_resource_authorized(path_param: str, api_key: str) -> bool:
         if not subscription:
             return False
         is_active = await subscription.is_active(session=session)
+        print("is_active: %s" % is_active)
         resource_name = await get_resource_name(path=path_param)
         can_access_resource = await subscription.can_access_resource(resource_name=resource_name, session=session)
     return is_active and can_access_resource
@@ -60,16 +82,13 @@ async def monthly_credit_available(api_key: str) -> bool:
     :return: True if credit is available
     """
     # Need to speed this function up considerably
-    with next(sessions) as session:
-        client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
-        subscription_instance: Subscriptions = client_api_model.subscription
-        if not subscription_instance:
-            return False
-        plan_instance: Plans = await Plans.get_plan_by_plan_id(plan_id=subscription_instance.plan_id, session=session)
-        if plan_instance.plan_limit <= subscription_instance.api_requests_balance:
-            # if hard_limit is true then monthly credit is not available
-            return not plan_instance.is_hard_limit()
-        return True
+    plan_dict = get_plans_dict(api_key)
+    subscription_dict = get_subscriptions_dict(api_key)
+
+    if plan_dict.get("plan_limit") <= subscription_dict.get("api_requests_balance"):
+        # if hard_limit is true then monthly credit is not available
+        return not plan_dict.get("plan_limit_type") == PlanType.hard_limit
+    return True
 
 
 async def create_take_credit_args(api_key: str, path: str):
@@ -92,16 +111,7 @@ async def take_credit_method(api_key: str, request_credit: int):
     :param api_key: the api_key associated with the request
     :return: None
     """
-    # TODO need to speed this up considerably
-    with next(sessions) as session:
-        client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
-        subscription_instance: Subscriptions = client_api_model.subscription
-        if subscription_instance:
-            subscription_instance.api_requests_balance -= request_credit
-            # The Purpose here is to update the subscription model so it reflects the most
-            # recent api_requests_balance
-            session.commit(subscription_instance)
-        # Log something here its an error if execution comes and user has no subscription
+    cache_api_keys_to_subscriptions.get(api_key)["api_requests_balance"] -= request_credit
 
 
 async def process_credit_queue():
@@ -141,7 +151,7 @@ def auth_and_rate_limit(func):
             raise NotAuthorized(message=mess)
 
         if api_key not in api_keys:
-            cache_api_keys_func()  # Update api_keys if the key is not found
+            await cache_api_keys_func()  # Update api_keys if the key is not found
             if api_key not in api_keys:
                 # user not authorized to access this routes
                 mess = "EOD Stock API - Invalid API Key, or Cancelled API Key please subscribe to get a valid API Key"
@@ -181,4 +191,5 @@ def auth_and_rate_limit(func):
         # is a soft limit, in which case the client will incur extra charges
 
         return await func(*args, **kwargs)
+
     return wrapper

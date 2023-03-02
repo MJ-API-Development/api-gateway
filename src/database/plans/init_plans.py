@@ -249,16 +249,17 @@ async def create_plans() -> None:
         session.add(create_business())
         session.add(create_enterprise())
         session.commit()
+        session.flush()
 
     return None
 
 
 def create_enterprise() -> Plans:
-    rate_limit, plan_limit, rate_per_request = RateLimits.ENTERPRISE
+    rate_limit, plan_limit, rate_per_request = RateLimits().ENTERPRISE
     return Plans(plan_id=create_id(size=UUID_LEN),
-                 plan_name=PlanNames.ENTERPRISE,
-                 charge_amount=ChargeAmounts.ENTERPRISE,
-                 description=PlanDescriptions.ENTERPRISE,
+                 plan_name=PlanNames().ENTERPRISE,
+                 charge_amount=ChargeAmounts().ENTERPRISE,
+                 description=PlanDescriptions().ENTERPRISE,
                  resource_set=PlanResources().ENTERPRISE,
                  rate_limit=rate_limit,
                  plan_limit=plan_limit,
@@ -267,11 +268,11 @@ def create_enterprise() -> Plans:
 
 
 def create_business() -> Plans:
-    rate_limit, plan_limit, rate_per_request = RateLimits.BUSINESS
+    rate_limit, plan_limit, rate_per_request = RateLimits().BUSINESS
     return Plans(plan_id=create_id(size=UUID_LEN),
-                 plan_name=PlanNames.BUSINESS,
-                 charge_amount=ChargeAmounts.BUSINESS,
-                 description=PlanDescriptions.BUSINESS,
+                 plan_name=PlanNames().BUSINESS,
+                 charge_amount=ChargeAmounts().BUSINESS,
+                 description=PlanDescriptions().BUSINESS,
                  resource_set=PlanResources().BUSINESS,
                  rate_limit=rate_limit,
                  plan_limit=plan_limit,
@@ -280,11 +281,11 @@ def create_business() -> Plans:
 
 
 def create_professional() -> Plans:
-    rate_limit, plan_limit, rate_per_request = RateLimits.PROFESSIONAL
+    rate_limit, plan_limit, rate_per_request = RateLimits().PROFESSIONAL
     return Plans(plan_id=create_id(size=UUID_LEN),
-                 plan_name=PlanNames.PROFESSIONAL,
-                 charge_amount=ChargeAmounts.PROFESSIONAL,
-                 description=PlanDescriptions.PROFESSIONAL,
+                 plan_name=PlanNames().PROFESSIONAL,
+                 charge_amount=ChargeAmounts().PROFESSIONAL,
+                 description=PlanDescriptions().PROFESSIONAL,
                  resource_set=PlanResources().PROFESSIONAL,
                  rate_limit=rate_limit,
                  plan_limit=plan_limit,
@@ -293,11 +294,11 @@ def create_professional() -> Plans:
 
 
 def create_basic() -> Plans:
-    rate_limit, plan_limit, rate_per_request = RateLimits.BASIC
+    rate_limit, plan_limit, rate_per_request = RateLimits().BASIC
     return Plans(plan_id=create_id(size=UUID_LEN),
-                 plan_name=PlanNames.BASIC,
-                 charge_amount=ChargeAmounts.BASIC,
-                 description=PlanDescriptions.BASIC,
+                 plan_name=PlanNames().BASIC,
+                 charge_amount=ChargeAmounts().BASIC,
+                 description=PlanDescriptions().BASIC,
                  resource_set=PlanResources().BASIC,
                  rate_limit=rate_limit,
                  plan_limit=plan_limit,

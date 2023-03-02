@@ -1,7 +1,8 @@
 
 
 def create_tables():
-    from src.database.apikeys.keys import ApiKeyModel, Account
+    from src.database.apikeys.keys import ApiKeyModel
+    from src.database.account.account import Account
     from src.database.plans.plans import Subscriptions, Plans, Payments, Invoices
     ApiKeyModel.create_if_not_exists()
     Account.create_if_not_exists()

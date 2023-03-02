@@ -121,7 +121,7 @@ class Plans(Base):
 
     @property
     def resource_set(self) -> set[str]:
-        return {res.lower() for res in self._resource_str.split(",")}
+        return set([res.lower() for res in self._resource_str.split(",")])
 
     @resource_set.setter
     def resource_set(self, rs_set: set[str]):
@@ -140,7 +140,6 @@ class Plans(Base):
             "rate_per_request": self.rate_per_request,
         }
 
-    @jit
     def resource_exist(self, resource_name: str) -> bool:
         """
 

@@ -3,9 +3,11 @@ import secrets
 
 
 from sqlalchemy import Column, String, inspect, Boolean, ForeignKey
+from sqlalchemy.orm import backref, relationship
 from typing_extensions import Self
 
 from src.const import UUID_LEN, NAME_LEN, EMAIL_LEN, STR_LEN, CELL_LEN
+from src.database.apikeys.keys import ApiKeyModel
 from src.database.database_sessions import Base, sessionType, engine
 
 
@@ -15,7 +17,6 @@ class Account(Base):
     """
     __tablename__ = "accounts"
     uuid: str = Column(String(UUID_LEN), primary_key=True, index=True)
-    api_key: str = Column(String(UUID_LEN), ForeignKey("eod_api_keys.api_key"))
     first_name: str = Column(String(NAME_LEN), index=True)
     second_name: str = Column(String(NAME_LEN), index=True)
     surname: str = Column(String(NAME_LEN), index=True)
@@ -24,6 +25,7 @@ class Account(Base):
     password_hash: str = Column(String(STR_LEN), index=True)
     is_admin: bool = Column(Boolean, default=False)
     is_deleted: bool = Column(Boolean, default=False)
+    apikey = relationship('ApiKeyModel', uselist=False, foreign_keys=[ApiKeyModel.uuid])
 
     @classmethod
     def create_if_not_exists(cls):

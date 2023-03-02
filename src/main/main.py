@@ -4,9 +4,10 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.database.apikeys.keys import cache_api_keys
+from src.database.apikeys.keys import cache_api_keys, create_admin_key
 from src.authentication import authenticate_admin
-from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized
+from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
+    load_plans_by_api_keys
 from src.config import config_instance
 from src.management_api.routes import admin_app
 from src.database.plans.init_plans import create_plans
@@ -90,10 +91,11 @@ async def handle_not_authorized(request, exc):
     return JSONResponse(status_code=exc.status_code, content={"message": exc.message})
 
 
-@app.get("/test-error-handling")
+@app.get("/test")
 async def test_error_handling():
-    response = await requester("https://example.com/non-existent-url")
-    return response.json()
+    await create_admin_key()
+    # response = await requester("https://example.com/non-existent-url")
+    return "Done"
 
 
 @app.post("/_bootstrap/create-plans")
@@ -118,7 +120,9 @@ async def startup_event():
     async def update_api_keys_background_task():
         while True:
             app_logger.info("Started Pre Fetching API Keys")
-            cache_api_keys()
+            # Caching API Keys , plans and Subscriptions
+            await cache_api_keys()
+            await load_plans_by_api_keys()
             app_logger.info("Done Pre Fetching API Keys")
 
             # wait for 15 minutes then update API Keys records
@@ -166,7 +170,7 @@ async def v1_gateway(request: Request, path: str):
     # creating response
     headers = {"Content-Type": "application/json"}
 
-    if 'application/json' not in response.headers['Content-Type']:
+    if response.get("status", 0) == 0:
         message = "there was an error accessing server please tru again later, if this error persists please " \
                   "contact admin@eod-stock-api.site"
 
@@ -175,9 +179,9 @@ async def v1_gateway(request: Request, path: str):
     # create an ijson parser for the response content
     # create response
     headers = {"Content-Type": "application/json"}
-    content = response.json()
-    status_code = response.status_code
+    content = response
+    status_code = 200 if response.get("status") else 400
     # if request is here it means the api request was authorized and valid
     _path = f"/api/v1/{path}"
     await create_take_credit_args(api_key=api_key, path=_path)
-    return JSONResponse(content=content, status_code=status_code, headers=headers)
+    return JSONResponse(content=response.get("payload"), status_code=status_code, headers=headers)

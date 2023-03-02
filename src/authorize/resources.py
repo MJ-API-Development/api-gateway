@@ -59,7 +59,6 @@ resource_paths: dict[str, str] = {
     "sentiment_analysis.tweeter.stock_code": "/api/v1/sentiment/tweet/stock/"}
 
 
-
 def path_to_resource() -> dict[str, str]:
     """
         reverses the resource to path dictionary
@@ -73,9 +72,18 @@ def path_to_resource() -> dict[str, str]:
     return _dict
 
 
-
 async def get_resource_name(path: str) -> str:
-    return path_to_resource()[path]
+    _path = path
+    path_dict = path_to_resource()
+    while True:
+        try:
+            resource = path_dict[_path]
+            return resource
+        except KeyError:
+            _path = "/".join(_path.split("/")[:-1])
+            if not _path:
+                raise KeyError(f"No Resource found for path: {path}")
+            _path = f"{_path}/"
 
 
 resource_name_request_size: dict[str, int] = {

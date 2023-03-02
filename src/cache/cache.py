@@ -100,10 +100,10 @@ class Cache:
         try:
             return ujson.loads(value)
         except JSONDecodeError as e:
-            config_instance().DEBUG and self._logger.error(f"Could be bad data on output stream {str(e)}")
+            config_instance().DEBUG and self._logger.error(f"{value}")
             return value
         except TypeError as e:
-            config_instance().DEBUG and self._logger.error(f"Could be bad data on output stream {str(e)}")
+            config_instance().DEBUG and self._logger.error(f"{value}")
             return value
 
     def set(self, key: str, value: Any, expiration_time: int = 0):
@@ -122,6 +122,7 @@ class Cache:
                     self._remove_oldest_entry()
                 # Add the new entry
                 self._cache[key] = {'value': value, 'timestamp': time.time()}
+                # self._logger.info(f"Created value : {value}")
 
     def get(self, key: str) -> Any:
         """
@@ -147,7 +148,7 @@ class Cache:
                 else:
                     value = None
 
-        return self._deserialize_value(value)
+        return self._deserialize_value(value) if value else None
 
     def _remove_oldest_entry(self):
         """
@@ -198,7 +199,7 @@ def cached(func):
         if _data is None:
             result = await func(*args, **kwargs)
             if result:
-                mem_cache.set(key=_key, value=_data, expiration_time=60 * 60 * 1)
+                mem_cache.set(key=_key, value=result, expiration_time=60 * 60 * 1)
                 # redis_cache.set(key=_key, value=result, expiration_time=60*60*1)
             return result
         return _data
@@ -220,7 +221,7 @@ def cached_ttl(ttl: int = 60 * 60 * 1):
             if _data is None:
                 result = await func(*args, **kwargs)
                 if result:
-                    mem_cache.set(key=_key, value=_data, expiration_time=ttl)
+                    mem_cache.set(key=_key, value=result, expiration_time=ttl)
                     # redis_cache.set(key=_key, value=result, expiration_time=60*60*1)
                 return result
             return _data
