@@ -46,6 +46,3 @@ class EmailTemplate:
         return EmailTemplate(template).render(client_name=client_name, plan_name=plan_name, amount=amount)
 
 
-# Usage
-subscription_welcome = EmailTemplate.subscription_welcome('John', 'Premium')
-payment_confirmation = EmailTemplate.payment_confirmation('John', 'Premium', 99.99)

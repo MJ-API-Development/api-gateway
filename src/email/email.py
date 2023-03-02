@@ -9,7 +9,6 @@ class Emailer:
     def __init__(self, smtp_server: str, port: int):
         self.server = smtplib.SMTP(smtp_server, port)
         self.server.starttls()
-        self.templates = EmailTemplate()
 
     def create_server(self, smtp_server: str, port: int) -> None:
         """Create a secure SSL/TLS connection to the SMTP server."""
@@ -44,11 +43,11 @@ class Emailer:
     def send_subscription_welcome_email(self, sender_email: str,
                                         recipient_email: str,
                                         client_name: str,
-                                        plan_name: str):
+                                        plan_name: str, templates: EmailTemplate =EmailTemplate):
         """Send the subscription welcome email."""
         subject = f"Welcome to our {plan_name} subscription!"
         text = f"Dear {client_name},\n\nThank you for signing up for our {plan_name} subscription!"
-        html = EmailTemplate.subscription_welcome(client_name=client_name, plan_name=plan_name)
+        html = templates.subscription_welcome(client_name=client_name, plan_name=plan_name)
 
         message = self.create_message(sender_email, recipient_email, subject, text, html)
         self.send_email(sender_email, recipient_email, message)
@@ -58,12 +57,12 @@ class Emailer:
                                         recipient_email: str,
                                         client_name: str,
                                         plan_name: str,
-                                        amount: float):
+                                        amount: float, templates: EmailTemplate = EmailTemplate):
 
         """Send the payment confirmation email."""
         subject = f"Payment confirmation for your {plan_name} subscription"
         text = f"Dear {client_name},\n\nThank you for your payment of {amount} for our {plan_name} subscription."
-        html = EmailTemplate.payment_confirmation(client_name=client_name, plan_name=plan_name, amount=amount)
+        html = templates.payment_confirmation(client_name=client_name, plan_name=plan_name, amount=amount)
 
         message = self.create_message(sender_email, recipient_email, subject, text, html)
         self.send_email(sender_email, recipient_email, message)
