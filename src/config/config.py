@@ -48,6 +48,7 @@ class RedisSettings(BaseSettings):
         env_file = '.env.development'
         env_file_encoding = 'utf-8'
 
+
 class CacheSettings(BaseSettings):
     """Google Mem Cache Settings"""
     # NOTE: TO USE Flask_cache with redis set Cache type to redis and setup CACHE_REDIS_URL
@@ -62,6 +63,7 @@ class CacheSettings(BaseSettings):
         env_file = '.env.development'
         env_file_encoding = 'utf-8'
 
+
 class EmailSettings(BaseSettings):
     SMTP_SERVER: str = Field(..., env="SMTP_SERVER")
     SMTP_PORT: int = Field(..., env="SMTP_PORT")
@@ -69,6 +71,17 @@ class EmailSettings(BaseSettings):
     class Config:
         env_file = '.env.development'
         env_file_encoding = 'utf-8'
+
+
+class PayPalSettings(BaseSettings):
+    MODE: str = Field(default="sandbox")
+    CLIENT_ID: str = Field(..., env="PAYPAL_CLIENT_ID")
+    CLIENT_SECRET: str = Field(..., env="PAYPAL_CLIENT_SECRET")
+
+    class Config:
+        env_file = '.env.development'
+        env_file_encoding = 'utf-8'
+
 
 class Settings(BaseSettings):
     SECRET_KEY: str = Field(..., env="SECRET_TOKEN")
@@ -81,6 +94,7 @@ class Settings(BaseSettings):
     REDIS_CACHE: RedisSettings = RedisSettings()
     CACHE_SETTINGS: CacheSettings = CacheSettings()
     EMAIL_SETTINGS: EmailSettings = EmailSettings()
+    PAYPAL_SETTINGS: PayPalSettings = PayPalSettings()
 
     class Config:
         case_sensitive = True

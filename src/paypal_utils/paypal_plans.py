@@ -1,18 +1,17 @@
 import paypalrestsdk
-from paypalrestsdk.openid_connect import client_secret
-
+from paypalrestsdk import BillingPlan, BillingAgreement
 from src.config import config_instance
-from src.database.database_sessions import sessions, sessionType
+from src.database.database_sessions import sessions
 from src.database.plans.plans import Plans, Subscriptions
 
-paypal_config = dict(client_id=config_instance().PAYPAL_SERVICE.CLIENT_ID,
-                     client_secret=config_instance().PAYPAL_SERVICE.CLIENT_ID,
-                     mode=config_instance().PAYPAL_SERVICE.MODE)
+paypal_config = dict(client_id=config_instance().PAYPAL_SETTINGS.CLIENT_ID,
+                     client_secret=config_instance().PAYPAL_SETTINGS.CLIENT_SECRET,
+                     mode=config_instance().PAYPAL_SETTINGS.MODE)
 
 
 class PayPalService:
     def __init__(self):
-        self.paypal_api = paypalrestsdk.configure(paypal_config).Api()
+        self.paypal_api = paypalrestsdk.configure(paypal_config)
         self.client_plans = self.load_plans()
 
     @staticmethod
@@ -21,7 +20,8 @@ class PayPalService:
             plans_list = Plans.fetch_all(session=session)
         return plans_list
 
-    def create_paypal_billing_plans(self):
+    @staticmethod
+    async def create_paypal_billing_plans():
         # Run Once to create PayPal Service - Billing Plans
         with next(sessions) as session:
             plans_list = Plans.fetch_all(session=session)
@@ -64,7 +64,7 @@ class PayPalService:
                         "max_fail_attempts": "3"
                     }
                 }
-                _billing_plan = self.paypal_api.BillingPlan(plan_attr)
+                _billing_plan = BillingPlan(plan_attr)
                 if _billing_plan.create():
                     plan.paypal_id = _billing_plan.id
                     _billing_plan.activate()
@@ -73,9 +73,11 @@ class PayPalService:
                     session.commit()
             session.flush()
 
-    def use_paypal_subscriptions(self, plan: Plans, subscription: Subscriptions) -> Subscriptions:
+    @staticmethod
+    async def create_paypal_billing(plan: Plans, subscription: Subscriptions) -> Subscriptions:
         """
-
+            create user subscription upon user selection on the client website and then send
+            the client to the approval url in order to approve the billing
         :param subscription:
         :param plan:
         :return:
@@ -92,7 +94,7 @@ class PayPalService:
             }
         }
         with next(sessions) as session:
-            _subscription = self.paypal_api.Subscription(sub_attrs)
+            _subscription = BillingAgreement(sub_attrs)
             if _subscription.create():
                 subscription.paypal_id = _subscription.id
                 for link in _subscription.links:
@@ -105,3 +107,6 @@ class PayPalService:
         return subscription
 
         # TODO Redirect client to  approval url
+
+
+paypal_service = PayPalService()

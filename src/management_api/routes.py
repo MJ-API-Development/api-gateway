@@ -1,40 +1,32 @@
 import asyncio
 import datetime
-import aiohttp
 
 from fastapi import Request, FastAPI, HTTPException, Form
 from starlette.responses import JSONResponse
 
 from src import paypal_utils
 from src.authentication import authenticate_admin, authenticate_app
+from src.const import UUID_LEN
 from src.database.account.account import Account
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions, Plans, Invoices
 from src.email.email import process_send_subscription_welcome_email, process_send_payment_confirmation_email
 from src.event_queues.invoice_queue import add_invoice_to_send, process_invoice_queues
-
+from src.paypal_utils.paypal_plans import paypal_service
 from src.utils.my_logger import init_logger
 from src.utils.utils import create_id, calculate_invoice_date_range
-from src.const import UUID_LEN
 
 management_logger = init_logger("management_aoi")
-admin_app = FastAPI(
-    title="EOD-STOCK-API - Admin Application",
-    description="Adminstrative Tasks EndPoints",
-    version="0.0.1",
-    terms_of_service="https://www.eod-stock-api.site/terms",
-    contact={
-        "name": "EOD-STOCK-API - Admin",
-        "url": "/contact",
-        "email": "admin@eod-stock-api.site"
-    },
-    license_info={
-        "name": "Apache 2.0",
-        "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
-    },
-    docs_url="/_admin/docs",
-    redoc_url="/_admin/redoc"
-)
+admin_app = FastAPI()
+
+
+async def paypal_subscription_activated_ipn(request: Request):
+    """
+        when subscription is created and activated call this endpoint
+    :param request:
+    :return:
+    """
+    return JSONResponse(content={'status': 'success'}, status_code=201)
 
 
 @authenticate_admin
@@ -61,7 +53,8 @@ async def paypal_ipn(request: Request, custom_data: str = Form(...), txn_type: s
         # e.g., email notifications, webhook notifications
         with next(sessions) as session:
             subscription_id: str = custom_data.get('subscription_id')
-            subscription_instance = await Subscriptions.get_by_subscription_id(subscription_id=subscription_id, session=session)
+            subscription_instance = await Subscriptions.get_by_subscription_id(subscription_id=subscription_id,
+                                                                               session=session)
 
         # Return a response to PayPal indicating that the IPN was handled successfully
         return JSONResponse(content={'status': 'success'}, status_code=200)
@@ -129,6 +122,8 @@ async def get_delete_user(request: Request, path: str):
             return JSONResponse(content=user_instance.to_dict(),
                                 status_code=201,
                                 headers=headers)
+
+    return JSONResponse(content={'message': 'deleted user'}, status_code=201)
 
 
 @authenticate_app
@@ -209,10 +204,24 @@ async def get_delete_subscriptions(request: Request, path: str):
     :return:
     """
     management_logger.info("Delete Subscriptions")
+    return JSONResponse(content={'message': 'deleted subscription'}, status_code=201)
 
 
-admin_app.add_route(path="/_ipn/payment-gateway/paypal/<path:path>", route=paypal_payment_gateway_ipn, methods=["GET"],
+async def create_paypal_subscriptions(request: Request):
+    """
+
+    :param request:
+    :return:
+    """
+    response = await paypal_service.create_paypal_billing_plans()
+    print(response)
+    return JSONResponse(content=response, status_code=201)
+
+
+admin_app.add_route(path="/paypal/subscriptions", route=create_paypal_subscriptions, methods=["GET"],
                     include_in_schema=True)
+admin_app.add_route(path="/_ipn/paypal/<path:path>", route=paypal_ipn, methods=["GET", "POST"], include_in_schema=True)
+admin_app.add_route(path="/_ipn/paypal/billing/subscription-created-activated", route=paypal_subscription_activated_ipn, methods=["GET", "POST"], include_in_schema=True)
 admin_app.add_route(path="/user/<path:path>", route=get_delete_user, methods=["GET", "DELETE"], include_in_schema=True)
 admin_app.add_route(path="/user", route=create_update_user, methods=["POST", "PUT"], include_in_schema=True)
 admin_app.add_route(path="/subscription/<path:path>", route=get_delete_subscriptions, methods=["GET", "DELETE"],
@@ -230,5 +239,3 @@ async def admin_startup():
     asyncio.create_task(process_invoice_queues())
     asyncio.create_task(process_send_subscription_welcome_email())
     asyncio.create_task(process_send_payment_confirmation_email())
-
-

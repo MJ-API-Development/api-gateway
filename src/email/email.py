@@ -12,8 +12,10 @@ class Emailer:
 
     def __init__(self, smtp_server: str, port: int):
         try:
-            self.server = smtplib.SMTP(smtp_server, port)
-            self.server.starttls()
+            # self.server = smtplib.SMTP(smtp_server, port)
+            # self.server.starttls()
+            self.server = None
+
         except ConnectionRefusedError as e:
             pass
 

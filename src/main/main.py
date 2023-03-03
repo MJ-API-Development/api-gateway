@@ -146,8 +146,6 @@ async def startup_event():
     asyncio.create_task(process_credit_queue())
 
 
-app.mount(path="/_admin", app=admin_app)
-
 
 @app.api_route("/api/v1/{path:path}", methods=["GET"], include_in_schema=True)
 @auth_and_rate_limit
@@ -186,3 +184,7 @@ async def v1_gateway(request: Request, path: str):
     return JSONResponse(content=response.get("payload"),
                         status_code=status_code,
                         headers=headers)
+
+
+
+app.mount(path="/_admin", app=admin_app)
