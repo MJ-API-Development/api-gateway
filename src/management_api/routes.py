@@ -57,9 +57,11 @@ async def paypal_ipn(request: Request, custom_data: str = Form(...), txn_type: s
     if response_text == 'VERIFIED':
         # Update your database with the relevant information
         # e.g., subscription start date, end date, and payment status
-
         # Send notifications to the client and relevant parties
         # e.g., email notifications, webhook notifications
+        with next(sessions) as session:
+            subscription_id: str = custom_data.get('subscription_id')
+            subscription_instance = await Subscriptions.get_by_subscription_id(subscription_id=subscription_id, session=session)
 
         # Return a response to PayPal indicating that the IPN was handled successfully
         return JSONResponse(content={'status': 'success'}, status_code=200)

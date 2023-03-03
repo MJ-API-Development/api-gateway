@@ -19,6 +19,9 @@ class Subscriptions(Base):
     _is_active: bool = Column(Boolean, default=False)
     api_requests_balance: int = Column(Integer)
 
+    approval_url: str = Column(String(255))
+    paypal_id: str = Column(String(255))
+
     @classmethod
     def create_if_not_exists(cls):
         if not inspect(engine).has_table(cls.__tablename__):
@@ -103,6 +106,7 @@ class Plans(Base):
     """
     __tablename__ = "plans"
     plan_id: str = Column(String(UUID_LEN), primary_key=True, index=True)
+    paypal_id: str = Column(String(255), index=True)
     plan_name: str = Column(String(NAME_LEN), index=True, unique=True)
     charge_amount: int = Column(Integer)  # Payment Amount for this plan in Cents
     description: str = Column(Text)
@@ -169,6 +173,10 @@ class Plans(Base):
 
     def is_hard_limit(self) -> bool:
         return self.plan_limit_type == PlanType.hard_limit
+
+    @classmethod
+    def fetch_all(cls, session: sessionType):
+        return session.query(cls).all()
 
 
 class Payments(Base):
