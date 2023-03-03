@@ -134,10 +134,11 @@ class Plans(Base):
     def to_dict(self) -> dict[str, str | int | set[str]]:
         return {
             "plan_id": self.plan_id,
+            "paypal_id": self.paypal_id,
             "plan_name": self.plan_name,
             "Amount": self.charge_amount,
             "description": self.description,
-            "resources": self.resource_set,
+            "resources": list(self.resource_set),
             "rate_limit": self.rate_limit,
             "plan_limit": self.plan_limit,
             "plan_limit_type": self.plan_limit_type,

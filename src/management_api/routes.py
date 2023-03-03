@@ -20,6 +20,8 @@ management_logger = init_logger("management_aoi")
 admin_app = FastAPI()
 
 
+@admin_app.api_route(path="/_ipn/paypal/billing/subscription-created-activated",
+                     methods=["GET", "POST"], include_in_schema=False)
 async def paypal_subscription_activated_ipn(request: Request):
     """
         when subscription is created and activated call this endpoint
@@ -29,6 +31,7 @@ async def paypal_subscription_activated_ipn(request: Request):
     return JSONResponse(content={'status': 'success'}, status_code=201)
 
 
+@admin_app.api_route(path="/_ipn/paypal/<path:path>", methods=["GET", "POST"], include_in_schema=True)
 @authenticate_admin
 async def paypal_ipn(request: Request, custom_data: str = Form(...), txn_type: str = Form(...)):
     paypal_url = 'https://ipnpb.paypal.com/cgi-bin/webscr'
@@ -65,6 +68,7 @@ async def paypal_ipn(request: Request, custom_data: str = Form(...), txn_type: s
         return JSONResponse(content={'status': 'error'}, status_code=500)
 
 
+@admin_app.api_route(path="/user", methods=["POST", "PUT"], include_in_schema=True)
 @authenticate_app
 async def create_update_user(request: Request, user_data: dict[str, str | int | bool]):
     """
@@ -96,6 +100,7 @@ async def create_update_user(request: Request, user_data: dict[str, str | int | 
     return JSONResponse(content=user_instance.to_dict(), status_code=201, headers=headers)
 
 
+@admin_app.api_route(path="/user/<path:path>", methods=["GET", "DELETE"], include_in_schema=True)
 @authenticate_app
 async def get_delete_user(request: Request, path: str):
     """
@@ -126,6 +131,7 @@ async def get_delete_user(request: Request, path: str):
     return JSONResponse(content={'message': 'deleted user'}, status_code=201)
 
 
+@admin_app.api_route(path="/subscriptions", methods=["POST", "PUT"], include_in_schema=True)
 @authenticate_app
 async def subscriptions(request: Request, subscription_data: dict[str, str | int | bool]):
     """
@@ -171,6 +177,11 @@ async def subscriptions(request: Request, subscription_data: dict[str, str | int
             await add_invoice_to_send(invoice=invoice.to_dict(), account=account.to_dict())
 
             session.commit()
+            session.flush()
+            # this last step creates a billing in paypal the client app must redirect the user to the url for verifying
+            # the billing
+            subscription_instance = await paypal_service.create_paypal_billing(plan=plan,
+                                                                               subscription=subscription_instance)
 
         elif request.method == "PUT":
             """
@@ -194,6 +205,7 @@ async def subscriptions(request: Request, subscription_data: dict[str, str | int
         return JSONResponse(content=subscription_instance.to_dict(), status_code=201, headers=headers)
 
 
+@admin_app.api_route(path="/subscription/<path:path>", methods=["GET", "DELETE"], include_in_schema=True)
 @authenticate_admin
 async def get_delete_subscriptions(request: Request, path: str):
     """
@@ -207,6 +219,8 @@ async def get_delete_subscriptions(request: Request, path: str):
     return JSONResponse(content={'message': 'deleted subscription'}, status_code=201)
 
 
+@admin_app.api_route(path="/paypal/subscriptions", methods=["GET"], include_in_schema=True)
+@authenticate_admin
 async def create_paypal_subscriptions(request: Request):
     """
 
@@ -218,15 +232,19 @@ async def create_paypal_subscriptions(request: Request):
     return JSONResponse(content=response, status_code=201)
 
 
-admin_app.add_route(path="/paypal/subscriptions", route=create_paypal_subscriptions, methods=["GET"],
-                    include_in_schema=True)
-admin_app.add_route(path="/_ipn/paypal/<path:path>", route=paypal_ipn, methods=["GET", "POST"], include_in_schema=True)
-admin_app.add_route(path="/_ipn/paypal/billing/subscription-created-activated", route=paypal_subscription_activated_ipn, methods=["GET", "POST"], include_in_schema=True)
-admin_app.add_route(path="/user/<path:path>", route=get_delete_user, methods=["GET", "DELETE"], include_in_schema=True)
-admin_app.add_route(path="/user", route=create_update_user, methods=["POST", "PUT"], include_in_schema=True)
-admin_app.add_route(path="/subscription/<path:path>", route=get_delete_subscriptions, methods=["GET", "DELETE"],
-                    include_in_schema=True)
-admin_app.add_route(path="/subscriptions", route=subscriptions, methods=["POST", "PUT"], include_in_schema=True),
+@admin_app.api_route(path="/plans", methods=["GET"], include_in_schema=True)
+@authenticate_app
+async def get_client_plans(request: Request):
+    """
+
+    :param request:
+    :return:
+    """
+    with next(sessions) as session:
+        plan_list = await Plans.get_all_plans(session=session)
+    payload = [plan.to_dict() for plan in plan_list]
+
+    return JSONResponse(content=payload, status_code=200)
 
 
 @admin_app.on_event("startup")

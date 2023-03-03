@@ -98,6 +98,9 @@ async def test_error_handling():
     return "Done"
 
 
+app.mount(path="/_admin", app=admin_app)
+
+
 @app.post("/_bootstrap/create-plans")
 @authenticate_admin
 async def _create_plans(request: Request):
@@ -146,7 +149,6 @@ async def startup_event():
     asyncio.create_task(process_credit_queue())
 
 
-
 @app.api_route("/api/v1/{path:path}", methods=["GET"], include_in_schema=True)
 @auth_and_rate_limit
 async def v1_gateway(request: Request, path: str):
@@ -184,7 +186,3 @@ async def v1_gateway(request: Request, path: str):
     return JSONResponse(content=response.get("payload"),
                         status_code=status_code,
                         headers=headers)
-
-
-
-app.mount(path="/_admin", app=admin_app)
