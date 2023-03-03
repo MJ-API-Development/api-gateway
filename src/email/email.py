@@ -8,8 +8,11 @@ from src.config.config import config_instance
 class Emailer:
 
     def __init__(self, smtp_server: str, port: int):
-        self.server = smtplib.SMTP(smtp_server, port)
-        self.server.starttls()
+        try:
+            self.server = smtplib.SMTP(smtp_server, port)
+            self.server.starttls()
+        except ConnectionRefusedError as e:
+            pass
 
     def create_server(self, smtp_server: str, port: int) -> None:
         """Create a secure SSL/TLS connection to the SMTP server."""
