@@ -1,6 +1,6 @@
 from src.config import config_instance
 from CloudFlare import CloudFlare
-
+import ipaddress
 
 EMAIL = config_instance().CLOUDFLARE_SETTINGS.EMAIL
 TOKEN = config_instance().CLOUDFLARE_SETTINGS.TOKEN
@@ -12,7 +12,13 @@ TOKEN = config_instance().CLOUDFLARE_SETTINGS.TOKEN
 class CloudFlareFirewall:
     def __init__(self):
         self.cloud_flare = CloudFlare(email=EMAIL, token=TOKEN)
+        self.ip_ranges = ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18',
+                          '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22',
+                          '198.41.128.0/17',
+                          '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22']
 
-    def cloudflare_ips(self) -> list[str]:
-        ip_list = self.cloud_flare.zones.firewall.access_rules.rules(ip_firewall=True)
-        return [rule['configuration']['value'] for rule in ip_list]
+    async def check_ip_range(self, ip):
+        for ip_range in self.ip_ranges:
+            if ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range):
+                return True
+        return False

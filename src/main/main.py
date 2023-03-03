@@ -65,8 +65,15 @@ app.add_middleware(
 
 @app.middleware("http")
 async def check_ip(request: Request, call_next):
+    """
+        determines if call originate from cloudflare
+    :param request:
+    :param call_next:
+    :return:
+    """
+    # TODO consider adding header checks
     ip = request.client.host
-    if ip not in CloudFlareFirewall().cloudflare_ips():
+    if await CloudFlareFirewall().check_ip_range(ip=ip):
         return {"message": "Access denied"}
     response = await call_next(request)
     return response
