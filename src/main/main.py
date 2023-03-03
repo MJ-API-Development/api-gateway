@@ -73,8 +73,8 @@ async def check_ip(request: Request, call_next):
     """
     # TODO consider adding header checks
     ip = request.client.host
-    if await CloudFlareFirewall().check_ip_range(ip=ip):
-        return {"message": "Access denied"}
+    if not await CloudFlareFirewall().check_ip_range(ip=ip):
+        return JSONResponse(content={"message": "Access denied"}, status_code=403)
     response = await call_next(request)
     return response
 
