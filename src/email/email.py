@@ -6,6 +6,9 @@ from src.config.config import config_instance
 
 
 class Emailer:
+    """
+        Emailing Class, used to create email servers and manage sending emails
+    """
 
     def __init__(self, smtp_server: str, port: int):
         try:

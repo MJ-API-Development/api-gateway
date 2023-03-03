@@ -2,6 +2,9 @@ from jinja2 import Template
 
 
 class EmailTemplate:
+    """
+        Used to create email templates based on Jinja2 for use in the gateway
+    """
     def __init__(self, template=None):
         self.template = Template(template)
 
