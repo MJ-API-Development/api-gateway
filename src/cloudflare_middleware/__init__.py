@@ -2,8 +2,8 @@ from src.config import config_instance
 from CloudFlare import CloudFlare
 
 
-EMAIL = config_instance.CLOUDFLARE_SETTINGS.EMAIL
-TOKEN = config_instance.CLOUDFLARE_SETTINGS.TOKEN
+EMAIL = config_instance().CLOUDFLARE_SETTINGS.EMAIL
+TOKEN = config_instance().CLOUDFLARE_SETTINGS.TOKEN
 
 
 # Create a middleware function that checks the IP address of incoming requests and only allows requests from the
