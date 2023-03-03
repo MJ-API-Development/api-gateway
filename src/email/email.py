@@ -2,6 +2,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from src.email.templates import EmailTemplate
+from src.config.config import config_instance
 
 
 class Emailer:
@@ -58,7 +59,6 @@ class Emailer:
                                         client_name: str,
                                         plan_name: str,
                                         amount: float, templates: EmailTemplate = EmailTemplate):
-
         """Send the payment confirmation email."""
         subject = f"Payment confirmation for your {plan_name} subscription"
         text = f"Dear {client_name},\n\nThank you for your payment of {amount} for our {plan_name} subscription."
@@ -66,3 +66,18 @@ class Emailer:
 
         message = self.create_message(sender_email, recipient_email, subject, text, html)
         self.send_email(sender_email, recipient_email, message)
+
+
+email_process = Emailer()
+
+
+async def process_send_subscription_welcome_email():
+    """
+
+    :return:
+    """
+    pass
+
+
+async def process_send_payment_confirmation_email():
+    pass

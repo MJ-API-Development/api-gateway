@@ -8,6 +8,7 @@ from src.authentication import authenticate_admin, authenticate_app
 from src.database.account.account import Account
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions, Plans, Invoices
+from src.email.email import process_send_subscription_welcome_email, process_send_payment_confirmation_email
 from src.event_queues.invoice_queue import add_invoice_to_send, process_invoice_queues
 
 from src.utils.my_logger import init_logger
@@ -202,8 +203,7 @@ async def admin_startup():
     **admin_startup**
         :return:
     """
+
     asyncio.create_task(process_invoice_queues())
-    # add more event queue tak here a they become available
-
-
-# TODO add, method to change API Key
+    asyncio.create_task(process_send_subscription_welcome_email())
+    asyncio.create_task(process_send_payment_confirmation_email())

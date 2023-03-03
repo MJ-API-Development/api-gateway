@@ -62,6 +62,13 @@ class CacheSettings(BaseSettings):
         env_file = '.env.development'
         env_file_encoding = 'utf-8'
 
+class EmailSettings(BaseSettings):
+    SMTP_SERVER: str = Field(..., env="SMTP_SERVER")
+    SMTP_PORT: int = Field(..., env="SMTP_PORT")
+
+    class Config:
+        env_file = '.env.development'
+        env_file_encoding = 'utf-8'
 
 class Settings(BaseSettings):
     SECRET_KEY: str = Field(..., env="SECRET_TOKEN")
@@ -73,6 +80,7 @@ class Settings(BaseSettings):
     PREFETCH_INTERVAL: int = 5
     REDIS_CACHE: RedisSettings = RedisSettings()
     CACHE_SETTINGS: CacheSettings = CacheSettings()
+    EMAIL_SETTINGS: EmailSettings = EmailSettings()
 
     class Config:
         case_sensitive = True
