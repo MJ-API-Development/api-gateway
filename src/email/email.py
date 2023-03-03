@@ -68,7 +68,10 @@ class Emailer:
         self.send_email(sender_email, recipient_email, message)
 
 
-email_process = Emailer()
+PORT = config_instance().EMAIL_SETTINGS.SMTP_PORT
+SMTP_SERVER = config_instance().EMAIL_SETTINGS.SMTP_SERVER
+
+email_process = Emailer(smtp_server=SMTP_SERVER, port=PORT)
 
 
 async def process_send_subscription_welcome_email():
