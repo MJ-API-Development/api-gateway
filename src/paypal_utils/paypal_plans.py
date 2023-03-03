@@ -1,5 +1,3 @@
-
-
 import paypalrestsdk
 from paypalrestsdk.openid_connect import client_secret
 
@@ -7,9 +5,10 @@ from src.config import config_instance
 from src.database.database_sessions import sessions, sessionType
 from src.database.plans.plans import Plans, Subscriptions
 
-paypal_config = dict( client_id=config_instance().PAYPAL_SERVICE.CLIENT_ID,
-                      client_secret=config_instance().PAYPAL_SERVICE.CLIENT_ID,
-                      mode= config_instance().PAYPAL_SERVICE.MODE)
+paypal_config = dict(client_id=config_instance().PAYPAL_SERVICE.CLIENT_ID,
+                     client_secret=config_instance().PAYPAL_SERVICE.CLIENT_ID,
+                     mode=config_instance().PAYPAL_SERVICE.MODE)
+
 
 class PayPalService:
     def __init__(self):
@@ -28,57 +27,57 @@ class PayPalService:
             plans_list = Plans.fetch_all(session=session)
             for plan in plans_list:
                 plan_attr = {
-                        "name": plan.plan_name,
-                        "description": plan.description,
-                        "type": "INFINITE",
-                        "payment_definitions": [
-                            {
-                                "name": "Monthly Payment",
-                                "type": "REGULAR",
-                                "frequency": "MONTH",
-                                "frequency_interval": "1",
-                                "amount": {
-                                    "currency": "USD",
-                                    "value": f"{plan.charge_amount / 100}"
-                                },
-                                "cycles": "0",
-                                "charge_models": [
-                                    {
-                                        "type": "SHIPPING",
-                                        "amount": {
-                                            "currency": "USD",
-                                            "value": "0.00"
-                                        }
-                                    }
-                                ]
-                            }
-                        ],
-                        "merchant_preferences": {
-                            "setup_fee": {
+                    "name": plan.plan_name,
+                    "description": plan.description,
+                    "type": "INFINITE",
+                    "payment_definitions": [
+                        {
+                            "name": "Monthly Payment",
+                            "type": "REGULAR",
+                            "frequency": "MONTH",
+                            "frequency_interval": "1",
+                            "amount": {
                                 "currency": "USD",
-                                "value": "1.00"
+                                "value": f"{plan.charge_amount / 100}"
                             },
-                            "cancel_url": "https://gateway.eod-stock-api.site/_ipn/paypal/cancel",
-                            "return_url": "https://gateway.eod-stock-api.site/_ipn/paypal/success",
-                            "auto_bill_amount": "YES",
-                            "initial_fail_amount_action": "CONTINUE",
-                            "max_fail_attempts": "3"
+                            "cycles": "0",
+                            "charge_models": [
+                                {
+                                    "type": "SHIPPING",
+                                    "amount": {
+                                        "currency": "USD",
+                                        "value": "0.00"
+                                    }
+                                }
+                            ]
                         }
+                    ],
+                    "merchant_preferences": {
+                        "setup_fee": {
+                            "currency": "USD",
+                            "value": "1.00"
+                        },
+                        "cancel_url": "https://gateway.eod-stock-api.site/_ipn/paypal/cancel",
+                        "return_url": "https://gateway.eod-stock-api.site/_ipn/paypal/success",
+                        "auto_bill_amount": "YES",
+                        "initial_fail_amount_action": "CONTINUE",
+                        "max_fail_attempts": "3"
+                    }
                 }
                 _billing_plan = self.paypal_api.BillingPlan(plan_attr)
                 if _billing_plan.create():
-                    plan.paypal_id =_billing_plan.id
+                    plan.paypal_id = _billing_plan.id
                     _billing_plan.activate()
                     # TODO you may need to save billing plans on own database
                     session.merge(plan)
                     session.commit()
             session.flush()
 
-
-    def use_paypal_subscriptions(self, plan: Plans, subscription: Subscriptions):
+    def use_paypal_subscriptions(self, plan: Plans, subscription: Subscriptions) -> Subscriptions:
         """
 
-        :param plan_id: plan_id to subscribe to in paypal
+        :param subscription:
+        :param plan:
         :return:
         """
         sub_attrs = {
