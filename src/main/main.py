@@ -3,10 +3,12 @@ import asyncio
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from src.authentication import authenticate_admin
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
     load_plans_by_api_keys
+from src.cloudflare_middleware import CloudFlareFirewall
 from src.config import config_instance
 from src.database.apikeys.keys import cache_api_keys, create_admin_key
 from src.database.plans.init_plans import create_plans
@@ -14,6 +16,7 @@ from src.management_api.routes import admin_app
 from src.prefetch import prefetch_endpoints
 from src.requests import requester
 from src.utils.my_logger import init_logger
+import CloudFlare
 
 # API Servers
 api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_instance().API_SERVERS.SLAVE_API_SERVER]
@@ -55,6 +58,21 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"]
 )
+
+
+# Create a middleware function that checks the IP address of incoming requests and only allows requests from the
+# Cloudflare IP ranges. Here's an example of how you could do this:
+
+@app.middleware("http")
+async def check_ip(request: Request, call_next):
+    ip = request.client.host
+    if ip not in CloudFlareFirewall().cloudflare_ips():
+        return {"message": "Access denied"}
+    response = await call_next(request)
+    return response
+
+
+app.add_middleware(TrustedHostMiddleware)
 
 
 @app.exception_handler(HTTPException)

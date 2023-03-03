@@ -83,6 +83,15 @@ class PayPalSettings(BaseSettings):
         env_file_encoding = 'utf-8'
 
 
+class CloudflareSettings(BaseSettings):
+    EMAIL: str = Field(..., env="CLOUDFLARE_EMAIL")
+    TOKEN: str = Field(..., env="CLOUDFLARE_TOKEN")
+
+    class Config:
+        env_file = '.env.development'
+        env_file_encoding = 'utf-8'
+
+
 class Settings(BaseSettings):
     SECRET_KEY: str = Field(..., env="SECRET_TOKEN")
     DATABASE_SETTINGS: DatabaseSettings = DatabaseSettings()
@@ -95,6 +104,7 @@ class Settings(BaseSettings):
     CACHE_SETTINGS: CacheSettings = CacheSettings()
     EMAIL_SETTINGS: EmailSettings = EmailSettings()
     PAYPAL_SETTINGS: PayPalSettings = PayPalSettings()
+    CLOUDFLARE_SETTINGS: CloudflareSettings = CloudflareSettings()
 
     class Config:
         case_sensitive = True
