@@ -43,7 +43,7 @@ class Emailer:
     def send_subscription_welcome_email(self, sender_email: str,
                                         recipient_email: str,
                                         client_name: str,
-                                        plan_name: str, templates: EmailTemplate =EmailTemplate):
+                                        plan_name: str, templates: EmailTemplate = EmailTemplate):
         """Send the subscription welcome email."""
         subject = f"Welcome to our {plan_name} subscription!"
         text = f"Dear {client_name},\n\nThank you for signing up for our {plan_name} subscription!"
