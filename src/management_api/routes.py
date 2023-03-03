@@ -1,9 +1,11 @@
 import asyncio
 import datetime
+import aiohttp
 
-from fastapi import Request, FastAPI, HTTPException
+from fastapi import Request, FastAPI, HTTPException, Form
 from starlette.responses import JSONResponse
 
+from src import paypal_utils
 from src.authentication import authenticate_admin, authenticate_app
 from src.database.account.account import Account
 from src.database.database_sessions import sessions
@@ -36,17 +38,36 @@ admin_app = FastAPI(
 
 
 @authenticate_admin
-async def paypal_payment_gateway_ipn(request: Request, path: str):
-    """
-        accept incoming payment notifications for
-        the api and then process them
+async def paypal_ipn(request: Request, custom_data: str = Form(...), txn_type: str = Form(...)):
+    paypal_url = 'https://ipnpb.paypal.com/cgi-bin/webscr'
+    paypal_token = 'your_paypal_token_here'
 
-        TODO if paid then create API Key
+    # Get the IPN data from PayPal
+    ipn_data = await request.form()
 
-    :param request:
-    :return:
-    """
-    management_logger.info("paypal IPN")
+    # Convert the form data to a dictionary
+    ipn_dict = {key: value for key, value in ipn_data.items()}
+
+    # Add the token to the data
+    ipn_dict['cmd'] = '_notify-validate'
+    ipn_dict['custom'] = custom_data
+    ipn_dict['txn_type'] = txn_type
+    response_text = await paypal_utils.verify_ipn(ipn_data=ipn_dict)
+
+    if response_text == 'VERIFIED':
+        # Update your database with the relevant information
+        # e.g., subscription start date, end date, and payment status
+
+        # Send notifications to the client and relevant parties
+        # e.g., email notifications, webhook notifications
+
+        # Return a response to PayPal indicating that the IPN was handled successfully
+        return JSONResponse(content={'status': 'success'}, status_code=200)
+
+    else:
+        # If the IPN is not verified, log the error and return a 500 status code
+        management_logger.error('IPN verification failed: %s', response_text)
+        return JSONResponse(content={'status': 'error'}, status_code=500)
 
 
 @authenticate_app
@@ -163,7 +184,7 @@ async def subscriptions(request: Request, subscription_data: dict[str, str | int
 
             subscription_id = subscription_data.get('subscription_id')
             subscription_instance: Subscriptions = await Subscriptions.get_by_subscription_id(
-                subscription_id=subscription_id,session=session)
+                subscription_id=subscription_id, session=session)
 
             if subscription_instance.plan_id != plan_id:
                 # create a method for upgrading or downgrading plan
@@ -207,3 +228,5 @@ async def admin_startup():
     asyncio.create_task(process_invoice_queues())
     asyncio.create_task(process_send_subscription_welcome_email())
     asyncio.create_task(process_send_payment_confirmation_email())
+
+

@@ -236,6 +236,8 @@ class Payments(Base):
 class Invoices(Base):
     """
         Invoices
+        param:
+        invoice_uri: will be used in payments to locate the invoice
     """
     __tablename__ = "invoices"
     invoice_id: str = Column(String(UUID_LEN), primary_key=True)
@@ -244,6 +246,7 @@ class Invoices(Base):
     invoice_from_date: float = Column(Float)
     invoice_to_date: float = Column(Float)
     time_issued: float = Column(Float)
+    invoice_uri: str = Column(String(255))
 
     @classmethod
     def create_if_not_exists(cls):
