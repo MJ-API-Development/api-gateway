@@ -6,6 +6,7 @@ from sqlalchemy import Column, String, inspect, Boolean, ForeignKey
 from sqlalchemy.orm import backref, relationship
 from typing_extensions import Self
 
+from src.authorize.authorize import NotAuthorized
 from src.const import UUID_LEN, NAME_LEN, EMAIL_LEN, STR_LEN, CELL_LEN
 from src.database.apikeys.keys import ApiKeyModel
 from src.database.database_sessions import Base, sessionType, engine
@@ -78,7 +79,7 @@ class Account(Base):
         # Get the user with the specified email address
         user: Account = session.query(cls).filter(cls.email == username).first()
         if user.is_deleted:
-            return None
+            raise NotAuthorized(message="You are not authorized to login to this account")
         # Hash the entered password using a secure hash function (SHA-256 in this example)
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         # Compare the hashed password to the stored hash using secrets.compare_digest,
