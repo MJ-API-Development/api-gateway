@@ -7,7 +7,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from src.authentication import authenticate_admin
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
-    load_plans_by_api_keys
+    load_plans_by_api_keys, RateLimitExceeded
 from src.cloudflare_middleware import CloudFlareFirewall
 from src.config import config_instance
 from src.database.apikeys.keys import cache_api_keys, create_admin_key
@@ -80,6 +80,34 @@ async def check_ip(request: Request, call_next):
 
 
 app.add_middleware(TrustedHostMiddleware)
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    """
+
+    :param request:
+    :param exc:
+    :return:
+    """
+    app_logger.error(msg=f"""
+    Rate Limit Error
+    
+    Debug Information
+        request_url: {request.url}
+        request_method: {request.method}
+        
+        error_detail: {exc.detail}
+        rate_limit: {exc.rate_limit}
+        status_code: {exc.status_code}    
+    """)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            'message': exc.detail,
+            'rate_limit': exc.rate_limit
+        }
+    )
 
 
 @app.exception_handler(HTTPException)
