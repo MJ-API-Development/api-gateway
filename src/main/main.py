@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +19,7 @@ from src.requests import requester
 from src.utils.my_logger import init_logger
 import CloudFlare
 
+cf_firewall = CloudFlareFirewall()
 # API Servers
 api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_instance().API_SERVERS.SLAVE_API_SERVER]
 api_server_counter = 0
@@ -73,7 +75,7 @@ async def check_ip(request: Request, call_next):
     """
     # TODO consider adding header checks
     ip = request.client.host
-    if not await CloudFlareFirewall().check_ip_range(ip=ip):
+    if not await cf_firewall.check_ip_range(ip=ip):
         return JSONResponse(content={"message": "Access denied"}, status_code=403)
 
     return await call_next(request)
@@ -83,7 +85,7 @@ app.add_middleware(TrustedHostMiddleware)
 
 
 @app.exception_handler(RateLimitExceeded)
-async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+async def rate_limit_error_handler(request: Request, exc: RateLimitExceeded):
     """
 
     :param request:
@@ -173,6 +175,11 @@ async def _create_plans(request: Request):
 # On Start Up Run the following Tasks
 @app.on_event('startup')
 async def startup_event():
+
+    async def setup_cf_firewall():
+        ipv4_cdrs, ipv6_cdrs = await cf_firewall.get_ip_ranges()
+        cf_firewall.ip_ranges = list(itertools.chain(*[ipv4_cdrs, ipv6_cdrs]))
+
     async def update_api_keys_background_task():
         while True:
             app_logger.info("Started Pre Fetching API Keys")
@@ -197,6 +204,7 @@ async def startup_event():
             #  wait for one hour 30 minutes then prefetch urls again
             await asyncio.sleep(60 * 60 * 1.5)
 
+    asyncio.create_task(setup_cf_firewall())
     asyncio.create_task(update_api_keys_background_task())
     asyncio.create_task(prefetch())
     asyncio.create_task(process_credit_queue())
