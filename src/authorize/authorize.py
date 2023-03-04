@@ -216,12 +216,13 @@ def auth_and_rate_limit(func):
 
         if api_keys[api_key]['requests_count'] >= limit:
             # TODO consider returning a JSON String with data on the rate rate_limit and how long to wait
+            time_left = last_request_timestamp + duration - now
+            mess: str = f"EOD Stock API - Rate Limit Exceeded. Please wait {time_left:.0f} seconds before making " \
+                        f"another request, or upgrade your plan to better take advantage of extra resources " \
+                        f"available on better plans."
 
-            mess: str = "EOD Stock API - Rate Limit Exceeded, please upgrade your plan to better take advantage " \
-                        "of extra resources available on better plans."
-
-            raise RateLimitExceeded(rate_limit={'duration': duration, 'rate_limit': limit},
-                                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            rate_limit_dict = {'duration': duration, 'rate_limit': limit, 'time_left': f"{time_left:.0f}"}
+            raise RateLimitExceeded(rate_limit=rate_limit_dict, status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                                     detail=mess)
 
         # updating number of requests and timestamp
