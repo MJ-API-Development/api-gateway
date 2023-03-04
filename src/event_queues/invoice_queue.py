@@ -3,6 +3,7 @@
 """
 from typing import Callable
 import asyncio
+lock = asyncio.Lock()
 
 _outgoing_invoices_queues: list[dict[str, str | int]] = list()
 get_argument: Callable = _outgoing_invoices_queues.pop
@@ -17,7 +18,8 @@ async def process_invoice_queues():
     """
     while True:
         if _outgoing_invoices_queues:
-            await send_invoice(args=get_argument())
+            async with lock:
+                await send_invoice(args=get_argument())
             # sleep for 1 minute
         await asyncio.sleep(60 * 1)
 
@@ -44,7 +46,8 @@ async def add_invoice_to_send(invoice: dict[str, str | int], account: dict[str, 
     """
     # Note: this step may be unnecessary it may be faster to just add the account dict here
     _account = await get_account_details(account=account)
-    add_arguments(dict(account=_account, invoice=invoice))
+    async with lock:
+        add_arguments(dict(account=_account, invoice=invoice))
 
 
 async def get_account_details(account: dict[str, str | int]) -> dict[str, str | int]:

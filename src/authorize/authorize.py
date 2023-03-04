@@ -1,7 +1,6 @@
 import asyncio
 import time
 from functools import wraps
-
 from fastapi import HTTPException, Request
 from starlette import status
 
@@ -11,6 +10,8 @@ from src.cache.cache import cached_ttl
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions, Plans, PlanType
 from src.utils.my_logger import init_logger
+
+lock = asyncio.Lock()
 
 api_keys_lookup = api_keys.get
 cache_api_keys_func = cache_api_keys
@@ -88,8 +89,9 @@ async def monthly_credit_available(api_key: str) -> bool:
     :return: True if credit is available
     """
     # Need to speed this function up considerably
-    plan_dict = get_plans_dict(api_key)
-    subscription_dict = get_subscriptions_dict(api_key)
+    async with lock:
+        plan_dict = get_plans_dict(api_key)
+        subscription_dict = get_subscriptions_dict(api_key)
 
     if plan_dict.get("plan_limit") <= subscription_dict.get("api_requests_balance"):
         # if hard_limit is true then monthly credit is not available
@@ -105,7 +107,8 @@ async def create_take_credit_args(api_key: str, path: str):
     :param api_key:
     :return: None
     """
-    take_credit_queue.append(dict(api_key=api_key, path=path))
+    async with lock:
+        take_credit_queue.append(dict(api_key=api_key, path=path))
 
 
 async def take_credit_method(api_key: str, path: str):
@@ -118,7 +121,8 @@ async def take_credit_method(api_key: str, path: str):
     """
     resource_name: str = await get_resource_name(path=path)
     request_credit: int = resource_name_request_size.get(resource_name, 1)
-    cache_api_keys_to_subscriptions.get(api_key)["api_requests_balance"] -= request_credit
+    async with lock:
+        cache_api_keys_to_subscriptions.get(api_key)["api_requests_balance"] -= request_credit
 
     with next(sessions) as session:
         subscription_instance = Subscriptions(**cache_api_keys_to_subscriptions.get(api_key))
@@ -135,7 +139,8 @@ async def process_credit_queue():
     """
     while True:
         if take_credit_queue:
-            args = take_credit_queue.pop()
+            async with lock:
+                args = take_credit_queue.pop()
             if args:
                 await take_credit_method(**args)
         await asyncio.sleep(5)
