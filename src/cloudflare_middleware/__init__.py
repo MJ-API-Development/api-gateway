@@ -67,9 +67,10 @@ class CloudFlareFirewall:
         :return:
         """
         # This will store the list_of_bad_addresses for 3 hours
-        redis_cache.set(key="list_of_bad_addresses", value=list(self.bad_addresses))
+        THIRTY_DAYS = 60 * 60 * 24 * 30
+        await redis_cache.set(key="list_of_bad_addresses", value=list(self.bad_addresses), ttl=THIRTY_DAYS)
 
     async def restore_addresses_from_redis(self):
-
-        for bad_address in redis_cache.get(key="list_of_bad_addresses"):
+        bad_addresses = await redis_cache.get(key="list_of_bad_addresses") or []
+        for bad_address in bad_addresses:
             self.bad_addresses.add(bad_address)

@@ -177,8 +177,11 @@ async def _create_plans(request: Request):
 async def startup_event():
 
     async def setup_cf_firewall():
+        app_logger.info("Setting Up CF Firewall...")
         ipv4_cdrs, ipv6_cdrs = await cf_firewall.get_ip_ranges()
         cf_firewall.ip_ranges = list(itertools.chain(*[ipv4_cdrs, ipv6_cdrs]))
+        await cf_firewall.restore_addresses_from_redis()
+        app_logger.info("Done Setting Up CF Firewall...")
 
     async def update_api_keys_background_task():
         while True:
@@ -204,7 +207,15 @@ async def startup_event():
             #  wait for one hour 30 minutes then prefetch urls again
             await asyncio.sleep(60 * 60 * 1.5)
 
+    async def backup_cf_firewall_data():
+        while True:
+            await cf_firewall.save_bad_addresses_to_redis()
+            # Everyday
+            await asyncio.sleep(60*60*24)
+            app_logger.info("CF Firewall Bad Addresses Backed Up")
+
     asyncio.create_task(setup_cf_firewall())
+    asyncio.create_task(backup_cf_firewall_data())
     asyncio.create_task(update_api_keys_background_task())
     asyncio.create_task(prefetch())
     asyncio.create_task(process_credit_queue())
