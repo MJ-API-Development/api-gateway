@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
 
 import pymysql
@@ -10,7 +11,7 @@ from typing_extensions import Self
 from src.database.database_sessions import sessions, Base, sessionType, engine
 from src.database.plans.plans import Subscriptions, Plans
 from src.utils.utils import create_id
-
+apikeys_lock = asyncio.Lock()
 # Define a dict to store API Keys and their rate rate_limit data
 # Cache tp store API KEys
 api_keys: dict[str, dict[str, int]] = {}
@@ -72,19 +73,19 @@ class ApiKeyModel(Base):
         self.subscription.api_requests_balance = plan_data.get("plan_limit")
         return self
 
+    @classmethod
+    async def get_all_active(cls, session: sessionType):
+        return session.query(cls).filter_by(is_active=True).all()
+
 
 async def cache_api_keys():
     with next(sessions) as session:
-        try:
-            db_keys = session.query(ApiKeyModel).all()
+        db_keys = await ApiKeyModel.get_all_active(session=session)
+        async with apikeys_lock:
             api_keys.update({db_key.api_key: {'requests_count': 0,
                                               'last_request_timestamp': 0,
                                               'duration': db_key.duration,
                                               'rate_limit': db_key.rate_limit} for db_key in db_keys})
-
-        except pymysql.err.OperationalError as e:
-            # TODO log errors
-            pass
 
 
 async def create_admin_key():

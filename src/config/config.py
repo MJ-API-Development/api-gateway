@@ -53,7 +53,7 @@ class CacheSettings(BaseSettings):
     """Google Mem Cache Settings"""
     # NOTE: TO USE Flask_cache with redis set Cache type to redis and setup CACHE_REDIS_URL
     CACHE_TYPE: str = Field(..., env="CACHE_TYPE")
-    CACHE_DEFAULT_TIMEOUT: int = Field(default=60 * 60 * 24)
+    CACHE_DEFAULT_TIMEOUT: int = Field(default=60 * 60 * 3)
     MEM_CACHE_SERVER_URI: str = Field(default="")
     CACHE_REDIS_URL: str = Field(..., env="CACHE_REDIS_URL")
     MAX_CACHE_SIZE: int = Field(default=1024 * 8 * 32)

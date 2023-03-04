@@ -1,12 +1,13 @@
 import asyncio
 import time
 from functools import wraps
+
 from fastapi import HTTPException, Request
 from starlette import status
 
-from src.database.apikeys.keys import api_keys, cache_api_keys, ApiKeyModel
 from src.authorize.resources import get_resource_name, resource_name_request_size
-from src.cache.cache import cached_ttl
+from src.cache.cache import cached_ttl, redis_cache
+from src.database.apikeys.keys import api_keys, cache_api_keys, ApiKeyModel
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions, Plans, PlanType
 from src.utils.my_logger import init_logger
@@ -21,12 +22,54 @@ take_credit_queue = []
 ONE_DAY: int = 60 * 60 * 24
 auth_logger = init_logger("auth-logger")
 
-cache_api_keys_to_plans = {}
-get_plans_dict = cache_api_keys_to_plans.get
-add_to_api_keys_to_plans_cache = cache_api_keys_to_plans.update
-cache_api_keys_to_subscriptions = {}
-get_subscriptions_dict = cache_api_keys_to_subscriptions.get
-add_to_api_keys_to_subscriptions_cache = cache_api_keys_to_subscriptions.update
+# cache_api_keys_to_plans = {}
+# get_plans_dict = cache_api_keys_to_plans.get
+# add_to_api_keys_to_plans_cache = cache_api_keys_to_plans.update
+# cache_api_keys_to_subscriptions = {}
+# get_subscriptions_dict = cache_api_keys_to_subscriptions.get
+# add_to_api_keys_to_subscriptions_cache = cache_api_keys_to_subscriptions.update
+
+
+# Define cache keys
+API_KEYS_TO_PLANS_KEY = "api_keys_to_plans"
+API_KEYS_TO_SUBSCRIPTIONS_KEY = "api_keys_to_subscriptions"
+
+
+class NotAuthorized(Exception):
+    """Custom NotAuthorized Class"""
+
+    def __init__(self, message):
+        super().__init__(message)
+        self.status_code = 403
+        self.message = message
+
+
+async def get_plans_dict(api_key: str):
+    # Retrieve plans dict from Redis
+    return await redis_cache.get(key=f"{API_KEYS_TO_PLANS_KEY}:{api_key}")
+    # Convert Redis byte strings to regular strings and return
+    # return {key.decode(): value.decode() for key, value in plans_dict.items()}
+
+
+async def add_to_api_keys_to_plans_cache(api_key: str, plans_dict: dict):
+    # Convert keys and values to byte strings for Redis
+    # plans_dict_redis = {key.encode(): str(value).encode() for key, value in plans_dict.items()}
+    # Set Redis hash
+    await redis_cache.set(key=f"{API_KEYS_TO_PLANS_KEY}:{api_key}", value=plans_dict)
+
+
+async def get_subscriptions_dict(api_key: str):
+    # Retrieve subscriptions dict from Redis
+    return await redis_cache.get(key=f"{API_KEYS_TO_SUBSCRIPTIONS_KEY}:{api_key}")
+    # Convert Redis byte strings to regular strings and return
+    # return {key.decode(): value.decode() for key, value in subscriptions_dict.items()}
+
+
+async def add_to_api_keys_to_subscriptions_cache(api_key: str, subscriptions_dict: dict):
+    # Convert keys and values to byte strings for Redis
+    # subscriptions_dict_redis = {key.encode(): str(value).encode() for key, value in subscriptions_dict.items()}
+    # Set Redis hash
+    await redis_cache.set(key=f"{API_KEYS_TO_SUBSCRIPTIONS_KEY}:{api_key}", value=subscriptions_dict)
 
 
 class RateLimitExceeded(HTTPException):
@@ -44,17 +87,9 @@ async def load_plans_by_api_keys() -> None:
                 return False
             plan_instance: Plans = await Plans.get_plan_by_plan_id(plan_id=subscription_instance.plan_id,
                                                                    session=session)
-            add_to_api_keys_to_plans_cache({api_key: plan_instance.to_dict()})
-            add_to_api_keys_to_subscriptions_cache({api_key: subscription_instance.to_dict()})
-
-
-class NotAuthorized(Exception):
-    """Custom NotAuthorized Class"""
-
-    def __init__(self, message):
-        super().__init__(message)
-        self.status_code = 403
-        self.message = message
+            await add_to_api_keys_to_plans_cache(api_key=api_key, plans_dict=plan_instance.to_dict())
+            await add_to_api_keys_to_subscriptions_cache(api_key=api_key,
+                                                         subscriptions_dict=subscription_instance.to_dict())
 
 
 @cached_ttl(ttl=ONE_DAY)
@@ -89,9 +124,8 @@ async def monthly_credit_available(api_key: str) -> bool:
     :return: True if credit is available
     """
     # Need to speed this function up considerably
-    async with lock:
-        plan_dict = get_plans_dict(api_key)
-        subscription_dict = get_subscriptions_dict(api_key)
+    plan_dict = await get_plans_dict(api_key=api_key)
+    subscription_dict = await get_subscriptions_dict(api_key=api_key)
 
     if plan_dict.get("plan_limit") <= subscription_dict.get("api_requests_balance"):
         # if hard_limit is true then monthly credit is not available
@@ -121,12 +155,13 @@ async def take_credit_method(api_key: str, path: str):
     """
     resource_name: str = await get_resource_name(path=path)
     request_credit: int = resource_name_request_size.get(resource_name, 1)
-    async with lock:
-        cache_api_keys_to_subscriptions.get(api_key)["api_requests_balance"] -= request_credit
+    subscription_dict = await get_subscriptions_dict(api_key=api_key)
+
+    subscription_dict["api_requests_balance"] -= request_credit
+    await add_to_api_keys_to_subscriptions_cache(api_key=api_key, subscriptions_dict=subscription_dict)
 
     with next(sessions) as session:
-        subscription_instance = Subscriptions(**cache_api_keys_to_subscriptions.get(api_key))
-        session.merge(subscription_instance)
+        session.merge(Subscriptions(**subscription_dict))
         session.commit()
 
 
@@ -157,13 +192,8 @@ def auth_and_rate_limit(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         api_key, path = await return_kwargs(kwargs)
-        if not path:
-            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                                detail='Please Provide a Valid path to the resource you want to access')
 
         path = f"/api/v1/{path}"
-        auth_logger.info(f"Request Path: {path}")
-
         api_key_found = api_key in api_keys
         if not api_key_found:
             await cache_api_keys_func()  # Update api_keys if the key is not found
@@ -219,5 +249,3 @@ def auth_and_rate_limit(func):
             raise NotAuthorized(message=mess)
 
     return wrapper
-
-
