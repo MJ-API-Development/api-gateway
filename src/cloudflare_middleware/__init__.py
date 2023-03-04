@@ -10,6 +10,9 @@ TOKEN = config_instance().CLOUDFLARE_SETTINGS.TOKEN
 # Cloudflare IP ranges. Here's an example of how you could do this:
 
 class CloudFlareFirewall:
+    """
+        TODO add more functionality to further enhance the security of our gateway
+    """
     def __init__(self):
         self.cloud_flare = CloudFlare(email=EMAIL, token=TOKEN)
         self.ip_ranges = ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18',

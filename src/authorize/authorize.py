@@ -28,6 +28,12 @@ get_subscriptions_dict = cache_api_keys_to_subscriptions.get
 add_to_api_keys_to_subscriptions_cache = cache_api_keys_to_subscriptions.update
 
 
+class TooManyRequestsError(HTTPException):
+    def __init__(self, rate_limit: dict[str, str | int], detail: str, status_code: int):
+        super().__init__(detail=detail, status_code=status_code)
+        self.rate_limit = rate_limit
+
+
 async def load_plans_by_api_keys() -> None:
     with next(sessions) as session:
         for api_key in api_keys:
@@ -99,20 +105,25 @@ async def create_take_credit_args(api_key: str, path: str):
     :param api_key:
     :return: None
     """
-    resource_name: str = await get_resource_name(path=path)
-    request_credit: int = resource_name_request_size.get(resource_name, 1)
-    take_credit_queue.append(dict(api_key=api_key, request_credit=request_credit))
+    take_credit_queue.append(dict(api_key=api_key, path=path))
 
 
-async def take_credit_method(api_key: str, request_credit: int):
+async def take_credit_method(api_key: str, path: str):
     """
-
-    :param request_credit: the size of api_balance in request which will be subtracted from the user subscription
+        this method will update the request balance on the in memory
+        dict, and then also update the database model
+    :param path:
     :param api_key: the api_key associated with the request
     :return: None
     """
+    resource_name: str = await get_resource_name(path=path)
+    request_credit: int = resource_name_request_size.get(resource_name, 1)
     cache_api_keys_to_subscriptions.get(api_key)["api_requests_balance"] -= request_credit
-    # TODO update the models in the database
+
+    with next(sessions) as session:
+        subscription_instance = Subscriptions(**cache_api_keys_to_subscriptions.get(api_key))
+        session.merge(subscription_instance)
+        session.commit()
 
 
 async def process_credit_queue():
@@ -159,19 +170,23 @@ def auth_and_rate_limit(func):
                 mess = "EOD Stock API - Invalid API Key, or Cancelled API Key please subscribe to get a valid API Key"
                 raise NotAuthorized(message=mess)
 
+        api_keys_model_dict: dict[str, str | int] = api_keys_lookup(api_key)
         now = time.time()
-        duration: int = api_keys_lookup(api_key, {}).get('duration')
-        limit: int = api_keys_lookup(api_key, {}).get('rate_limit')
-        # Note that apikeysmodel must be updated with plan rate_limit
-        if now - api_keys_lookup(api_key, {}).get('last_request_timestamp') > duration:
+        duration: int = api_keys_model_dict.get('duration')
+        limit: int = api_keys_model_dict.get('rate_limit')
+        # Note that APiKeysModel must be updated with plan rate_limit
+        if now - api_keys_model_dict.get('last_request_timestamp') > duration:
             api_keys[api_key]['requests_count'] = 0
 
-        if api_keys_lookup(api_key, {}).get('requests_count') >= limit:
+        if api_keys[api_key]['requests_count'] >= limit:
             # TODO consider returning a JSON String with data on the rate rate_limit and how long to wait
+
             mess: str = "EOD Stock API - rate limit exceeded, please upgrade your plan to better take advantage " \
                         "of extra resources available on better plans."
-            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                                detail=mess)
+
+            raise TooManyRequestsError(rate_limit={'duration': duration, 'rate_limit': limit},
+                                       status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                                       detail=mess)
 
         # verifying if user can access this resource
         if not await is_resource_authorized(path_param=path, api_key=api_key):

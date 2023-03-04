@@ -75,8 +75,8 @@ async def check_ip(request: Request, call_next):
     ip = request.client.host
     if not await CloudFlareFirewall().check_ip_range(ip=ip):
         return JSONResponse(content={"message": "Access denied"}, status_code=403)
-    response = await call_next(request)
-    return response
+
+    return await call_next(request)
 
 
 app.add_middleware(TrustedHostMiddleware)
@@ -104,13 +104,13 @@ async def http_exception_handler(request, exc):
 @app.exception_handler(NotAuthorized)
 async def handle_not_authorized(request, exc):
     app_logger.error(f"""
-    Not Authorized Error
-    
-    Debug Information
-    request_url: {request.url}
-    request_method: {request.method}
-    error_detail: {exc.message}
-    status_code: {exc.status_code}
+        Not Authorized Error
+        
+        Debug Information
+        request_url: {request.url}
+        request_method: {request.method}
+        error_detail: {exc.message}
+        status_code: {exc.status_code}
     
     """)
     return JSONResponse(status_code=exc.status_code, content={"message": exc.message})
@@ -189,7 +189,7 @@ async def v1_gateway(request: Request, path: str):
     api_server_counter = (api_server_counter + 1) % len(api_server_urls)
     api_url = f'{api_server_url}/api/v1/{path}'
     api_key: dict = request.query_params.get('api_key')
-    response = await requester(api_url)
+    response = await requester(api_url=api_url)
 
     # creating response
     headers = {"Content-Type": "application/json"}
