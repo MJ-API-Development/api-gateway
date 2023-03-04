@@ -6,7 +6,7 @@ import ipaddress
 
 
 from src.make_request import send_request
-from src.cache.cache import redis_cache
+from src.cache.cache import redis_cache, cached, cached_ttl
 
 EMAIL = config_instance().CLOUDFLARE_SETTINGS.EMAIL
 TOKEN = config_instance().CLOUDFLARE_SETTINGS.TOKEN
@@ -45,7 +45,7 @@ class CloudFlareFirewall:
 
         return ipv4_cidrs, ipv6_cidrs
 
-    @functools.lru_cache
+    @cached_ttl(ttl=60*30)
     async def check_ip_range(self, ip):
         """
             checks if an ip address falls within range of those found in cloudflare edge servers
