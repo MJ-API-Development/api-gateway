@@ -76,7 +76,9 @@ async def check_ip(request: Request, call_next):
     # TODO consider adding header checks
     ip = request.client.host
     if not await cf_firewall.check_ip_range(ip=ip):
-        return JSONResponse(content={"message": "Access denied"}, status_code=403)
+        return JSONResponse(
+            content={"message": "Access denied, Suspicious Activity, Use a Proper Gateway to access our resources"},
+            status_code=403)
 
     return await call_next(request)
 
@@ -240,7 +242,7 @@ async def v1_gateway(request: Request, path: str):
 
     app_logger.info(f"""
         RESPONSE FROM SERVER: {api_url} 
-        {response}
+        RESPONSE : {response}
     """)
     # creating response
     headers = {"Content-Type": "application/json"}
