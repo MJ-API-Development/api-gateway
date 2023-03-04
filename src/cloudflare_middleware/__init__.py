@@ -1,9 +1,12 @@
+import functools
+
 from src.config import config_instance
 from CloudFlare import CloudFlare
 import ipaddress
-import httpx
+
 
 from src.make_request import send_request
+from src.cache.cache import redis_cache
 
 EMAIL = config_instance().CLOUDFLARE_SETTINGS.EMAIL
 TOKEN = config_instance().CLOUDFLARE_SETTINGS.TOKEN
@@ -29,6 +32,10 @@ class CloudFlareFirewall:
 
     @staticmethod
     async def get_ip_ranges() -> tuple[list[str], list[str]]:
+        """
+            obtains a list of ip addresses from cloudflare edge servers
+        :return:
+        """
 
         _uri = 'https://api.cloudflare.com/client/v4/ips'
         _headers = {'Accept': 'application/json', 'X-Auth-Email': EMAIL}
@@ -38,7 +45,13 @@ class CloudFlareFirewall:
 
         return ipv4_cidrs, ipv6_cidrs
 
+    @functools.lru_cache
     async def check_ip_range(self, ip):
+        """
+            checks if an ip address falls within range of those found in cloudflare edge servers
+        :param ip:
+        :return:
+        """
         if ip in self.bad_addresses:
             return False
         for ip_range in self.ip_ranges:
@@ -53,4 +66,10 @@ class CloudFlareFirewall:
             take a list of bad addresses and save to redis
         :return:
         """
-        pass
+        # This will store the list_of_bad_addresses for 3 hours
+        redis_cache.set(key="list_of_bad_addresses", value=list(self.bad_addresses))
+
+    async def restore_addresses_from_redis(self):
+
+        for bad_address in redis_cache.get(key="list_of_bad_addresses"):
+            self.bad_addresses.add(bad_address)
