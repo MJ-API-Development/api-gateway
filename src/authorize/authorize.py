@@ -28,7 +28,7 @@ get_subscriptions_dict = cache_api_keys_to_subscriptions.get
 add_to_api_keys_to_subscriptions_cache = cache_api_keys_to_subscriptions.update
 
 
-class TooManyRequestsError(HTTPException):
+class RateLimitExceeded(HTTPException):
     def __init__(self, rate_limit: dict[str, str | int], detail: str, status_code: int):
         super().__init__(detail=detail, status_code=status_code)
         self.rate_limit = rate_limit
@@ -181,12 +181,12 @@ def auth_and_rate_limit(func):
         if api_keys[api_key]['requests_count'] >= limit:
             # TODO consider returning a JSON String with data on the rate rate_limit and how long to wait
 
-            mess: str = "EOD Stock API - rate limit exceeded, please upgrade your plan to better take advantage " \
+            mess: str = "EOD Stock API - Rate Limit Exceeded, please upgrade your plan to better take advantage " \
                         "of extra resources available on better plans."
 
-            raise TooManyRequestsError(rate_limit={'duration': duration, 'rate_limit': limit},
-                                       status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                                       detail=mess)
+            raise RateLimitExceeded(rate_limit={'duration': duration, 'rate_limit': limit},
+                                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                                    detail=mess)
 
         # verifying if user can access this resource
         if not await is_resource_authorized(path_param=path, api_key=api_key):
