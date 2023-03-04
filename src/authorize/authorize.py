@@ -163,24 +163,25 @@ def auth_and_rate_limit(func):
 
         path = f"/api/v1/{path}"
         auth_logger.info(f"Request Path: {path}")
-        if api_key is None:
-            mess: str = "Provide an API Key in order to access this resources, please subscribe to our services to " \
-                        "get one if you already have an API Key please read our docs for instructions, on using our API"
+
+        api_key_found = api_key in api_keys
+        if not api_key_found:
+            await cache_api_keys_func()  # Update api_keys if the key is not found
+            api_key_found = api_key in api_keys
+
+        if not api_key_found:
+            # user not authorized to access this routes
+            mess = "EOD Stock API - Invalid API Key, or Cancelled API Key please subscribe to get a valid API Key"
             raise NotAuthorized(message=mess)
 
-        if api_key not in api_keys:
-            await cache_api_keys_func()  # Update api_keys if the key is not found
-            if api_key not in api_keys:
-                # user not authorized to access this routes
-                mess = "EOD Stock API - Invalid API Key, or Cancelled API Key please subscribe to get a valid API Key"
-                raise NotAuthorized(message=mess)
-
+        # Rate Limiting Section
         api_keys_model_dict: dict[str, str | int] = api_keys_lookup(api_key)
-        now = time.time()
+        now = time.monotonic()
         duration: int = api_keys_model_dict.get('duration')
         limit: int = api_keys_model_dict.get('rate_limit')
+        last_request_timestamp: float = api_keys_model_dict.get('last_request_timestamp')
         # Note that APiKeysModel must be updated with plan rate_limit
-        if now - api_keys_model_dict.get('last_request_timestamp') > duration:
+        if now - last_request_timestamp > duration:
             api_keys[api_key]['requests_count'] = 0
 
         if api_keys[api_key]['requests_count'] >= limit:
@@ -193,24 +194,30 @@ def auth_and_rate_limit(func):
                                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                                     detail=mess)
 
-        # verifying if user can access this resource
-        if not await is_resource_authorized(path_param=path, api_key=api_key):
-            mess: str = "EOD Stock API - Request not Authorized, Either you are not subscribed to any plan or you " \
-                        "need to upgrade your subscription"
-            raise NotAuthorized(message=mess)
-
-        if not await monthly_credit_available(api_key=api_key):
-            mess: str = f"EOD Stock API - Your Monthly plan request limit has been reached. " \
-                        f"please upgrade your plan, to take advantage of our soft limits"
-            raise NotAuthorized(message=mess)
-
         # updating number of requests and timestamp
         api_keys[api_key]['requests_count'] += 1
         # noinspection PyTypeChecker
         api_keys[api_key]['last_request_timestamp'] = now
 
-        # will execute the api if monthly credit is available or monthly limit
-        # is a soft limit, in which case the client will incur extra charges
-        return await func(*args, **kwargs)
+        # Authorization Section
+        # Use asyncio.gather to run is_resource_authorized and monthly_credit_available concurrently
+        is_authorized_task = asyncio.create_task(is_resource_authorized(path_param=path, api_key=api_key))
+        monthly_credit_task = asyncio.create_task(monthly_credit_available(api_key=api_key))
+        is_authorized, monthly_credit = await asyncio.gather(is_authorized_task, monthly_credit_task)
+
+        if is_authorized and monthly_credit:
+            return await func(*args, **kwargs)
+
+        if not is_authorized:
+            mess: str = "EOD Stock API - Request not Authorized, Either you are not subscribed to any plan or you " \
+                        "need to upgrade your subscription"
+            raise NotAuthorized(message=mess)
+
+        if not monthly_credit:
+            mess: str = f"EOD Stock API - Your Monthly plan request limit has been reached. " \
+                        f"please upgrade your plan, to take advantage of our soft limits"
+            raise NotAuthorized(message=mess)
 
     return wrapper
+
+
