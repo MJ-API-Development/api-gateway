@@ -11,6 +11,6 @@ create_tables()
 if __name__ == '__main__':
     # Start the FastAPI app
     if config_instance().DEVELOPMENT_SERVER_NAME.casefold() == socket.gethostname().casefold():
-        uvicorn.run("app:app", host="0.0.0.0", port=8080, reload=True)
+        uvicorn.run("app:app", host="0.0.0.0", port=8080, reload=True, workers=2)
     else:
-        uvicorn.run("app:app", host="0.0.0.0", port=80, reload=True)
+        uvicorn.run("app:app", host="0.0.0.0", port=80, reload=False, workers=2)
