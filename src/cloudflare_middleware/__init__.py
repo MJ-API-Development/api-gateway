@@ -25,7 +25,7 @@ class CloudFlareFirewall:
         self.cloud_flare = CloudFlare(email=EMAIL, token=TOKEN)
         self.cloud_flare.api_from_openapi(url="https://www.eod-stock-api.site/open-api")
         self.ip_ranges = []
-        self.bad_addresses = []
+        self.bad_addresses = set()
 
     @staticmethod
     async def get_ip_ranges() -> tuple[list[str], list[str]]:
@@ -39,9 +39,18 @@ class CloudFlareFirewall:
         return ipv4_cidrs, ipv6_cidrs
 
     async def check_ip_range(self, ip):
+        if ip in self.bad_addresses:
+            return False
         for ip_range in self.ip_ranges:
             if ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range):
 
                 return True
-        self.bad_addresses.append(ip)
+        self.bad_addresses.add(ip)
         return False
+
+    async def save_bad_addresses_to_redis(self):
+        """
+            take a list of bad addresses and save to redis
+        :return:
+        """
+        pass
