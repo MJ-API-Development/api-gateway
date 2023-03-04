@@ -237,7 +237,11 @@ async def v1_gateway(request: Request, path: str):
     api_url = f'{api_server_url}/api/v1/{path}'
     api_key: dict = request.query_params.get('api_key')
     response = await requester(api_url=api_url)
-    app_logger.info(response)
+
+    app_logger.info(f"""
+        RESPONSE FROM SERVER: {api_url} 
+        {response}
+    """)
     # creating response
     headers = {"Content-Type": "application/json"}
 
