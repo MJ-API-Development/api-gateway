@@ -239,7 +239,7 @@ async def v1_gateway(request: Request, path: str):
     api_server_counter = (api_server_counter + 1) % len(api_server_urls)
     api_url = f'{api_server_url}/api/v1/{path}'
     api_key: dict = request.query_params.get('api_key')
-    _data = redis_cache.get(key=api_url)
+    _data = await redis_cache.get(key=api_url)
     if _data is None:
         response = await requester(api_url=api_url)
         if response and response.get("status"):
