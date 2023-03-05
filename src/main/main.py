@@ -9,6 +9,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from src.authentication import authenticate_admin
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
     load_plans_by_api_keys, RateLimitExceeded
+from src.cache.cache import redis_cache
 from src.cloudflare_middleware import CloudFlareFirewall
 from src.config import config_instance
 from src.database.apikeys.keys import cache_api_keys, create_admin_key
@@ -17,7 +18,7 @@ from src.management_api.routes import admin_app
 from src.prefetch import prefetch_endpoints
 from src.requests import requester
 from src.utils.my_logger import init_logger
-import CloudFlare
+
 
 cf_firewall = CloudFlareFirewall()
 # API Servers
@@ -238,7 +239,13 @@ async def v1_gateway(request: Request, path: str):
     api_server_counter = (api_server_counter + 1) % len(api_server_urls)
     api_url = f'{api_server_url}/api/v1/{path}'
     api_key: dict = request.query_params.get('api_key')
-    response = await requester(api_url=api_url)
+    _data = redis_cache.get(key=api_url)
+    if _data is None:
+        response = await requester(api_url=api_url)
+        if response and response.get("status"):
+            redis_cache.set(key=api_url, value=response, ttl=60*60)
+    else:
+        response = _data
 
     app_logger.info(f"""
         RESPONSE FROM SERVER: {api_url} 
