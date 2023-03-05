@@ -270,7 +270,7 @@ async def v1_gateway(request: Request, path: str):
     if _data is None:
         response = await requester(api_url=api_url)
         if response and response.get("status"):
-            redis_cache.set(key=api_url, value=response, ttl=60*60)
+            await redis_cache.set(key=api_url, value=response, ttl=60*60)
     else:
         response = _data
 
