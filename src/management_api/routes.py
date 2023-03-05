@@ -55,6 +55,7 @@ async def paypal_ipn(request: Request, custom_data: str = Form(...), txn_type: s
         # Send notifications to the client and relevant parties
         # e.g., email notifications, webhook notifications
         with next(sessions) as session:
+            # TODO have to fix this somehow
             subscription_id: str = custom_data.get('subscription_id')
             subscription_instance = await Subscriptions.get_by_subscription_id(subscription_id=subscription_id,
                                                                                session=session)

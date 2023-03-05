@@ -133,7 +133,7 @@ class Cache:
 
         await self._set_mem_cache(key=key, value=value, ttl=ttl)
 
-    async def _get_memcache(self, key: str):
+    async def _get_memcache(self, key: str) -> Any:
         """
             # called by get and set should not be called by user
         :param key:
@@ -144,6 +144,7 @@ class Cache:
             value = entry['value']
         else:
             value = None
+        return value
 
     async def get(self, key: str) -> Any:
         """

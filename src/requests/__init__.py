@@ -1,7 +1,5 @@
 import httpx
 from src.config import config_instance
-from src.cache.cache import cached
-import requests
 
 # Use the connection pool limits in the AsyncClient
 

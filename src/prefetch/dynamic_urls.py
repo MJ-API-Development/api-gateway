@@ -1,11 +1,11 @@
 # Prefetch endpoints
 import random
-from itertools import chain
+
 from httpx import HTTPError
 from src.config import config_instance
 from src.prefetch.exchange_lists import cached_exchange_lists
 from src.requests import requester
-from src.cache.cache import cached_ttl
+from src.cache.cache import redis_cached_ttl
 from src.utils.my_logger import init_logger
 
 prefetch_logger = init_logger("prefetching")
@@ -19,7 +19,7 @@ PREFETCH_ENDPOINTS = [
     '/api/v1/fundamental/general']
 
 
-@cached_ttl(ONE_DAY)
+@redis_cached_ttl(ONE_DAY)
 async def get_exchange_lists():
     try:
         server_url = random.choice(api_server_urls)
@@ -51,7 +51,7 @@ async def get_countries():
     return [exchange.get("country") for exchange in await get_exchange_lists()]
 
 
-@cached_ttl(ttl=ONE_DAY)
+@redis_cached_ttl(ttl=ONE_DAY)
 async def build_dynamic_urls() -> list[str]:
     """
         dynamic urls to prefetch

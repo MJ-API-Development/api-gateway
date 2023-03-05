@@ -1,12 +1,13 @@
 from functools import wraps
-from fastapi import FastAPI, Request
+from fastapi import Request
 
+from src.cache.cache import redis_cached_ttl
 from src.database.account.account import Account
 from src.database.apikeys.keys import ApiKeyModel, sessions
 from src.authorize.authorize import NotAuthorized
-from src.cache.cache import cached_ttl
 
 
+# TODO find a way to cache the results of this methods
 def authenticate_admin(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
@@ -24,14 +25,14 @@ def authenticate_admin(func):
 
 def authenticate_app(func):
     """
-        thi ill only authenticate application eg client and admin app
+        this will only authenticate application example client and admin app
     :param func:
     :return:
     """
+
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        print(args)
-        print(kwargs)
+        # TODO find a way of authenticating APPS, not BASED on API, Suggestion SECRET_KEY
         request: Request = kwargs.get('request')
         api_key = request.query_params.get('api_key')
         with next(sessions) as session:

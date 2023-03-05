@@ -1,6 +1,6 @@
 
 from datetime import datetime
-from sqlalchemy import Column, String, inspect, Integer, Float, ForeignKey
+from sqlalchemy import Column, String, inspect, Float, ForeignKey
 
 from src.const import UUID_LEN, NAME_LEN, EMAIL_LEN, STR_LEN
 from src.database.database_sessions import Base, engine

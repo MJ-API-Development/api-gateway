@@ -72,6 +72,7 @@ def camel_to_snake(name: str) -> str:
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
+@jit(forceobj=True)
 def create_api_key() -> str:
     return f"{create_id(6)}-{create_id(4)}-{create_id(4)}-{create_id(4)}-{create_id(12)}"
 

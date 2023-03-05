@@ -6,7 +6,7 @@ from fastapi import HTTPException, Request
 from starlette import status
 
 from src.authorize.resources import get_resource_name, resource_name_request_size
-from src.cache.cache import cached_ttl, redis_cache
+from src.cache.cache import redis_cache, redis_cached_ttl
 from src.database.apikeys.keys import api_keys, cache_api_keys, ApiKeyModel
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions, Plans, PlanType
@@ -92,7 +92,7 @@ async def load_plans_by_api_keys() -> None:
                                                          subscriptions_dict=subscription_instance.to_dict())
 
 
-@cached_ttl(ttl=ONE_DAY)
+@redis_cached_ttl(ttl=ONE_DAY)
 async def is_resource_authorized(path_param: str, api_key: str) -> bool:
     """
         given a url and api_key check if the user can access the resource

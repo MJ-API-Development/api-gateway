@@ -2,8 +2,8 @@ import hashlib
 import secrets
 
 
-from sqlalchemy import Column, String, inspect, Boolean, ForeignKey
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy import Column, String, inspect, Boolean
+from sqlalchemy.orm import relationship
 from typing_extensions import Self
 
 from src.authorize.authorize import NotAuthorized
