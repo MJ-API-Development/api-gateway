@@ -263,11 +263,10 @@ async def v1_gateway(request: Request, path: str):
     # create an ijson parser for the response content
     # create response
     headers = {"Content-Type": "application/json"}
-    content = response
     status_code = 200 if response.get("status") else 400
     # if request is here it means the api request was authorized and valid
     _path = f"/api/v1/{path}"
     await create_take_credit_args(api_key=api_key, path=_path)
-    return JSONResponse(content=response.get("payload"),
+    return JSONResponse(content=response,
                         status_code=status_code,
                         headers=headers)
