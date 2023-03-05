@@ -224,6 +224,33 @@ async def startup_event():
     asyncio.create_task(process_credit_queue())
 
 
+async def validate_request_middleware(request: Request, call_next):
+    """
+
+    :param request:
+    :param call_next:
+    :return:
+    """
+    # This code will be executed for each incoming request
+    # before it is processed by the route handlers.
+    # You can modify the request here, or perform any other
+    # pre-processing that you need.
+    signature = request.headers.get('X-Signature')
+    _secret = config_instance().SECRET_KEY
+    if await cf_firewall.confirm_signature(signature=signature, request=request, secret=_secret):
+        response: JSONResponse = await call_next(request)
+    else:
+        raise NotAuthorized(message="Invalid Signature")
+
+    # This code will be executed for each outgoing response
+    # before it is sent back to the client.
+    # You can modify the response here, or perform any other
+    # post-processing that you need.
+    _out_signature = await cf_firewall.create_signature(response=response, secret=_secret)
+    response.headers.update({'X-Signature': _out_signature})
+    return response
+
+
 @app.api_route("/api/v1/{path:path}", methods=["GET"], include_in_schema=True)
 @auth_and_rate_limit
 async def v1_gateway(request: Request, path: str):

@@ -2,6 +2,7 @@
 from src.config import config_instance
 from CloudFlare import CloudFlare
 import ipaddress
+import hashlib
 
 
 from src.make_request import send_request
@@ -73,3 +74,31 @@ class CloudFlareFirewall:
         bad_addresses = await redis_cache.get(key="list_of_bad_addresses") or []
         for bad_address in bad_addresses:
             self.bad_addresses.add(bad_address)
+
+    @staticmethod
+    async def confirm_signature(signature, request, secret):
+        url = request.url
+        method = request.method.upper()
+        headers = request.headers
+
+        expected_signature = hashlib.sha256(f"{method}{url}{headers}{secret}")
+
+        return signature == expected_signature
+
+    @staticmethod
+    async def sha256(message):
+        data = message.encode('utf-8')
+        hash_bytes = hashlib.sha256(data).digest()
+        hash_hex = hash_bytes.hex()
+        return hash_hex
+
+    @staticmethod
+    async def create_signature(response, secret):
+        url = response.url
+        method = response.method.upper()
+        headers = response.headers
+
+        message = f"{method}{url}{headers}{secret}"
+        signature = hashlib.sha256(message)
+
+        return signature
