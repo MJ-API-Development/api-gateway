@@ -24,8 +24,17 @@ def redis_cached_ttl(ttl: int = 60 * 60 * 1):
         @functools.wraps(func)
         async def _wrapper(*args, **kwargs):
 
-            api_url, = args if args else None
-            new_kwargs = {'api_url': api_url} if api_url is not None else {}
+            new_kwargs = {}
+            for arg_index, arg_value in enumerate(args):
+                if isinstance(arg_value, (tuple, list)):
+                    for i, val in enumerate(arg_value):
+                        new_kwargs[f'arg{arg_index}_{i}'] = val
+                elif isinstance(arg_value, str):
+                    new_kwargs[f'arg{arg_index}'] = arg_value
+                else:
+                    # handle other data types here
+                    pass
+
             new_kwargs.update({k: v for k, v in kwargs.items() if k != 'session'})
             _key = await create_key(method=func.__name__, kwargs=new_kwargs)
 
