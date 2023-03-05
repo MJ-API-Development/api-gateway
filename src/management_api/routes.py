@@ -5,9 +5,10 @@ from fastapi import Request, FastAPI, HTTPException, Form
 from starlette.responses import JSONResponse
 
 from src import paypal_utils
-from src.authentication import authenticate_admin, authenticate_app
+from src.authentication import authenticate_admin, authenticate_app, authenticate_cloudflare_workers
 from src.const import UUID_LEN
 from src.database.account.account import Account
+from src.database.apikeys.keys import ApiKeyModel
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions, Plans, Invoices
 from src.email.email import process_send_subscription_welcome_email, process_send_payment_confirmation_email
@@ -258,3 +259,17 @@ async def admin_startup():
     asyncio.create_task(process_invoice_queues())
     asyncio.create_task(process_send_subscription_welcome_email())
     asyncio.create_task(process_send_payment_confirmation_email())
+
+
+@admin_app.api_route(path="/cloudflare/init-gateway", methods=["GET", "POST"], include_in_schema=False)
+@authenticate_cloudflare_workers
+async def init_cloudflare_gateway(request: Request):
+    """
+
+    :param request:
+    :return:
+    """
+    with next(sessions) as session:
+        api_keys = await ApiKeyModel.get_all_active(session=session)
+        payload = [api_key.to_dict() for api_key in api_keys]
+    return JSONResponse(content=dict(status=True, api_keys=payload), status_code=200)

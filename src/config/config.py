@@ -86,6 +86,7 @@ class PayPalSettings(BaseSettings):
 class CloudflareSettings(BaseSettings):
     EMAIL: str = Field(..., env="CLOUDFLARE_EMAIL")
     TOKEN: str = Field(..., env="CLOUDFLARE_TOKEN")
+    CLOUDFLARE_SECRET_KEY: str = Field(..., env="CLOUDFLARE_SECRET_KEY")
 
     class Config:
         env_file = '.env.development'

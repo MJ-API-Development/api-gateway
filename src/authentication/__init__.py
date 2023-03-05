@@ -1,7 +1,7 @@
 from functools import wraps
 from fastapi import Request
-
-from src.cache.cache import redis_cached_ttl
+import hmac
+from src.config import config_instance
 from src.database.account.account import Account
 from src.database.apikeys.keys import ApiKeyModel, sessions
 from src.authorize.authorize import NotAuthorized
@@ -44,3 +44,18 @@ def authenticate_app(func):
         raise NotAuthorized(message="This Resource is only Accessible to Admins")
 
     return wrapper
+
+
+def authenticate_cloudflare_workers(func):
+    @wraps(func)
+    async def _cloudflare_auth(*args, **kwargs):
+        request: Request = kwargs.get('request')
+        secret_token = request.headers.get('X-SECRET-KEY')
+        this_secret_token = config_instance().CLOUDFLARE_SETTINGS.CLOUDFLARE_SECRET_KEY
+
+        if hmac.compare_digest(this_secret_token, secret_token):
+            return await func(*args, **kwargs)
+        else:
+            raise NotAuthorized(message="Invalid X-SECRET-KEY header")
+
+    return _cloudflare_auth
