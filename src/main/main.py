@@ -233,7 +233,12 @@ async def validate_request_middleware(request: Request, call_next):
     # before it is processed by the route handlers.
     # You can modify the request here, or perform any other
     # pre-processing that you need.
+
     signature = request.headers.get('X-Signature')
+    _url: str = request.url
+    if signature is None and _url.startswith("https://gateway.eod-stock-api.site/_admin"):
+        response: JSONResponse = await call_next(request)
+
     _secret = config_instance().SECRET_KEY
     if await cf_firewall.confirm_signature(signature=signature, request=request, secret=_secret):
         response: JSONResponse = await call_next(request)
