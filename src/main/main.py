@@ -19,7 +19,6 @@ from src.prefetch import prefetch_endpoints
 from src.requests import requester
 from src.utils.my_logger import init_logger
 
-
 cf_firewall = CloudFlareFirewall()
 # API Servers
 api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_instance().API_SERVERS.SLAVE_API_SERVER]
@@ -178,7 +177,6 @@ async def _create_plans(request: Request):
 # On Start Up Run the following Tasks
 @app.on_event('startup')
 async def startup_event():
-
     async def setup_cf_firewall():
         app_logger.info("Setting Up CF Firewall...")
         ipv4_cdrs, ipv6_cdrs = await cf_firewall.get_ip_ranges()
@@ -214,7 +212,7 @@ async def startup_event():
         while True:
             await cf_firewall.save_bad_addresses_to_redis()
             # Everyday
-            await asyncio.sleep(60*60*24)
+            await asyncio.sleep(60 * 60 * 24)
             app_logger.info("CF Firewall Bad Addresses Backed Up")
 
     asyncio.create_task(setup_cf_firewall())
@@ -270,7 +268,7 @@ async def v1_gateway(request: Request, path: str):
     if _data is None:
         response = await requester(api_url=api_url)
         if response and response.get("status"):
-            await redis_cache.set(key=api_url, value=response, ttl=60*60)
+            await redis_cache.set(key=api_url, value=response, ttl=60 * 60)
     else:
         response = _data
 
@@ -279,7 +277,7 @@ async def v1_gateway(request: Request, path: str):
         RESPONSE : {response}
     """)
     # creating response
-    headers = {"Content-Type":"application/json"}
+    headers = {"Content-Type": "application/json"}
 
     if response.get("status", 0) == 0:
         message = "there was an error accessing server please tru again later, if this error persists please " \
