@@ -158,6 +158,7 @@ async def test_error_handling():
 app.mount(path="/_admin", app=admin_app)
 
 
+# noinspection PyUnusedLocal
 @app.post("/_bootstrap/create-plans")
 @authenticate_admin
 async def _create_plans(request: Request):
@@ -235,12 +236,12 @@ async def validate_request_middleware(request: Request, call_next):
     # pre-processing that you need.
 
     signature = request.headers.get('X-Signature')
+    _secret = config_instance().SECRET_KEY
     _url: str = request.url
     if signature is None and _url.startswith("https://gateway.eod-stock-api.site/_admin"):
         response: JSONResponse = await call_next(request)
 
-    _secret = config_instance().SECRET_KEY
-    if await cf_firewall.confirm_signature(signature=signature, request=request, secret=_secret):
+    elif await cf_firewall.confirm_signature(signature=signature, request=request, secret=_secret):
         response: JSONResponse = await call_next(request)
     else:
         raise NotAuthorized(message="Invalid Signature")
