@@ -279,7 +279,7 @@ async def v1_gateway(request: Request, path: str):
         RESPONSE : {response}
     """)
     # creating response
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type":"application/json"}
 
     if response.get("status", 0) == 0:
         message = "there was an error accessing server please tru again later, if this error persists please " \
