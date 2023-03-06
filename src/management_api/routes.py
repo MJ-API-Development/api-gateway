@@ -6,12 +6,13 @@ from starlette.responses import JSONResponse
 
 from src import paypal_utils
 from src.authentication import authenticate_admin, authenticate_app, authenticate_cloudflare_workers
+from src.config import config_instance
 from src.const import UUID_LEN
 from src.database.account.account import Account
 from src.database.apikeys.keys import ApiKeyModel
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions, Plans, Invoices
-from src.email.email import process_send_subscription_welcome_email, process_send_payment_confirmation_email
+from src.email.email import email_process
 from src.event_queues.invoice_queue import add_invoice_to_send, process_invoice_queues
 from src.paypal_utils.paypal_plans import paypal_service
 from src.utils.my_logger import init_logger
@@ -88,6 +89,9 @@ async def create_update_user(request: Request, user_data: dict[str, str | int | 
             if not user_instance:
                 user_instance = Account(**user_data)
                 session.add(user_instance)
+                account_dict = dict()
+                # this will schedule an account confirmation email to be sent
+                await email_process.send_account_confirmation_email(account_dict)
             else:
                 raise HTTPException(detail="User already exist", status_code=401)
 
@@ -184,6 +188,10 @@ async def subscriptions(request: Request, subscription_data: dict[str, str | int
             # the billing
             subscription_instance = await paypal_service.create_paypal_billing(plan=plan,
                                                                                subscription=subscription_instance)
+            ADMIN = config_instance().EMAIL_SETTINGS.ADMIN
+            sub_dict = dict(sender_email=ADMIN, recipient_email=account.email, client_name=account.name,
+                            plan_name=plan.name)
+            await email_process.send_subscription_welcome_email(**sub_dict)
 
         elif request.method == "PUT":
             """
@@ -257,8 +265,6 @@ async def admin_startup():
     """
     # Needs more processes here
     asyncio.create_task(process_invoice_queues())
-    asyncio.create_task(process_send_subscription_welcome_email())
-    asyncio.create_task(process_send_payment_confirmation_email())
 
 
 @admin_app.api_route(path="/cloudflare/init-gateway", methods=["GET", "POST"], include_in_schema=False)

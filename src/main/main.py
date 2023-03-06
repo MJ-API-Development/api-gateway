@@ -14,6 +14,7 @@ from src.cloudflare_middleware import CloudFlareFirewall
 from src.config import config_instance
 from src.database.apikeys.keys import cache_api_keys, create_admin_key
 from src.database.plans.init_plans import create_plans
+from src.email.email import email_process
 from src.management_api.routes import admin_app
 from src.prefetch import prefetch_endpoints
 from src.requests import requester
@@ -221,6 +222,7 @@ async def startup_event():
     asyncio.create_task(update_api_keys_background_task())
     asyncio.create_task(prefetch())
     asyncio.create_task(process_credit_queue())
+    asyncio.create_task(email_process.process_message_queues())
 
 
 async def validate_request_middleware(request: Request, call_next):
