@@ -67,6 +67,7 @@ class CacheSettings(BaseSettings):
 class EmailSettings(BaseSettings):
     SMTP_SERVER: str = Field(..., env="SMTP_SERVER")
     SMTP_PORT: int = Field(..., env="SMTP_PORT")
+    SENDGRID_API_KEY: str = Field(..., env="SENDGRID_API_KEY")
 
     class Config:
         env_file = '.env.development'

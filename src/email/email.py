@@ -1,53 +1,32 @@
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from src.email.templates import EmailTemplate
 from src.config.config import config_instance
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 
 class Emailer:
     """
         Emailing Class, used to create email servers and manage sending emails
     """
-
-    def __init__(self, smtp_server: str, port: int):
-        try:
-            # self.server = smtplib.SMTP(smtp_server, port)
-            # self.server.starttls()
-            self.server = None
-
-        except ConnectionRefusedError as e:
-            pass
-
-    def create_server(self, smtp_server: str, port: int) -> None:
-        """Create a secure SSL/TLS connection to the SMTP server."""
-        self.server = smtplib.SMTP(smtp_server, port)
-        self.server.starttls()
-
-    def login(self, sender_email: str, password: str):
-        """Login to the SMTP server."""
-        self.server.login(sender_email, password)
+    def __init__(self):
+        self.server = SendGridAPIClient(config_instance().EMAIL_SETTINGS.SENDGRID_API_KEY)
 
     @staticmethod
     def create_message(sender_email: str, recipient_email: str,
-                       subject: str, text: str, html: str) -> MIMEMultipart:
+                       subject: str, html: str) -> Mail:
         """Create the message with plain-text and HTML versions."""
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From'] = sender_email
-        msg['To'] = recipient_email
+        return Mail(
+            from_email=sender_email,
+            to_emails=recipient_email,
+            subject=subject,
+            html_content=html)
 
-        part1 = MIMEText(text, 'plain')
-        part2 = MIMEText(html, 'html')
-
-        msg.attach(part1)
-        msg.attach(part2)
-
-        return msg
-
-    def send_email(self, sender_email: str, recipient_email: str, message: MIMEMultipart):
+    def send_email(self, message: Mail) -> bool:
         """Send the email via the SMTP server."""
-        self.server.sendmail(sender_email, recipient_email, message.as_string())
+        response = self.server.send(message)
+        if response.status_code in [200, 201]:
+            return True
+        return False
 
     def send_subscription_welcome_email(self, sender_email: str,
                                         recipient_email: str,
@@ -58,10 +37,11 @@ class Emailer:
         text = f"Dear {client_name},\n\nThank you for signing up for our {plan_name} subscription!"
         html = templates.subscription_welcome(client_name=client_name, plan_name=plan_name)
 
-        message = self.create_message(sender_email, recipient_email, subject, text, html)
-        self.send_email(sender_email, recipient_email, message)
+        message_dict = dict(sender_email=sender_email, recipient_email=recipient_email,
+                            subject=subject, html=html)
+        self.send_email(self.create_message(**message_dict))
 
-    def send_payment_confirmation_email(self, server: smtplib.SMTP,
+    def send_payment_confirmation_email(self,
                                         sender_email: str,
                                         recipient_email: str,
                                         client_name: str,
@@ -69,17 +49,14 @@ class Emailer:
                                         amount: float, templates: EmailTemplate = EmailTemplate):
         """Send the payment confirmation email."""
         subject = f"Payment confirmation for your {plan_name} subscription"
-        text = f"Dear {client_name},\n\nThank you for your payment of {amount} for our {plan_name} subscription."
         html = templates.payment_confirmation(client_name=client_name, plan_name=plan_name, amount=amount)
 
-        message = self.create_message(sender_email, recipient_email, subject, text, html)
-        self.send_email(sender_email, recipient_email, message)
+        message_dict = dict(sender_email=sender_email, recipient_email=recipient_email,
+                            subject=subject, html=html)
+        self.send_email(self.create_message(**message_dict))
 
 
-PORT = config_instance().EMAIL_SETTINGS.SMTP_PORT
-SMTP_SERVER = config_instance().EMAIL_SETTINGS.SMTP_SERVER
-
-email_process = Emailer(smtp_server=SMTP_SERVER, port=PORT)
+email_process = Emailer()
 
 
 async def process_send_subscription_welcome_email():
