@@ -7,15 +7,15 @@ from src.config import config_instance
 async_client = httpx.AsyncClient(http2=True, limits=httpx.Limits(max_connections=100, max_keepalive_connections=20))
 
 
-async def requester(api_url: str):
+async def requester(api_url: str, timeout: int = 36000):
     try:
         headers = await set_headers()
-        response = await async_client.get(url=api_url, headers=headers, timeout=360000)
+        response = await async_client.get(url=api_url, headers=headers, timeout=timeout)
     except httpx.HTTPError as http_err:
         raise http_err
     except Exception as err:
         raise err
-    return response.json()
+    return response.json() if response else None
 
 
 async def set_headers():
@@ -26,3 +26,5 @@ async def set_headers():
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'}
 
 # TODO Try random election
+
+

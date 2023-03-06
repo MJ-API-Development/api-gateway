@@ -265,6 +265,7 @@ async def v1_gateway(request: Request, path: str):
     :param path:
     :return:
     """
+
     api_key: dict = request.query_params.get('api_key')
     _path = f"/api/v1/{path}"
     await create_take_credit_args(api_key=api_key, path=_path)
