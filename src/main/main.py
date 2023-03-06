@@ -265,39 +265,33 @@ async def v1_gateway(request: Request, path: str):
     :param path:
     :return:
     """
-    global api_server_counter
-    api_server_url = api_server_urls[api_server_counter]
-    api_server_counter = (api_server_counter + 1) % len(api_server_urls)
-    api_url = f'{api_server_url}/api/v1/{path}'
     api_key: dict = request.query_params.get('api_key')
-    _data = await redis_cache.get(key=api_url)
-    if _data is None:
-        response = await requester(api_url=api_url)
-        if response and response.get("status"):
-            await redis_cache.set(key=api_url, value=response, ttl=60 * 60)
-    else:
-        response = _data
-
-    app_logger.info(f"""
-        RESPONSE FROM SERVER: {api_url} 
-        RESPONSE : {response}
-    """)
-    # creating response
-    headers = {"Content-Type": "application/json"}
-
-    if response.get("status", 0) == 0:
-        message = "there was an error accessing server please tru again later, if this error persists please " \
-                  "contact admin@eod-stock-api.site"
-
-        return JSONResponse(content=dict(status=False, message=message), status_code=404, headers=headers)
-
-    # create an ijson parser for the response content
-    # create response
-    headers = {"Content-Type": "application/json"}
-    status_code = 200 if response.get("status") else 400
-    # if request is here it means the api request was authorized and valid
     _path = f"/api/v1/{path}"
     await create_take_credit_args(api_key=api_key, path=_path)
-    return JSONResponse(content=response,
-                        status_code=status_code,
-                        headers=headers)
+
+    api_urls = [f'{api_server_url}/api/v1/{path}' for api_server_url in api_server_urls]
+
+    tasks = [redis_cache.get(key=api_url) for api_url in api_urls]
+    cached_responses = await asyncio.gather(*tasks)
+
+    for i, response in enumerate(cached_responses):
+        if response is not None:
+            app_logger.info(msg=f"Found cached response from {api_urls[i]}")
+            return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
+
+    app_logger.info(msg="All cached responses not found")
+
+    tasks = [requester(api_url=api_url) for api_url in api_urls]
+    responses = await asyncio.gather(*tasks)
+
+    for i, response in enumerate(responses):
+        if response and response.get("status"):
+            api_url = api_urls[i]
+            await redis_cache.set(key=api_url, value=response, ttl=60 * 60)
+            app_logger.info(msg=f"Cached response from {api_url}")
+            return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
+        else:
+            app_logger.error(msg=f"This resource not responding correctly: {api_urls[i]}")
+
+    app_logger.error(msg="All API servers failed to respond")
+    return JSONResponse(content={"status": False, "message": "All API servers failed to respond"}, status_code=404, headers={"Content-Type": "application/json"})
