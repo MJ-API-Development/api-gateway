@@ -291,6 +291,8 @@ async def v1_gateway(request: Request, path: str):
             app_logger.info(msg=f"Cached response from {api_url}")
             return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
         else:
+            # The reason for this algorithm is because sometimes the cron server is busy this way no matter
+            # what happens a response is returned
             app_logger.error(msg=f"This resource not responding correctly: {api_urls[i]}")
 
     app_logger.error(msg="All API servers failed to respond")
