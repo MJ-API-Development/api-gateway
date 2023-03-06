@@ -31,12 +31,3 @@ async def requester(api_url: str, timeout: int = 30):
         raise err
     return response.json() if response else None
 
-
-async def set_headers():
-    return {'X-API-KEY': config_instance().API_SERVERS.X_API_KEY,
-            'X-SECRET-TOKEN': config_instance().API_SERVERS.X_SECRET_TOKEN,
-            'X-RapidAPI-Proxy-Secret': config_instance().API_SERVERS.X_RAPID_SECRET,
-            'Content-Type': "application/json",
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'}
-
-# TODO Try random election
