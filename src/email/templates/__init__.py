@@ -15,16 +15,16 @@ class EmailTemplate:
         return self.template.render(**kwargs)
 
     @staticmethod
-    def subscription_welcome(client_name, plan_name):
+    async def subscription_welcome(client_name, plan_name):
         template = "subscription_welcome.html"
         return EmailTemplate(template).render(client_name=client_name, plan_name=plan_name)
 
     @staticmethod
-    def payment_confirmation(client_name, plan_name, amount):
+    async def payment_confirmation(client_name, plan_name, amount):
         template = "payment_confirmation.html"
         return EmailTemplate(template).render(client_name=client_name, plan_name=plan_name, amount=amount)
 
     @staticmethod
-    def account_confirmation(client_name: str, verification_link: str):
+    async def account_confirmation(client_name: str, verification_link: str):
         template = "account_confirmation.html"
         return EmailTemplate(template).render(client_name=client_name, verification_link=verification_link)

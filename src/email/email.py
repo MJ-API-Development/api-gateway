@@ -53,7 +53,7 @@ class Emailer:
         """Send the subscription welcome email."""
         subject = f"Welcome to our {plan_name} subscription!"
         text = f"Dear {client_name},\n\nThank you for signing up for our {plan_name} subscription!"
-        html = templates.subscription_welcome(client_name=client_name, plan_name=plan_name)
+        html = await templates.subscription_welcome(client_name=client_name, plan_name=plan_name)
 
         message_dict = dict(sender_email=sender_email, recipient_email=recipient_email,
                             subject=subject, html=html)
@@ -68,7 +68,7 @@ class Emailer:
                                               amount: float, templates: EmailTemplate = EmailTemplate):
         """Send the payment confirmation email."""
         subject = f"Payment confirmation for your {plan_name} subscription"
-        html = templates.payment_confirmation(client_name=client_name, plan_name=plan_name, amount=amount)
+        html = await templates.payment_confirmation(client_name=client_name, plan_name=plan_name, amount=amount)
 
         message_dict = dict(sender_email=sender_email, recipient_email=recipient_email,
                             subject=subject, html=html)
@@ -79,8 +79,12 @@ class Emailer:
                                               sender_email: str,
                                               recipient_email: str,
                                               client_name: str,
+                                              verification_link: str,
                                               templates: EmailTemplate = EmailTemplate):
-        pass
+        subject = f"Account confirmation from EOD-STOCK-API.SITE"
+        html = await templates.account_confirmation(client_name=client_name, verification_link=verification_link)
+        message_dict = dict(sender_email=sender_email, recipient_email=recipient_email, subject=subject, html=html)
+        await self.put_message_on_queue(message=await self.create_message(**message_dict))
 
 
 email_process = Emailer()
