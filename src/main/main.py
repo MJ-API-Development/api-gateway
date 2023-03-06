@@ -282,7 +282,8 @@ async def v1_gateway(request: Request, path: str):
 
     app_logger.info(msg="All cached responses not found")
 
-    tasks = [requester(api_url=api_url, timeout=10) for api_url in api_urls]
+    # 5 seconds Maximum amount of time requests should wait here
+    tasks = [requester(api_url=api_url, timeout=5) for api_url in api_urls]
     responses = await asyncio.gather(*tasks)
 
     for i, response in enumerate(responses):
