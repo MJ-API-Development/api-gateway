@@ -7,7 +7,13 @@ from src.config import config_instance
 async_client = httpx.AsyncClient(http2=True, limits=httpx.Limits(max_connections=100, max_keepalive_connections=20))
 
 
-async def requester(api_url: str, timeout: int = 36000):
+async def requester(api_url: str, timeout: int = 30):
+    """
+        30 seconds is the maximum amount of time a request will ever wait
+    :param api_url:
+    :param timeout:
+    :return:
+    """
     try:
         headers = await set_headers()
         response = await async_client.get(url=api_url, headers=headers, timeout=timeout)
