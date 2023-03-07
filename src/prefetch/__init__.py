@@ -8,7 +8,7 @@ from src.requests import requester
 async def prefetch_endpoints():
     """will fetch the endpoints causing the endpoints to be cached"""
     urls = await build_dynamic_urls()
-    responses = await asyncio.gather(*[requester(_url) for _url in urls])
+    responses = await asyncio.gather(*[requester(_url, timeout=5*60) for _url in urls])
     for response, url in zip(responses, urls):
         if response and response.get("status"):
             await redis_cache.set(key=url, value=response)
