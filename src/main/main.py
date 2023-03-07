@@ -157,7 +157,7 @@ async def handle_json_decode_error(request, exc):
         Debug Information
         request_url: {request.url}
         request_method: {request.method}
-        error_detail: {exc.message}
+        error_detail: {exc.detail}
         status_code: {exc.status_code}    
     """)
 
