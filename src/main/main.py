@@ -253,35 +253,36 @@ async def validate_request_middleware(request: Request, call_next):
     _url: str = request.url
     # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
     # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
-    if signature is None and _url.startswith("https://gateway.eod-stock-api.site/_admin"):
-        response: JSONResponse = await call_next(request)
-
-    elif await cf_firewall.confirm_signature(signature=signature, request=request, secret=_secret):
-        response: JSONResponse = await call_next(request)
-        # TODO - debug this not properly working
-        # if await cf_firewall.path_matches_known_route(request=request):
-        #     response: JSONResponse = await call_next(request)
-        # else:
-        #     app_logger.warning(msg=f"""
-        #         Fire Walled Requests
-        #                 request.url = {request.url}
-        #
-        #                 request.method = {request.method}
-        #
-        #                 request.headers = {request.headers}
-        #
-        #                 request_time = {datetime.datetime.now().isoformat(sep="-")}
-        #     """)
-        #     raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
-    else:
-        raise NotAuthorized(message="Invalid Signature")
-
-    # This code will be executed for each outgoing response
-    # before it is sent back to the client.
-    # You can modify the response here, or perform any other
-    # post-processing that you need.
-    _out_signature = await cf_firewall.create_signature(response=response, secret=_secret)
-    response.headers.update({'X-Signature': _out_signature})
+    response: JSONResponse = await call_next(request)
+    # if signature is None and _url.startswith("https://gateway.eod-stock-api.site/_admin"):
+    #     response: JSONResponse = await call_next(request)
+    #
+    # elif await cf_firewall.confirm_signature(signature=signature, request=request, secret=_secret):
+    #     response: JSONResponse = await call_next(request)
+    #     # TODO - debug this not properly working
+    #     # if await cf_firewall.path_matches_known_route(request=request):
+    #     #     response: JSONResponse = await call_next(request)
+    #     # else:
+    #     #     app_logger.warning(msg=f"""
+    #     #         Fire Walled Requests
+    #     #                 request.url = {request.url}
+    #     #
+    #     #                 request.method = {request.method}
+    #     #
+    #     #                 request.headers = {request.headers}
+    #     #
+    #     #                 request_time = {datetime.datetime.now().isoformat(sep="-")}
+    #     #     """)
+    #     #     raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
+    # else:
+    #     raise NotAuthorized(message="Invalid Signature")
+    #
+    # # This code will be executed for each outgoing response
+    # # before it is sent back to the client.
+    # # You can modify the response here, or perform any other
+    # # post-processing that you need.
+    # _out_signature = await cf_firewall.create_signature(response=response, secret=_secret)
+    # response.headers.update({'X-Signature': _out_signature})
     return response
 
 
