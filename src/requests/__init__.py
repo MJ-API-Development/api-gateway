@@ -1,8 +1,9 @@
 import httpx
 from src.config import config_instance
+from src.utils.my_logger import init_logger
 
 # Use the connection pool limits in the AsyncClient
-
+request_logger = init_logger("requester_logger")
 _headers = {
     'X-API-KEY': config_instance().API_SERVERS.X_API_KEY,
     'X-SECRET-TOKEN': config_instance().API_SERVERS.X_SECRET_TOKEN,
@@ -25,6 +26,16 @@ async def requester(api_url: str, timeout: int = 30):
     """
     try:
         response = await async_client.get(url=api_url, timeout=timeout)
+        _response =f"""
+        BACKEND SERVERS ACTUAL RESPONSES
+
+        response_headers: {response.headers} 
+
+        response_code: {response.status_code}
+
+        response_text: {response.text}
+        """
+        request_logger.info(_response)
     except httpx.HTTPError as http_err:
         raise http_err
     except Exception as err:
