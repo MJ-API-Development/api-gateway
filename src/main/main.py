@@ -294,8 +294,8 @@ async def v1_gateway(request: Request, path: str):
 
     app_logger.info(msg="All cached responses not found")
 
-    # 5 seconds Maximum amount of time requests should wait here
-    tasks = [requester(api_url=api_url, timeout=5) for api_url in api_urls]
+    # 5 minutes Maximum amount of time requests should wait here
+    tasks = [requester(api_url=api_url, timeout=5*60) for api_url in api_urls]
     responses = await asyncio.gather(*tasks)
 
     for i, response in enumerate(responses):
@@ -310,6 +310,7 @@ async def v1_gateway(request: Request, path: str):
             app_logger.error(msg=f"This resource not responding correctly: {api_urls[i]}")
 
     app_logger.error(msg="All API servers failed to respond")
+    # TODO - send Notifications to developers that the API Servers are down
     return JSONResponse(content={"status": False, "message": "All API servers failed to respond"}, status_code=404,
                         headers={"Content-Type": "application/json"})
 
