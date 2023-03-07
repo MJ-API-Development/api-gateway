@@ -11,6 +11,7 @@ from redis import ConnectionError
 from src.config import config_instance
 from src.utils.my_logger import init_logger
 from src.utils.utils import camel_to_snake
+import pickle
 
 MEM_CACHE_SIZE = config_instance().CACHE_SETTINGS.MAX_CACHE_SIZE
 EXPIRATION_TIME = config_instance().CACHE_SETTINGS.CACHE_DEFAULT_TIMEOUT
@@ -81,12 +82,12 @@ class Cache:
             Serialize the given value to a json string.
         """
         try:
-            return ujson.dumps(value)
-        except JSONDecodeError as e:
-            config_instance().DEBUG and self._logger.error(f"Could be bad data on input stream {str(e)}")
+            return pickle.dumps(value)
+        except (JSONDecodeError, pickle.PicklingError):
+            config_instance().DEBUG and self._logger.error(f"Serializer Error")
             return value
         except TypeError as e:
-            config_instance().DEBUG and self._logger.error(f"Could be bad data on input stream {str(e)}")
+            config_instance().DEBUG and self._logger.error(f"Serializer Error")
             return value
 
     async def _deserialize_value(self, value: any) -> Any:
@@ -94,17 +95,18 @@ class Cache:
             Deserialize the given json string to a python object.
         """
         try:
-            return ujson.loads(value)
-        except JSONDecodeError:
-            config_instance().DEBUG and self._logger.error(f"{value}")
+            return pickle.loads(value)
+        except (JSONDecodeError, pickle.UnpicklingError):
+            config_instance().DEBUG and self._logger.error(f"Error Deserializing Data")
             return value
         except TypeError:
-            config_instance().DEBUG and self._logger.error(f"{value}")
+            config_instance().DEBUG and self._logger.error(f"Error Deserializing Data")
             return value
 
     async def _set_mem_cache(self, key: str, value: Any, ttl: int = 0):
         """
-
+            **_set_mem_cache**
+                private method never call this code directly
         :param key:
         :param value:
         :param ttl:
@@ -115,9 +117,9 @@ class Cache:
             # If the cache is full, remove the oldest entry
             if len(self._cache) >= self.max_size:
                 await self._remove_oldest_entry()
-            # Add the new entry
+
+            # creates a mem_cache item and set the timestamp and time to live based on given value or default
             self._cache[key] = {'value': value, 'timestamp': time.monotonic(), 'ttl': ttl}
-            # self._logger.info(f"Created value : {value}")
 
     async def set(self, key: str, value: Any, ttl: int = 0):
         """
@@ -125,15 +127,15 @@ class Cache:
             If use_redis=True the value is stored in Redis, otherwise it is stored in-memory
         """
         value = await self._serialize_value(value)
+        exp_time = ttl if ttl else self.expiration_time
 
         if len(self._cache) > self.max_size:
             await self._remove_oldest_entry()
 
         if self._use_redis:
-            exp_time = ttl if ttl else self.expiration_time
             self._redis_client.set(key, value, ex=exp_time)
 
-        await self._set_mem_cache(key=key, value=value, ttl=ttl)
+        await self._set_mem_cache(key=key, value=value, ttl=exp_time)
 
     async def _get_memcache(self, key: str) -> Any:
         """
@@ -142,17 +144,22 @@ class Cache:
         :return:
         """
         entry = self._cache.get(key)
-        if entry and time.time() - entry['timestamp'] < self.expiration_time:
+        if entry and time.monotonic() - entry['timestamp'] < self.expiration_time:
             value = entry['value']
         else:
             value = None
         return value
 
-    # 5 seconds timeout default
-    async def get(self, key: str, timeout=5) -> Any:
+    # 1 second timeout default
+    async def get(self, key: str, timeout=1) -> Any:
         """
-            Retrieve the value associated with the given key within the allocated time.
-            If use_redis=True the value is retrieved from Redis, only if that key is not also on local memory.
+        *GET*
+            NOTE This method will time-out in 1 second if no value is returned from any cache
+                Retrieve the value associated with the given key within the allocated time.
+                If use_redis=True the value is retrieved from Redis, only if that key is not also on local memory.
+
+        :param timeout: timeout in seconds, if time expires the method will return None
+        :param key = a key used to find the value to search for.
         """
         async def _async_redis_get(get: Callable, _key: str):
             return get(_key)
@@ -198,18 +205,22 @@ class Cache:
                 await self.delete_redis_key(key=oldest_entry)
 
     async def delete_redis_key(self, key):
+        """removes a single redis key"""
         self._redis_client.delete([key])
 
     async def delete_memcache_key(self, key):
-        self._cache.pop(key)
+        with self._lock:
+            self._cache.pop(key)
 
     async def delete_key(self, key):
-        await self.delete_redis_key(key)
-        await self.delete_memcache_key(key)
+        with self._lock:
+            await self.delete_redis_key(key)
+            await self.delete_memcache_key(key)
 
     async def clear_mem_cache(self):
         """"""
-        self._cache = {}
+        with self._lock:
+            self._cache = {}
 
     async def clear_redis_cache(self):
         self._redis_client.flushall(asynchronous=True)
@@ -218,15 +229,21 @@ class Cache:
         """
             **memcache_ttl_cleaner**
                 will run every ten minutes to clean up every expired mem cache item
-                expiration is depndent on ttl
+                expiration is dependent on ttl
         :return:
         """
         now = time.monotonic()
         for key, value in self._cache.items():
-            if value['timestamp'] + value['ttl'] < now:
+            # Time has progressed past the allocated time for this resource
+            # NOTE for those values where timeout is not previously declared the Assumption is 1 Hour
+            if value.get('timestamp', 0) + value.get('ttl', 60*60) < now:
                 await self.delete_memcache_key(key=key)
 
     async def create_redis_pool(self):
+        """
+            Eventually Use redis pools to store data to redis
+        :return:
+        """
         redis_host = config_instance().REDIS_CACHE.CACHE_REDIS_HOST
         redis_port = config_instance().REDIS_CACHE.CACHE_REDIS_PORT
         password = config_instance().REDIS_CACHE.REDIS_PASSWORD

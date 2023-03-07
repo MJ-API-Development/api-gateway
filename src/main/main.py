@@ -8,14 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from src.authentication import authenticate_admin
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
     load_plans_by_api_keys, RateLimitExceeded
 from src.cache.cache import redis_cache
 from src.cloudflare_middleware import CloudFlareFirewall
 from src.config import config_instance
-from src.database.apikeys.keys import cache_api_keys, create_admin_key
-from src.database.plans.init_plans import create_plans
+from src.database.apikeys.keys import cache_api_keys
 from src.email.email import email_process
 from src.management_api.routes import admin_app
 from src.prefetch import prefetch_endpoints
@@ -217,24 +215,9 @@ async def handle_json_decode_error(request, exc):
     return JSONResponse(status_code=exc.status_code, content=message)
 
 
+# TODO Admin Application Mounting Point should eventually Move this
+# To its own separate Application
 app.mount(path="/_admin", app=admin_app)
-
-#
-# # noinspection PyUnusedLocal
-# @app.post("/_bootstrap/create-plans")
-# @authenticate_admin
-# async def _create_plans(request: Request):
-#     """
-#         this should only be run once by admin
-#         afterwards plans can be updated
-#     :return:
-#     """
-#     plans_response = await create_plans()
-#
-#     status_code = 201
-#     content = dict(payload=plans_response, status=True)
-#     headers = {"Content-Type": "application/json"}
-#     return JSONResponse(content=content, status_code=status_code, headers=headers)
 
 
 # On Start Up Run the following Tasks
@@ -309,9 +292,9 @@ async def v1_gateway(request: Request, path: str):
     await create_take_credit_args(api_key=api_key, path=_path)
 
     api_urls = [f'{api_server_url}/api/v1/{path}' for api_server_url in api_server_urls]
-    # 5 seconds timeout on redis get
-    # TODO  learn how to break this get if it takes too long
-    tasks = [redis_cache.get(key=api_url) for api_url in api_urls]
+
+    # Will Take at least one second on the cache if it finds nothing will return None
+    tasks = [redis_cache.get(key=api_url, timeout=1) for api_url in api_urls]
     cached_responses = await asyncio.gather(*tasks)
 
     for i, response in enumerate(cached_responses):
@@ -319,17 +302,18 @@ async def v1_gateway(request: Request, path: str):
             app_logger.info(msg=f"Found cached response from {api_urls[i]}")
             return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
-    app_logger.info(msg="All cached responses not found")
+    app_logger.info(msg="All cached responses not found- Must Be a Slow Day")
 
-    # 1 minute timeout on resource fetching from backend
-    tasks = [requester(api_url=api_url, timeout=1*60) for api_url in api_urls]
+    # 5 minute timeout on resource fetching from backend - some resources may take very long
+    tasks = [requester(api_url=api_url, timeout=5*60) for api_url in api_urls]
     responses = await asyncio.gather(*tasks)
-    app_logger.info(responses)
+
     for i, response in enumerate(responses):
         if response and response.get("status"):
             api_url = api_urls[i]
+            # NOTE, Cache is being set to a ttl of one hour here
             await redis_cache.set(key=api_url, value=response, ttl=60 * 60)
-            app_logger.info(msg=f"Cached response from {api_url}")
+            app_logger.info(msg=f"Server Responded for this Resource {api_url}")
             return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
         else:
             # The reason for this algorithm is because sometimes the cron server is busy this way no matter
@@ -340,8 +324,13 @@ async def v1_gateway(request: Request, path: str):
                 Actual Response : Check Requester Debug Output          
             """)
 
-    app_logger.fatal(msg="All API servers failed to respond")
+    app_logger.fatal(msg="All API Servers failed to respond")
     # TODO - send Notifications to developers that the API Servers are down
+    _time = datetime.datetime.now().isoformat(sep="-")
+
+    # TODO - create Dev Message Types - Like Fatal Errors, and etc also create Priority Levels
+    _args = dict(message_type="resource_not_found", request=request, api_key=api_key)
+    await email_process.send_message_to_devs(**_args)
     return JSONResponse(content={"status": False, "message": "All API servers failed to respond"}, status_code=404,
                         headers={"Content-Type": "application/json"})
 

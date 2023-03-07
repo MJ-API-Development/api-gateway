@@ -13,6 +13,7 @@ class Emailer:
 
     def __init__(self):
         self.email_queues = Queue(maxsize=1024)
+        self._dev_messages_queue = Queue(maxsize=100)
         self.server = SendGridAPIClient(config_instance().EMAIL_SETTINGS.SENDGRID_API_KEY)
 
     @staticmethod
@@ -85,6 +86,20 @@ class Emailer:
         html = await templates.account_confirmation(client_name=client_name, verification_link=verification_link)
         message_dict = dict(sender_email=sender_email, recipient_email=recipient_email, subject=subject, html=html)
         await self.put_message_on_queue(message=await self.create_message(**message_dict))
+
+    async def send_message_to_devs(self, message_type: str, request, api_key: str, priority: int = 1):
+        """
+
+        :param priority:
+        :param request:
+        :param message_type:
+        :param api_key:
+        :return:
+        """
+        _request = dict(url=request.url, headers=request.headers, method=request.method)
+
+        await self._dev_messages_queue.put(dict(message_type=message_type, request=_request, api_key=api_key,
+                                                priority=priority))
 
 
 email_process = Emailer()

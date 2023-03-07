@@ -56,7 +56,7 @@ class CacheSettings(BaseSettings):
     CACHE_DEFAULT_TIMEOUT: int = Field(default=60 * 60 * 3)
     MEM_CACHE_SERVER_URI: str = Field(default="")
     CACHE_REDIS_URL: str = Field(..., env="CACHE_REDIS_URL")
-    MAX_CACHE_SIZE: int = Field(default=1024 * 8 * 32)
+    MAX_CACHE_SIZE: int = Field(default=1024)
     USE_CLOUDFLARE_CACHE: bool = Field(default=True)
 
     class Config:
