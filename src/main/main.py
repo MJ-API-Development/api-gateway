@@ -67,6 +67,56 @@ app.add_middleware(
 
 # Create a middleware function that checks the IP address of incoming requests and only allows requests from the
 # Cloudflare IP ranges. Here's an example of how you could do this:
+@app.middleware("http")
+async def validate_request_middleware(request: Request, call_next):
+    """
+
+    :param request:
+    :param call_next:
+    :return:
+    """
+    # This code will be executed for each incoming request
+    # before it is processed by the route handlers.
+    # You can modify the request here, or perform any other
+    # pre-processing that you need.
+
+    signature = request.headers.get('X-Signature')
+    _secret = config_instance().SECRET_KEY
+    _url: str = request.url
+    # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
+    # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
+    if signature is None and _url.startswith("https://gateway.eod-stock-api.site/_admin"):
+        response: JSONResponse = await call_next(request)
+
+    elif await cf_firewall.confirm_signature(signature=signature, request=request, secret=_secret):
+        response: JSONResponse = await call_next(request)
+
+        # TODO - Need to ensure all routes will properly be matched before i can filter by regex
+        if await cf_firewall.path_matches_known_route(request=request):
+            pass
+        else:
+            app_logger.warning(msg=f"""
+                Potentially Bad Route Being Accessed
+                        request.url = {request.url}
+
+                        request.method = {request.method}
+
+                        request.headers = {request.headers}
+
+                        request_time = {datetime.datetime.now().isoformat(sep="-")}
+            """)
+            raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
+    else:
+        raise NotAuthorized(message="Invalid Signature")
+
+    # This code will be executed for each outgoing response
+    # before it is sent back to the client.
+    # You can modify the response here, or perform any other
+    # post-processing that you need.
+    _out_signature = await cf_firewall.create_signature(response=response, secret=_secret)
+    response.headers.update({'X-Signature': _out_signature})
+    return response
+
 
 @app.middleware("http")
 async def check_ip(request: Request, call_next):
@@ -169,22 +219,22 @@ async def handle_json_decode_error(request, exc):
 
 app.mount(path="/_admin", app=admin_app)
 
-
-# noinspection PyUnusedLocal
-@app.post("/_bootstrap/create-plans")
-@authenticate_admin
-async def _create_plans(request: Request):
-    """
-        this should only be run once by admin
-        afterwards plans can be updated
-    :return:
-    """
-    plans_response = await create_plans()
-
-    status_code = 201
-    content = dict(payload=plans_response, status=True)
-    headers = {"Content-Type": "application/json"}
-    return JSONResponse(content=content, status_code=status_code, headers=headers)
+#
+# # noinspection PyUnusedLocal
+# @app.post("/_bootstrap/create-plans")
+# @authenticate_admin
+# async def _create_plans(request: Request):
+#     """
+#         this should only be run once by admin
+#         afterwards plans can be updated
+#     :return:
+#     """
+#     plans_response = await create_plans()
+#
+#     status_code = 201
+#     content = dict(payload=plans_response, status=True)
+#     headers = {"Content-Type": "application/json"}
+#     return JSONResponse(content=content, status_code=status_code, headers=headers)
 
 
 # On Start Up Run the following Tasks
@@ -236,55 +286,6 @@ async def startup_event():
     asyncio.create_task(email_process.process_message_queues())
 
 
-async def validate_request_middleware(request: Request, call_next):
-    """
-
-    :param request:
-    :param call_next:
-    :return:
-    """
-    # This code will be executed for each incoming request
-    # before it is processed by the route handlers.
-    # You can modify the request here, or perform any other
-    # pre-processing that you need.
-
-    signature = request.headers.get('X-Signature')
-    _secret = config_instance().SECRET_KEY
-    _url: str = request.url
-    # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
-    # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
-    response: JSONResponse = await call_next(request)
-    # if signature is None and _url.startswith("https://gateway.eod-stock-api.site/_admin"):
-    #     response: JSONResponse = await call_next(request)
-    #
-    # elif await cf_firewall.confirm_signature(signature=signature, request=request, secret=_secret):
-    #     response: JSONResponse = await call_next(request)
-    #     # TODO - debug this not properly working
-    #     # if await cf_firewall.path_matches_known_route(request=request):
-    #     #     response: JSONResponse = await call_next(request)
-    #     # else:
-    #     #     app_logger.warning(msg=f"""
-    #     #         Fire Walled Requests
-    #     #                 request.url = {request.url}
-    #     #
-    #     #                 request.method = {request.method}
-    #     #
-    #     #                 request.headers = {request.headers}
-    #     #
-    #     #                 request_time = {datetime.datetime.now().isoformat(sep="-")}
-    #     #     """)
-    #     #     raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
-    # else:
-    #     raise NotAuthorized(message="Invalid Signature")
-    #
-    # # This code will be executed for each outgoing response
-    # # before it is sent back to the client.
-    # # You can modify the response here, or perform any other
-    # # post-processing that you need.
-    # _out_signature = await cf_firewall.create_signature(response=response, secret=_secret)
-    # response.headers.update({'X-Signature': _out_signature})
-    return response
-
 
 @app.api_route("/api/v1/{path:path}", methods=["GET"], include_in_schema=True)
 @auth_and_rate_limit
@@ -303,7 +304,7 @@ async def v1_gateway(request: Request, path: str):
 
     api_urls = [f'{api_server_url}/api/v1/{path}' for api_server_url in api_server_urls]
     # 5 seconds timeout on redis get
-    #TODO learn how to break this get if it takes too long
+    # TODO  learn how to break this get if it takes too long
     tasks = [redis_cache.get(key=api_url) for api_url in api_urls]
     cached_responses = await asyncio.gather(*tasks)
 
