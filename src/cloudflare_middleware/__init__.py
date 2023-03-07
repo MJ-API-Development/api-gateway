@@ -100,10 +100,9 @@ class CloudFlareFirewall:
     @staticmethod
     async def path_matches_known_route(request):
         # NOTE: that at this stage if this request is not a get then its invalid
-        if request.method != "GET":
-            return False
         path = request.path
-        return any(re.match(route_regex, path) for resource_name, route_regex in route_regexes.items())
+        return any(re.match(route_regex, path) for resource_name, route_regex in
+                   route_regexes.items()) if request.method.lower() == "get" else False
 
     @redis_cached_ttl(ttl=60 * 30)
     async def check_ip_range(self, ip):
