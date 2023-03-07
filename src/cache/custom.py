@@ -116,7 +116,7 @@ class Cache:
             if len(self._cache) >= self.max_size:
                 await self._remove_oldest_entry()
             # Add the new entry
-            self._cache[key] = {'value': value, 'timestamp': time.time()}
+            self._cache[key] = {'value': value, 'timestamp': time.monotonic(), 'ttl': ttl}
             # self._logger.info(f"Created value : {value}")
 
     async def set(self, key: str, value: Any, ttl: int = 0):
@@ -213,6 +213,18 @@ class Cache:
 
     async def clear_redis_cache(self):
         self._redis_client.flushall(asynchronous=True)
+
+    async def memcache_ttl_cleaner(self):
+        """
+            **memcache_ttl_cleaner**
+                will run every ten minutes to clean up every expired mem cache item
+                expiration is depndent on ttl
+        :return:
+        """
+        now = time.monotonic()
+        for key, value in self._cache.items():
+            if value['timestamp'] + value['ttl'] < now:
+                await self.delete_memcache_key(key=key)
 
     async def create_redis_pool(self):
         redis_host = config_instance().REDIS_CACHE.CACHE_REDIS_HOST
