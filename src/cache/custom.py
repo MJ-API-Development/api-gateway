@@ -168,7 +168,7 @@ class Cache:
             try:
                 # Wait for the result of the redis lookup with a timeout
                 redis_get = functools.partial(_async_redis_get, get=self._redis_client.get)
-                value = await asyncio.wait_for(redis_get(key=key), timeout=timeout)
+                value = await asyncio.wait_for(redis_get(_key=key), timeout=timeout)
             except (redis.exceptions.TimeoutError, asyncio.TimeoutError):
                 # Timed out waiting for the redis lookup
                 config_instance().DEBUG and self._logger.error("Timeout Error Reading from redis")
