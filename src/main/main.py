@@ -162,10 +162,10 @@ async def validate_request_middleware(request: Request, call_next):
     # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
     # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
     if signature is None and _url.startswith("https://gateway.eod-stock-api.site/_admin"):
-        response: JSONResponse = await call_next(request)
+        response = await call_next(request)
 
-    if await cf_firewall.path_matches_known_route(request=request):
-            response: JSONResponse = await call_next(request)
+    elif await cf_firewall.path_matches_known_route(request=request):
+            response  = await call_next(request)
     else:
         app_logger.warning(msg=f"""
             Potentially Bad Route Being Accessed
