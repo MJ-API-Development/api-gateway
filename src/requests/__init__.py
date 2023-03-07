@@ -27,15 +27,15 @@ async def requester(api_url: str, timeout: int = 30):
     try:
         response = await async_client.get(url=api_url, timeout=timeout)
         _response =f"""
-        BACKEND SERVERS ACTUAL RESPONSES
-
-        response_headers: {response.headers} 
-
-        response_code: {response.status_code}
-
-        response_text: {response.text}
+            BACKEND SERVERS ACTUAL RESPONSES
+    
+            response_headers: {response.headers} 
+    
+            response_code: {response.status_code}
+    
+            response_text: {response.text}
         """
-        request_logger.info(_response)
+        request_logger.debug(_response)
     except httpx.HTTPError as http_err:
         raise http_err
     except Exception as err:

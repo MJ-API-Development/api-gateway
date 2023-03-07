@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import itertools
 from json.decoder import JSONDecodeError
 
@@ -250,11 +251,26 @@ async def validate_request_middleware(request: Request, call_next):
     signature = request.headers.get('X-Signature')
     _secret = config_instance().SECRET_KEY
     _url: str = request.url
+    # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
+    # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
     if signature is None and _url.startswith("https://gateway.eod-stock-api.site/_admin"):
         response: JSONResponse = await call_next(request)
 
     elif await cf_firewall.confirm_signature(signature=signature, request=request, secret=_secret):
-        response: JSONResponse = await call_next(request)
+        if await cf_firewall.path_matches_known_route(request=request):
+            response: JSONResponse = await call_next(request)
+        else:
+            app_logger.warning(msg=f"""
+                Fire Walled Requests
+                        request.url = {request.url}
+        
+                        request.method = {request.method}
+        
+                        request.headers = {request.headers}
+                        
+                        request_time = {datetime.datetime.now().isoformat(sep="-")}          
+            """)
+            raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
     else:
         raise NotAuthorized(message="Invalid Signature")
 
@@ -307,9 +323,13 @@ async def v1_gateway(request: Request, path: str):
         else:
             # The reason for this algorithm is because sometimes the cron server is busy this way no matter
             # what happens a response is returned
-            app_logger.error(msg=f"This resource not responding correctly: {api_urls[i]}")
+            app_logger.warning(msg=f"""
+            Server Failed To Respond
+                Original Request URL : {api_urls[i]}
+                Actual Response : Check Requester Debug Output          
+            """)
 
-    app_logger.error(msg="All API servers failed to respond")
+    app_logger.fatal(msg="All API servers failed to respond")
     # TODO - send Notifications to developers that the API Servers are down
     return JSONResponse(content={"status": False, "message": "All API servers failed to respond"}, status_code=404,
                         headers={"Content-Type": "application/json"})
@@ -326,13 +346,13 @@ async def create_resource_keys(request: Request) -> list[str]:
 
 async def delete_resource_from_cache(request: Request):
     """
-
+        This will delete any resource associated with a request from cache if such a
+        resource is causing errors such as JSON Decode Errors
     :return:
     """
     try:
         resource_keys = await create_resource_keys(request)
         for resource_key in resource_keys:
             await redis_cache.delete_key(key=resource_key)
-
     except Exception as e:
         app_logger.error(msg=str(e))
