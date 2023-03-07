@@ -19,7 +19,6 @@ PREFETCH_ENDPOINTS = [
     '/api/v1/fundamental/general']
 
 
-@redis_cached_ttl(ONE_DAY)
 async def get_exchange_lists():
     try:
         server_url = random.choice(api_server_urls)
@@ -51,7 +50,6 @@ async def get_countries():
     return [exchange.get("country") for exchange in await get_exchange_lists()]
 
 
-@redis_cached_ttl(ttl=ONE_DAY)
 async def build_dynamic_urls() -> list[str]:
     """
         dynamic urls to prefetch
@@ -81,10 +79,3 @@ async def build_dynamic_urls() -> list[str]:
             expanded_urls.append(f"{server_url}{_url}")
 
     return expanded_urls
-
-# if __name__ == "__main__":
-#     import asyncio
-# 
-#     response = asyncio.run(build_dynamic_urls())
-#     print(response)
-#     print(f"total urls: {len(response)} ")

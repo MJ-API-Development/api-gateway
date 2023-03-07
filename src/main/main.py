@@ -63,6 +63,84 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_error_handler(request: Request, exc: RateLimitExceeded):
+    """
+
+    :param request:
+    :param exc:
+    :return:
+    """
+    app_logger.error(msg=f"""
+    Rate Limit Error
+
+    Debug Information
+        request_url: {request.url}
+        request_method: {request.method}
+
+        error_detail: {exc.detail}
+        rate_limit: {exc.rate_limit}
+        status_code: {exc.status_code}    
+    """)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            'message': exc.detail,
+            'rate_limit': exc.rate_limit
+        }
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    """HTTP Error Handler Will display HTTP Errors in JSON Format to the client"""
+    app_logger.error(msg=f"""
+    HTTP Exception Occurred 
+
+    Debug Information
+        request_url: {request.url}
+        request_method: {request.method}
+
+        error_detail: {exc.detail}
+        status_code: {exc.status_code}
+    """)
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": exc.detail})
+
+
+@app.exception_handler(NotAuthorized)
+async def handle_not_authorized(request, exc):
+    app_logger.error(f"""
+        Not Authorized Error
+
+        Debug Information
+        request_url: {request.url}
+        request_method: {request.method}
+        error_detail: {exc.message}
+        status_code: {exc.status_code}
+
+    """)
+    return JSONResponse(status_code=exc.status_code, content={"message": exc.message})
+
+
+@app.exception_handler(JSONDecodeError)
+async def handle_json_decode_error(request, exc):
+    app_logger.error(f"""
+    Error Decoding JSON    
+        Debug Information
+        request_url: {request.url}
+        request_method: {request.method}
+        error_detail: "error decoding JSON"
+        status_code: {exc.status_code}    
+    """)
+    await delete_resource_from_cache(request)
+
+    message: str = "Oopsie- Server Error, Hopefully our engineers will resolve it soon"
+    return JSONResponse(status_code=exc.status_code, content=message)
+
+
 # Create a middleware function that checks the IP address of incoming requests and only allows requests from the
 # Cloudflare IP ranges. Here's an example of how you could do this:
 @app.middleware("http")
@@ -80,18 +158,16 @@ async def validate_request_middleware(request: Request, call_next):
 
     signature = request.headers.get('X-Signature')
     _secret = config_instance().SECRET_KEY
-    _url: str = request.url
+    _url: str = str(request.url)
     # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
     # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
     if signature is None and _url.startswith("https://gateway.eod-stock-api.site/_admin"):
         response: JSONResponse = await call_next(request)
 
     elif await cf_firewall.confirm_signature(signature=signature, request=request, secret=_secret):
-        response: JSONResponse = await call_next(request)
 
-        # TODO - Need to ensure all routes will properly be matched before i can filter by regex
         if await cf_firewall.path_matches_known_route(request=request):
-            pass
+            response: JSONResponse = await call_next(request)
         else:
             app_logger.warning(msg=f"""
                 Potentially Bad Route Being Accessed
@@ -103,16 +179,18 @@ async def validate_request_middleware(request: Request, call_next):
 
                         request_time = {datetime.datetime.now().isoformat(sep="-")}
             """)
-            raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
+            # raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
+            response = JSONResponse(content="Request Does not Match Any Known Route", status_code=404)
     else:
-        raise NotAuthorized(message="Invalid Signature")
+        # raise NotAuthorized(message="Invalid Signature")
+        response = JSONResponse(content="Request not Authorized - Bad Signature", status_code=403)
 
     # This code will be executed for each outgoing response
     # before it is sent back to the client.
     # You can modify the response here, or perform any other
     # post-processing that you need.
-    _out_signature = await cf_firewall.create_signature(response=response, secret=_secret)
-    response.headers.update({'X-Signature': _out_signature})
+    # _out_signature = await cf_firewall.create_signature(response=response, secret=_secret)
+    # response.headers.update({'X-Signature': _out_signature})
     return response
 
 
@@ -137,82 +215,6 @@ async def check_ip(request: Request, call_next):
 app.add_middleware(TrustedHostMiddleware)
 
 
-@app.exception_handler(RateLimitExceeded)
-async def rate_limit_error_handler(request: Request, exc: RateLimitExceeded):
-    """
-
-    :param request:
-    :param exc:
-    :return:
-    """
-    app_logger.error(msg=f"""
-    Rate Limit Error
-    
-    Debug Information
-        request_url: {request.url}
-        request_method: {request.method}
-        
-        error_detail: {exc.detail}
-        rate_limit: {exc.rate_limit}
-        status_code: {exc.status_code}    
-    """)
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            'message': exc.detail,
-            'rate_limit': exc.rate_limit
-        }
-    )
-
-
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request, exc):
-    """HTTP Error Handler Will display HTTP Errors in JSON Format to the client"""
-    app_logger.error(msg=f"""
-    HTTP Exception Occurred 
-
-    Debug Information
-        request_url: {request.url}
-        request_method: {request.method}
-        
-        error_detail: {exc.detail}
-        status_code: {exc.status_code}
-    """)
-
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"message": exc.detail})
-
-
-@app.exception_handler(NotAuthorized)
-async def handle_not_authorized(request, exc):
-    app_logger.error(f"""
-        Not Authorized Error
-        
-        Debug Information
-        request_url: {request.url}
-        request_method: {request.method}
-        error_detail: {exc.message}
-        status_code: {exc.status_code}
-    
-    """)
-    return JSONResponse(status_code=exc.status_code, content={"message": exc.message})
-
-
-@app.exception_handler(JSONDecodeError)
-async def handle_json_decode_error(request, exc):
-    app_logger.error(f"""
-    Error Decoding JSON    
-        Debug Information
-        request_url: {request.url}
-        request_method: {request.method}
-        error_detail: "error decoding JSON"
-        status_code: {exc.status_code}    
-    """)
-    await delete_resource_from_cache(request)
-
-    message: str = "Oopsie- Server Error, Hopefully our engineers will resolve it soon"
-    return JSONResponse(status_code=exc.status_code, content=message)
 
 
 # TODO Admin Application Mounting Point should eventually Move this

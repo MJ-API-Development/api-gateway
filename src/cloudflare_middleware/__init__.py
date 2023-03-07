@@ -137,7 +137,7 @@ class CloudFlareFirewall:
         method = request.method.upper()
         headers = request.headers
 
-        expected_signature = hashlib.sha256(f"{method}{url}{headers}{secret}")
+        expected_signature = hashlib.sha256(f"{method}{url}{headers}{secret}".encode('UTF-8'))
 
         return signature == expected_signature
 
@@ -149,8 +149,7 @@ class CloudFlareFirewall:
         return hash_hex
 
     @staticmethod
-    async def create_signature(response, secret):
-        url = response.url
+    async def create_signature(response, url, secret):
         method = response.method.upper()
         headers = response.headers
 
