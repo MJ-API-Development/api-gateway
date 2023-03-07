@@ -78,4 +78,4 @@ def create_api_key() -> str:
 
 
 if __name__ == '__main__':
-    pass
+    print(create_api_key())

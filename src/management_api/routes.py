@@ -91,7 +91,16 @@ async def create_update_user(request: Request, user_data: dict[str, str | int | 
                 session.add(user_instance)
                 account_dict = dict()
                 # this will schedule an account confirmation email to be sent
-                await email_process.send_account_confirmation_email(account_dict)
+                # TODO look at this
+                verification_link = f"https://gateway.eod-stock-api.site/_admin/account/confirm/{account_dict.get('uuid')}"
+
+                sender_email = config_instance().EMAIL_SETTINGS.ADMIN
+                recipient_email = account_dict.get('email')
+                client_name = account_dict.get('name')
+                message_dict = dict(verification_link=verification_link, sender_email=sender_email,
+                                    recipient_email=recipient_email, client_name=client_name)
+
+                await email_process.send_account_confirmation_email(**message_dict)
             else:
                 raise HTTPException(detail="User already exist", status_code=401)
 
@@ -125,11 +134,13 @@ async def get_delete_user(request: Request, path: str):
             user_instance.is_deleted = True
             session.merge(user_instance)
             session.commit()
+            # TODO send a Goodbye Email
             return JSONResponse(content={'message': 'successfully deleted user'},
                                 status_code=201,
                                 headers=headers)
 
         elif request.method == "GET":
+            # TODO Send a Login Email
             return JSONResponse(content=user_instance.to_dict(),
                                 status_code=201,
                                 headers=headers)

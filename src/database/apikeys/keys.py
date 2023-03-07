@@ -14,6 +14,7 @@ from src.utils.utils import create_id
 apikeys_lock = asyncio.Lock()
 # Define a dict to store API Keys and their rate rate_limit data
 # Cache tp store API KEys
+# TODO use Async QUEUE
 api_keys: dict[str, dict[str, int]] = {}
 
 ONE_MINUTE = 60 * 60

@@ -1,5 +1,6 @@
 import asyncio
 import itertools
+from json import JSONDecodeError
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -149,11 +150,19 @@ async def handle_not_authorized(request, exc):
     return JSONResponse(status_code=exc.status_code, content={"message": exc.message})
 
 
-@app.get("/test")
-async def test_error_handling():
-    await create_admin_key()
-    # response = await requester("https://example.com/non-existent-url")
-    return "Done"
+@app.exception_handler(JSONDecodeError)
+async def handle_json_decode_error(request, exc):
+    app_logger.error(f"""
+    Error Decoding JSON    
+        Debug Information
+        request_url: {request.url}
+        request_method: {request.method}
+        error_detail: {exc.message}
+        status_code: {exc.status_code}    
+    """)
+
+    message: str = "Oopsie- Server Error, Hopefully our engineers will resolve it soon"
+    return JSONResponse(status_code=exc.status_code, content=message)
 
 
 app.mount(path="/_admin", app=admin_app)
@@ -300,4 +309,5 @@ async def v1_gateway(request: Request, path: str):
             app_logger.error(msg=f"This resource not responding correctly: {api_urls[i]}")
 
     app_logger.error(msg="All API servers failed to respond")
-    return JSONResponse(content={"status": False, "message": "All API servers failed to respond"}, status_code=404, headers={"Content-Type": "application/json"})
+    return JSONResponse(content={"status": False, "message": "All API servers failed to respond"}, status_code=404,
+                        headers={"Content-Type": "application/json"})
