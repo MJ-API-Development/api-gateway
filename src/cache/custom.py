@@ -156,7 +156,7 @@ class Cache:
 
         if self._use_redis and value is None:
             try:
-                value = self._redis_client.get(key, timeout=timeout)
+                value = self._redis_client.get(key)
             except redis.exceptions.TimeoutError:
                 config_instance().DEBUG and self._logger.error("Timeout Error Reading from redis")
                 value = None
