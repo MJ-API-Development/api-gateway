@@ -1,8 +1,9 @@
 import asyncio
+import functools
 import threading
 import time
 from json import JSONDecodeError
-from typing import Any
+from typing import Any, Callable
 import redis
 import asyncio_redis
 import ujson
@@ -153,6 +154,9 @@ class Cache:
             Retrieve the value associated with the given key within the allocated time.
             If use_redis=True the value is retrieved from Redis, only if that key is not also on local memory.
         """
+        async def _async_redis_get(get: Callable, _key: str):
+            return get(key=_key)
+
         try:
             # Wait for the result of the memcache lookup with a timeout
             value = await asyncio.wait_for(self._get_memcache(key=key), timeout=timeout)
@@ -163,7 +167,8 @@ class Cache:
         if self._use_redis and value is None:
             try:
                 # Wait for the result of the redis lookup with a timeout
-                value = await asyncio.wait_for(self._redis_client.get(key), timeout=timeout)
+                redis_get = functools.partial(_async_redis_get, get=self._redis_client.get)
+                value = await asyncio.wait_for(redis_get(key=key), timeout=timeout)
             except (redis.exceptions.TimeoutError, asyncio.TimeoutError):
                 # Timed out waiting for the redis lookup
                 config_instance().DEBUG and self._logger.error("Timeout Error Reading from redis")
