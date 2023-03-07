@@ -301,8 +301,8 @@ async def v1_gateway(request: Request, path: str):
     await create_take_credit_args(api_key=api_key, path=_path)
 
     api_urls = [f'{api_server_url}/api/v1/{path}' for api_server_url in api_server_urls]
-
-    tasks = [redis_cache.get(key=api_url) for api_url in api_urls]
+    # 5 seconds timeout on redis get
+    tasks = [redis_cache.get(key=api_url, timeout=5) for api_url in api_urls]
     cached_responses = await asyncio.gather(*tasks)
 
     for i, response in enumerate(cached_responses):
@@ -312,8 +312,8 @@ async def v1_gateway(request: Request, path: str):
 
     app_logger.info(msg="All cached responses not found")
 
-    # 5 minutes Maximum amount of time requests should wait here
-    tasks = [requester(api_url=api_url, timeout=5*60) for api_url in api_urls]
+    # 1 minute timeout on resource fetching from backend
+    tasks = [requester(api_url=api_url, timeout=1*60) for api_url in api_urls]
     responses = await asyncio.gather(*tasks)
     app_logger.info(responses)
     for i, response in enumerate(responses):
