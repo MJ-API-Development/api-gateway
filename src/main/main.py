@@ -297,7 +297,7 @@ async def v1_gateway(request: Request, path: str):
     # 5 minutes Maximum amount of time requests should wait here
     tasks = [requester(api_url=api_url, timeout=5*60) for api_url in api_urls]
     responses = await asyncio.gather(*tasks)
-
+    app_logger.info(responses)
     for i, response in enumerate(responses):
         if response and response.get("status"):
             api_url = api_urls[i]
