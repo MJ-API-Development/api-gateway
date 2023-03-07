@@ -191,6 +191,10 @@ class Cache:
     async def delete_memcache_key(self, key):
         self._cache.pop(key)
 
+    async def delete_key(self, key):
+        await self.delete_redis_key(key)
+        await self.delete_memcache_key(key)
+
     async def clear_mem_cache(self):
         """"""
         self._cache = {}

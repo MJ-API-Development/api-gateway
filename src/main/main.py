@@ -1,6 +1,6 @@
 import asyncio
 import itertools
-from json import JSONDecodeError
+from json.decoder import JSONDecodeError
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -160,6 +160,7 @@ async def handle_json_decode_error(request, exc):
         error_detail: "error decoding JSON"
         status_code: {exc.status_code}    
     """)
+    await delete_resource_from_cache(request)
 
     message: str = "Oopsie- Server Error, Hopefully our engineers will resolve it soon"
     return JSONResponse(status_code=exc.status_code, content=message)
@@ -311,3 +312,26 @@ async def v1_gateway(request: Request, path: str):
     app_logger.error(msg="All API servers failed to respond")
     return JSONResponse(content={"status": False, "message": "All API servers failed to respond"}, status_code=404,
                         headers={"Content-Type": "application/json"})
+
+
+async def create_resource_keys(request: Request) -> list[str]:
+    """
+        create resource keys for urls
+    :param request:
+    :return:
+    """
+    return [f"{b_server}{request.url.path}" for b_server in api_server_urls]
+
+
+async def delete_resource_from_cache(request: Request):
+    """
+
+    :return:
+    """
+    try:
+        resource_keys = await create_resource_keys(request)
+        for resource_key in resource_keys:
+            await redis_cache.delete_key(key=resource_key)
+
+    except Exception as e:
+        app_logger.error(msg=str(e))

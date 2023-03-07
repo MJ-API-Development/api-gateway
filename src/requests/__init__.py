@@ -29,5 +29,5 @@ async def requester(api_url: str, timeout: int = 30):
         raise http_err
     except Exception as err:
         raise err
-    return response.json() if response else None
+    return response.json() if response.headers.get('Content-Type') == "application/json" else None
 
