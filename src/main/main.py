@@ -257,20 +257,22 @@ async def validate_request_middleware(request: Request, call_next):
         response: JSONResponse = await call_next(request)
 
     elif await cf_firewall.confirm_signature(signature=signature, request=request, secret=_secret):
-        if await cf_firewall.path_matches_known_route(request=request):
-            response: JSONResponse = await call_next(request)
-        else:
-            app_logger.warning(msg=f"""
-                Fire Walled Requests
-                        request.url = {request.url}
-        
-                        request.method = {request.method}
-        
-                        request.headers = {request.headers}
-                        
-                        request_time = {datetime.datetime.now().isoformat(sep="-")}          
-            """)
-            raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
+        response: JSONResponse = await call_next(request)
+        # TODO - debug this not properly working
+        # if await cf_firewall.path_matches_known_route(request=request):
+        #     response: JSONResponse = await call_next(request)
+        # else:
+        #     app_logger.warning(msg=f"""
+        #         Fire Walled Requests
+        #                 request.url = {request.url}
+        #
+        #                 request.method = {request.method}
+        #
+        #                 request.headers = {request.headers}
+        #
+        #                 request_time = {datetime.datetime.now().isoformat(sep="-")}
+        #     """)
+        #     raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
     else:
         raise NotAuthorized(message="Invalid Signature")
 
