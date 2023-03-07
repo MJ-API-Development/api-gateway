@@ -148,22 +148,20 @@ class Cache:
             value = None
         return value
 
-    # 5 seconds
+    # 5 seconds timeout default
     async def get(self, key: str, timeout=5) -> Any:
         """
             Retrieve the value associated with the given key within the allocated time.
             If use_redis=True the value is retrieved from Redis, only if that key is not also on local memory.
         """
         async def _async_redis_get(get: Callable, _key: str):
-            return get(key=_key)
-
+            return get(_key)
         try:
             # Wait for the result of the memcache lookup with a timeout
             value = await asyncio.wait_for(self._get_memcache(key=key), timeout=timeout)
         except asyncio.TimeoutError:
             # Timed out waiting for the memcache lookup
             return None
-
         if self._use_redis and value is None:
             try:
                 # Wait for the result of the redis lookup with a timeout
