@@ -164,26 +164,21 @@ async def validate_request_middleware(request: Request, call_next):
     if signature is None and _url.startswith("https://gateway.eod-stock-api.site/_admin"):
         response: JSONResponse = await call_next(request)
 
-    elif await cf_firewall.confirm_signature(signature=signature, request=request, secret=_secret):
-
-        if await cf_firewall.path_matches_known_route(request=request):
+    if await cf_firewall.path_matches_known_route(request=request):
             response: JSONResponse = await call_next(request)
-        else:
-            app_logger.warning(msg=f"""
-                Potentially Bad Route Being Accessed
-                        request.url = {request.url}
-
-                        request.method = {request.method}
-
-                        request.headers = {request.headers}
-
-                        request_time = {datetime.datetime.now().isoformat(sep="-")}
-            """)
-            # raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
-            response = JSONResponse(content="Request Does not Match Any Known Route", status_code=404)
     else:
-        # raise NotAuthorized(message="Invalid Signature")
-        response = JSONResponse(content="Request not Authorized - Bad Signature", status_code=403)
+        app_logger.warning(msg=f"""
+            Potentially Bad Route Being Accessed
+                    request.url = {request.url}
+
+                    request.method = {request.method}
+
+                    request.headers = {request.headers}
+
+                    request_time = {datetime.datetime.now().isoformat(sep="-")}
+        """)
+        # raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
+        response = JSONResponse(content="Request Does not Match Any Known Route", status_code=404)
 
     # This code will be executed for each outgoing response
     # before it is sent back to the client.
