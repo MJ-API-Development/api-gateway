@@ -103,7 +103,7 @@ class CloudFlareFirewall:
         if request.method != "GET":
             return False
         path = request.path
-        return any(re.match(route_regex, path) for route_regex in route_regexes.items())
+        return any(re.match(route_regex, path) for resource_name, route_regex in route_regexes.items())
 
     @redis_cached_ttl(ttl=60 * 30)
     async def check_ip_range(self, ip):
