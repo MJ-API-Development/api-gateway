@@ -146,7 +146,8 @@ class Cache:
             value = None
         return value
 
-    async def get(self, key: str) -> Any:
+    # 1 minute
+    async def get(self, key: str, timeout=1*60) -> Any:
         """
             Retrieve the value associated with the given key. If use_redis=True
             the value is retrieved from Redis, otherwise it is retrieved from in-memory cache.
@@ -155,7 +156,7 @@ class Cache:
 
         if self._use_redis and value is None:
             try:
-                value = self._redis_client.get(key)
+                value = self._redis_client.get(key, timeout=timeout)
             except redis.exceptions.TimeoutError:
                 config_instance().DEBUG and self._logger.error("Timeout Error Reading from redis")
                 value = None

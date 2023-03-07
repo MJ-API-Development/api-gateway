@@ -302,7 +302,8 @@ async def v1_gateway(request: Request, path: str):
 
     api_urls = [f'{api_server_url}/api/v1/{path}' for api_server_url in api_server_urls]
     # 5 seconds timeout on redis get
-    tasks = [redis_cache.get(key=api_url, timeout=5) for api_url in api_urls]
+    #TODO learn how to break this get if it takes too long
+    tasks = [redis_cache.get(key=api_url) for api_url in api_urls]
     cached_responses = await asyncio.gather(*tasks)
 
     for i, response in enumerate(cached_responses):
