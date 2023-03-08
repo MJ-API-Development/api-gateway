@@ -50,8 +50,10 @@ async def get_countries():
     return [exchange.get("country") for exchange in await get_exchange_lists()]
 
 
+@redis_cached_ttl(ttl=60*60*24)
 async def build_dynamic_urls() -> list[str]:
     """
+        dynamic urls are cached for 24 hours
         dynamic urls to prefetch
     :return:
     """
