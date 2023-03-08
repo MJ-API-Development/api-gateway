@@ -57,6 +57,7 @@ async def build_dynamic_urls() -> list[str]:
         dynamic urls to prefetch
     :return:
     """
+    # TODO  - interesting that i could use this list for some other things such as request validation
     codes_urls = ['/api/v1/exchange/listed-stocks/', '/api/v1/stocks/exchange/code/']
     exchange_by_id_url = "/api/v1/stocks/exchange/id/"
     stocks_by_currency_url = "/api/v1/stocks/currency/"
