@@ -14,9 +14,11 @@ from src.cache.cache import redis_cache
 from src.cloudflare_middleware import CloudFlareFirewall
 from src.config import config_instance
 from src.database.apikeys.keys import cache_api_keys
+from src.database.plans.init_plans import RateLimits
 from src.email.email import email_process
 from src.management_api.routes import admin_app
 from src.prefetch import prefetch_endpoints
+from src.ratelimit import ip_rate_limits, RateLimit
 from src.requests import requester
 from src.utils.my_logger import init_logger
 
@@ -141,6 +143,47 @@ async def handle_json_decode_error(request, exc):
     message: str = "Oopsie- Server Error, Hopefully our engineers will resolve it soon"
     return JSONResponse(status_code=exc.status_code, content=message)
 
+# Rate Limit per IP Must Always Match The Rate Limit of the Highest Plan Allowed
+rate_limit, _, duration = RateLimits().ENTERPRISE
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    """
+        Middleware to enforce rate limiting
+    """
+    # rate limit by IP address
+    ip_address = request.client.host
+    if ip_address not in ip_rate_limits:
+        # create a new rate limit for this IP address
+        # TODO - subjected to plan -means i have to make adjustment to match the highest rate limit per API_KEY
+
+        ip_rate_limits[ip_address] = RateLimit(max_requests=rate_limit, duration=duration * 60)  # limit to 100 requests per minute
+    if ip_rate_limits[ip_address].is_limit_exceeded():
+        raise RateLimitExceeded(detail="Rate limit exceeded", rate_limit=ip_rate_limits[ip_address].max_requests)
+
+    # continue with the request
+    response = await call_next(request)
+    return response
+
+
+@app.middleware("http")
+async def check_ip(request: Request, call_next):
+    """
+        determines if call originate from cloudflare
+    :param request:
+    :param call_next:
+    :return:
+    """
+    # TODO consider adding header checks
+    ip = request.client.host
+    if not await cf_firewall.check_ip_range(ip=ip):
+        return JSONResponse(
+            content={"message": "Access denied, Suspicious Activity, Use a Proper Gateway to access our resources"},
+            status_code=403)
+
+    return await call_next(request)
+
 
 # Create a middleware function that checks the IP address of incoming requests and only allows requests from the
 # Cloudflare IP ranges. Here's an example of how you could do this:
@@ -166,7 +209,7 @@ async def validate_request_middleware(request: Request, call_next):
         response = await call_next(request)
 
     elif await cf_firewall.path_matches_known_route(request=request):
-            response  = await call_next(request)
+        response = await call_next(request)
     else:
         app_logger.warning(msg=f"""
             Potentially Bad Route Being Accessed
@@ -188,24 +231,6 @@ async def validate_request_middleware(request: Request, call_next):
     # _out_signature = await cf_firewall.create_signature(response=response, secret=_secret)
     # response.headers.update({'X-Signature': _out_signature})
     return response
-
-
-@app.middleware("http")
-async def check_ip(request: Request, call_next):
-    """
-        determines if call originate from cloudflare
-    :param request:
-    :param call_next:
-    :return:
-    """
-    # TODO consider adding header checks
-    ip = request.client.host
-    if not await cf_firewall.check_ip_range(ip=ip):
-        return JSONResponse(
-            content={"message": "Access denied, Suspicious Activity, Use a Proper Gateway to access our resources"},
-            status_code=403)
-
-    return await call_next(request)
 
 
 app.add_middleware(TrustedHostMiddleware)
@@ -259,7 +284,7 @@ async def startup_event():
     async def clean_up_memcache():
         while True:
             await redis_cache.memcache_ttl_cleaner()
-            await asyncio.sleep(delay=60*10)
+            await asyncio.sleep(delay=60 * 10)
             app_logger.info("Cleaning Up Expired Mem Cache Items")
 
     asyncio.create_task(setup_cf_firewall())
@@ -300,11 +325,11 @@ async def v1_gateway(request: Request, path: str):
     app_logger.info(msg="All cached responses not found- Must Be a Slow Day")
 
     # 5 minute timeout on resource fetching from backend - some resources may take very long
-    tasks = [requester(api_url=api_url, timeout=5*60) for api_url in api_urls]
+    tasks = [requester(api_url=api_url, timeout=5 * 60) for api_url in api_urls]
     responses = await asyncio.gather(*tasks)
 
     for i, response in enumerate(responses):
-        if response and response.get("status"):
+        if response and response.get("status", False):
             api_url = api_urls[i]
             # NOTE, Cache is being set to a ttl of one hour here
             await redis_cache.set(key=api_url, value=response, ttl=60 * 60)
@@ -314,19 +339,20 @@ async def v1_gateway(request: Request, path: str):
             # The reason for this algorithm is because sometimes the cron server is busy this way no matter
             # what happens a response is returned
             app_logger.warning(msg=f"""
-            Server Failed To Respond
+            Server Failed To Respond - Or Data Not Found
                 Original Request URL : {api_urls[i]}
-                Actual Response : Check Requester Debug Output          
+                Actual Response : {response}          
             """)
 
-    app_logger.fatal(msg="All API Servers failed to respond")
+    mess = "All API Servers failed to respond - Or there is no Data for the requested resource and parameters"
+    app_logger.warning(msg=mess)
     # TODO - send Notifications to developers that the API Servers are down
     _time = datetime.datetime.now().isoformat(sep="-")
 
     # TODO - create Dev Message Types - Like Fatal Errors, and etc also create Priority Levels
     _args = dict(message_type="resource_not_found", request=request, api_key=api_key)
     await email_process.send_message_to_devs(**_args)
-    return JSONResponse(content={"status": False, "message": "All API servers failed to respond"}, status_code=404,
+    return JSONResponse(content={"status": False, "message": mess}, status_code=404,
                         headers={"Content-Type": "application/json"})
 
 

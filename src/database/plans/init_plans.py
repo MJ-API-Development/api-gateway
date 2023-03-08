@@ -231,10 +231,10 @@ class PlanResources:
 @dataclass(frozen=True)
 class RateLimits:
     # TODO Propagate the plan limits to the APIModel & Subscriptions
-    BASIC: tuple[int, int, int] = (30, 1_500, 0)
-    PROFESSIONAL: tuple[int, int, int] = (250, 10_000, 1)
-    BUSINESS: tuple[int, int, int] = (500, 25_000, 1)
-    ENTERPRISE: tuple[int, int, int] = (750, 50_000, 1)
+    BASIC: tuple[int, int, int] = (10, 1_500, 0)
+    PROFESSIONAL: tuple[int, int, int] = (50, 10_000, 1)
+    BUSINESS: tuple[int, int, int] = (75, 25_000, 1)
+    ENTERPRISE: tuple[int, int, int] = (125, 50_000, 1)
 
 
 async def create_plans() -> None:
