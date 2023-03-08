@@ -88,46 +88,49 @@ async def cache_api_keys():
                                               'duration': db_key.duration,
                                               'rate_limit': db_key.rate_limit} for db_key in db_keys})
 
-
-async def create_admin_key():
-    """
-        this is only for the purposes of testing
-    :return:
-    """
-    from src.database.account.account import Account
-    with next(sessions) as session:
-        _uuid = create_id(size=UUID_LEN)
-        _api_key = create_id(size=UUID_LEN)
-        first_name = "John"
-        second_name = "Peters"
-        surname = "Smith"
-        email = "info@eod-stock-api.site"
-        cell = "0711863234"
-        is_admin = True
-        admin_user = Account(uuid=_uuid, first_name=first_name,
-                             second_name=second_name, surname=surname, email=email,
-                             cell=cell, is_admin=is_admin, password="MobiusCrypt5627084@")
-
-        api_key = ApiKeyModel(uuid=_uuid,
-                              api_key=_api_key,
-                              duration=ONE_MINUTE * 60,
-                              rate_limit=30,
-                              is_active=True)
-        sub_id = create_id(UUID_LEN)
-        # await create_plans()
-        plans = await Plans.get_all_plans(session=session)
-        _enterprise_plan: Plans = [plan for plan in plans if plan.plan_name == "ENTERPRISE"][0]
-        subscription = Subscriptions(uuid=_uuid, subscription_id=sub_id, plan_id=_enterprise_plan.plan_id,
-                                     time_subscribed=datetime.datetime.now().timestamp(), payment_day="31",
-                                     api_requests_balance=_enterprise_plan.plan_limit)
-        try:
-            session.add(admin_user)
-            session.commit()
-            session.flush()
-            session.add(subscription)
-            session.add(api_key)
-            session.commit()
-            session.flush()
-        except pymysql.err.OperationalError as e:
-            # TODO log errors
-            pass
+#
+# async def create_admin_key():
+#     """
+#         this is only for the purposes of testing
+#     :return:
+#     """
+#     from src.database.account.account import Account
+#     with next(sessions) as session:
+#
+#         _uuid = create_id(size=UUID_LEN)
+#         _api_key = create_id(size=UUID_LEN)
+#         first_name = "John"
+#         second_name = "Peters"
+#         surname = "Smith"
+#         email = "info@eod-stock-api.site"
+#         cell = "0711863234"
+#         is_admin = True
+#         admin_user = Account(uuid=_uuid, first_name=first_name,
+#                              second_name=second_name, surname=surname, email=email,
+#                              cell=cell, is_admin=is_admin, password="MobiusCrypt5627084@")
+#
+#         api_key = ApiKeyModel(uuid=_uuid,
+#                               api_key=_api_key,
+#                               duration=ONE_MINUTE * 60,
+#                               rate_limit=30,
+#                               is_active=True)
+#
+#         sub_id = create_id(UUID_LEN)
+#         # await create_plans()
+#         plans = await Plans.get_all_plans(session=session)
+#         _enterprise_plan: Plans = [plan for plan in plans if plan.plan_name == "ENTERPRISE"][0]
+#         subscription = Subscriptions(uuid=_uuid, subscription_id=sub_id, plan_id=_enterprise_plan.plan_id,
+#                                      time_subscribed=datetime.datetime.now().timestamp(), payment_day="31",
+#                                      api_requests_balance=_enterprise_plan.plan_limit)
+#         try:
+#             session.add(admin_user)
+#             session.commit()
+#             session.flush()
+#             session.add(subscription)
+#             session.add(api_key)
+#             session.commit()
+#             session.flush()
+#
+#         except pymysql.err.OperationalError as e:
+#             # TODO log errors
+#             pass

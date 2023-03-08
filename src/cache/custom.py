@@ -247,6 +247,8 @@ class Cache:
         redis_host = config_instance().REDIS_CACHE.CACHE_REDIS_HOST
         redis_port = config_instance().REDIS_CACHE.CACHE_REDIS_PORT
         password = config_instance().REDIS_CACHE.REDIS_PASSWORD
-        self._redis_pool = await asyncio_redis.Pool.create(host=redis_host, port=redis_port, password=password,
+        self._redis_pool = await asyncio_redis.Pool.create(host=redis_host,
+                                                           port=redis_port,
+                                                           password=password,
                                                            poolsize=5)
 

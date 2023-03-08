@@ -109,6 +109,9 @@ class CloudFlareFirewall:
     @redis_cached_ttl(ttl=60 * 30)
     async def check_ip_range(self, ip):
         """
+            This IP Range check only prevents direct server access from an Actual IP Address thereby
+            bypassing some of the security measures.
+
             checks if an ip address falls within range of those found in cloudflare edge servers
         :param ip:
         :return:
@@ -130,7 +133,7 @@ class CloudFlareFirewall:
         THIRTY_DAYS = 60 * 60 * 24 * 30
         await redis_cache.set(key="list_of_bad_addresses", value=list(self.bad_addresses), ttl=THIRTY_DAYS)
 
-    async def restore_addresses_from_redis(self):
+    async def restore_bad_addresses_from_redis(self):
         bad_addresses = await redis_cache.get(key="list_of_bad_addresses") or []
         for bad_address in bad_addresses:
             self.bad_addresses.add(bad_address)

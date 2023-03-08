@@ -65,6 +65,11 @@ app.add_middleware(
 )
 
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # ERROR HANDLERS
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_error_handler(request: Request, exc: RateLimitExceeded):
     """
@@ -143,24 +148,31 @@ async def handle_json_decode_error(request, exc):
     message: str = "Oopsie- Server Error, Hopefully our engineers will resolve it soon"
     return JSONResponse(status_code=exc.status_code, content=message)
 
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # MIDDLE WARES
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 # Rate Limit per IP Must Always Match The Rate Limit of the Highest Plan Allowed
 rate_limit, _, duration = RateLimits().ENTERPRISE
 
 
 @app.middleware("http")
-async def rate_limit_middleware(request: Request, call_next):
+async def global_request_throttle(request: Request, call_next):
     """
-        Middleware to enforce rate limiting
+        Middleware will throttle requests if they are more than 100 requests per second
+        per edge, other edge servers may be serviced just as before but the one server
+        where higher traffic is coming from will be limited
     """
-    # rate limit by IP address
+    # rate limit by cloudflare edge address - which will
     ip_address = request.client.host
-    if ip_address not in ip_rate_limits:
-        # create a new rate limit for this IP address
-        # TODO - subjected to plan -means i have to make adjustment to match the highest rate limit per API_KEY
 
-        ip_rate_limits[ip_address] = RateLimit(max_requests=rate_limit, duration=duration * 60)  # limit to 100 requests per minute
+    if ip_address not in ip_rate_limits:
+        # This will throttle the connection if there is too many requests coming from only one edge server
+        ip_rate_limits[ip_address] = RateLimit()
+
     if ip_rate_limits[ip_address].is_limit_exceeded():
-        raise RateLimitExceeded(detail="Rate limit exceeded", rate_limit=ip_rate_limits[ip_address].max_requests)
+        await ip_rate_limits[ip_address].ip_throttle()
 
     # continue with the request
     response = await call_next(request)
@@ -190,7 +202,6 @@ async def check_ip(request: Request, call_next):
 @app.middleware("http")
 async def validate_request_middleware(request: Request, call_next):
     """
-
     :param request:
     :param call_next:
     :return:
@@ -200,12 +211,13 @@ async def validate_request_middleware(request: Request, call_next):
     # You can modify the request here, or perform any other
     # pre-processing that you need.
 
+    # TODO - consider reintegrating signature verification
     signature = request.headers.get('X-Signature')
     _secret = config_instance().SECRET_KEY
     _url: str = str(request.url)
     # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
     # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
-    if signature is None and _url.startswith("https://gateway.eod-stock-api.site/_admin"):
+    if _url.startswith("https://gateway.eod-stock-api.site/_admin"):
         response = await call_next(request)
 
     elif await cf_firewall.path_matches_known_route(request=request):
@@ -240,6 +252,10 @@ app.add_middleware(TrustedHostMiddleware)
 app.mount(path="/_admin", app=admin_app)
 
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # STARTUP EVENTS
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 # On Start Up Run the following Tasks
 @app.on_event('startup')
 async def startup_event():
@@ -247,8 +263,9 @@ async def startup_event():
         app_logger.info("Setting Up CF Firewall...")
         ipv4_cdrs, ipv6_cdrs = await cf_firewall.get_ip_ranges()
         cf_firewall.ip_ranges = list(itertools.chain(*[ipv4_cdrs, ipv6_cdrs]))
-        await cf_firewall.restore_addresses_from_redis()
-        app_logger.info("Done Setting Up CF Firewall...")
+        # This will restore a list of known Bad IP Addresses
+        await cf_firewall.restore_bad_addresses_from_redis()
+        app_logger.info(f"""Done Setting Up CF Firewall...""")
 
     async def update_api_keys_background_task():
         while True:
@@ -258,12 +275,12 @@ async def startup_event():
             await load_plans_by_api_keys()
             app_logger.info("Done Pre Fetching API Keys")
 
-            # wait for 15 minutes then update API Keys records
-            await asyncio.sleep(60 * 15)
+            # wait for 5 minutes then update API Keys records
+            await asyncio.sleep(60 * 5)
 
     async def prefetch():
         """
-        Method to Prefetch Common Routes for faster Execution
+            Method to Prefetch Common Routes for faster Execution
         :return:
         """
         while True:
@@ -278,11 +295,13 @@ async def startup_event():
         while True:
             await cf_firewall.save_bad_addresses_to_redis()
             # Everyday
+            # Runs every 24 hours in order to backup bad addresses list
             await asyncio.sleep(60 * 60 * 24)
             app_logger.info("CF Firewall Bad Addresses Backed Up")
 
     async def clean_up_memcache():
         while True:
+            # This cleans up the cache every ten minutes
             await redis_cache.memcache_ttl_cleaner()
             await asyncio.sleep(delay=60 * 10)
             app_logger.info("Cleaning Up Expired Mem Cache Items")
@@ -295,6 +314,10 @@ async def startup_event():
     asyncio.create_task(email_process.process_message_queues())
     asyncio.create_task(clean_up_memcache())
 
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # API GATEWAY
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 @app.api_route("/api/v1/{path:path}", methods=["GET"], include_in_schema=True)
 @auth_and_rate_limit
@@ -346,7 +369,7 @@ async def v1_gateway(request: Request, path: str):
 
     mess = "All API Servers failed to respond - Or there is no Data for the requested resource and parameters"
     app_logger.warning(msg=mess)
-    # TODO - send Notifications to developers that the API Servers are down
+    # TODO - send Notifications to developers that the API Servers are down - or something requests coming up empty handed
     _time = datetime.datetime.now().isoformat(sep="-")
 
     # TODO - create Dev Message Types - Like Fatal Errors, and etc also create Priority Levels
@@ -355,6 +378,10 @@ async def v1_gateway(request: Request, path: str):
     return JSONResponse(content={"status": False, "message": mess}, status_code=404,
                         headers={"Content-Type": "application/json"})
 
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # CACHE MANAGEMENT UTILS
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 async def create_resource_keys(request: Request) -> list[str]:
     """

@@ -167,7 +167,6 @@ async def take_credit_method(api_key: str, path: str):
 
 async def process_credit_queue():
     """
-        TODO - use a separate client to process credit_queue
         will run on the main app, as a separate thread to process
         request credit continuously
     :return:
