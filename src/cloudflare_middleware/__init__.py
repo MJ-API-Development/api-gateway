@@ -51,7 +51,7 @@ route_regexes = {
                  "get_exchange_with_tickers_by_code": "^/api/v1/exchange/exchange-with-tickers/code/[a-zA-Z0-9]{2,16}(?<!/)$",
                  "get_insider_transactions_from_exchange": "^/api/v1/fundamentals/ex-technical-indicators/exchange-code/[a-zA-Z0-9]{2,16}/\\d{4}(?<!/)$",
                  "get_news": "^/api/v1/news/article/[a-zA-Z0-9]{1,64}(?<!/)$",
-                 "get_news_articles_bounded": "^/api/v1/news/articles-bounded/\d+$",
+                 "get_news_articles_bounded": "^/api/v1/news/articles-bounded/\d{1,2}+$",
                  "get_news_articles_by_date": "^/api/v1/news/articles-by-date/\d{4}-\d{2}-\d{2}(?<!/)$",
                  "get_news_articles_by_publisher": "^/api/v1/news/articles-by-publisher/[a-zA-Z0-9_-]{2,128}(?<!/)$",
                  "get_news_articles_by_ticker": "^/api/v1/news/articles-by-ticker/[a-zA-Z0-9_-]{1,16}(?<!/)$",
@@ -102,6 +102,7 @@ class CloudFlareFirewall:
 
     @redis_cached_ttl(ttl=60 * 30)
     async def path_matches_known_route(self, request: Request):
+        """helps to filter out malicious paths based on regex matching"""
         # NOTE: that at this stage if this request is not a get then its invalid
         path = request.url.path
         return any(pattern.match(path) for pattern in self.compiled_patterns) if request.method.lower() == "get" else False
@@ -145,9 +146,7 @@ class CloudFlareFirewall:
         url = request.url
         method = request.method.upper()
         headers = request.headers
-
         expected_signature = hashlib.sha256(f"{method}{url}{headers}{secret}".encode('UTF-8'))
-
         return signature == expected_signature
 
     @staticmethod
