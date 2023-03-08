@@ -32,7 +32,7 @@ route_regexes = {
                  "fetch_listed_stocks_by_exchange_code": "^/api/v1/stocks/exchange/code/[a-zA-Z0-9]{1,16}(?<!/)$",
                  "fetch_listed_stocks_by_exchange_id": "^/api/v1/stocks/exchange/id/[a-zA-Z0-9]{16}(?<!/)$",
                  "fetch_stocks_listed_by_currency": "^/api/v1/stocks/currency/[a-zA-Z0-9]{1,16}(?<!/)$",
-                 "fetch_stocks_listed_in_country": "^/api/v1/stocks/country/[a-zA-Z]{2}$i",
+                 "fetch_stocks_listed_in_country": "^/api/v1/stocks/country/[a-zA-Z]{1,4}(?<!/)$",
                  "get_annual_balance_sheet": "^/api/v1/fundamentals/quarterly-balance-sheet/(20[1-2][0-9]|203[0-3])-(0[1-9]|1[0-2])-\d{2}/[a-zA-Z0-9]{1,16}(?<!/)$",
                  "get_quarterly_balance_sheet": "^/api/v1/fundamentals/quarterly-balance-sheet/[2-9]\\d{3}-(0[1-9]|1[0-2])-\\d{2}/[a-zA-Z0-9]{1,16}(?<!/)$",
                  "get_all_technical_indicators_in_an_exchange": "^/api/v1/fundamentals/tech-indicators-by-exchange/exchange-code/[a-zA-Z0-9]{1,16}/(20[1-9][0-9]|203[0-3])(?<!/)$",
