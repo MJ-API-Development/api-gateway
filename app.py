@@ -13,4 +13,4 @@ if __name__ == '__main__':
     if config_instance().DEVELOPMENT_SERVER_NAME.casefold() == socket.gethostname().casefold():
         uvicorn.run("app:app", host="0.0.0.0", port=8080, reload=True, workers=1)
     else:
-        uvicorn.run("app:app", host="0.0.0.0", port=80, reload=False, workers=1)
+        uvicorn.run("app:app", host="0.0.0.0", port=8080, reload=False, workers=1)
