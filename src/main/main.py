@@ -260,20 +260,19 @@ app.mount(path="/_admin", app=admin_app)
 @app.on_event('startup')
 async def startup_event():
     async def setup_cf_firewall():
-        app_logger.info("Setting Up CF Firewall...")
+        app_logger.info("Application Setup")
         ipv4_cdrs, ipv6_cdrs = await cf_firewall.get_ip_ranges()
         cf_firewall.ip_ranges = list(itertools.chain(*[ipv4_cdrs, ipv6_cdrs]))
+        app_logger.info(f"CF Firewall Added {len(ipv4_cdrs)} IP-V4 & {len(ipv6_cdrs)} IP-V6 Addresses")
         # This will restore a list of known Bad IP Addresses
         await cf_firewall.restore_bad_addresses_from_redis()
-        app_logger.info(f"""Done Setting Up CF Firewall...""")
 
     async def update_api_keys_background_task():
         while True:
-            app_logger.info("Started Pre Fetching API Keys")
             # Caching API Keys , plans and Subscriptions
-            await cache_api_keys()
+            total_apikeys: int  = await cache_api_keys()
             await load_plans_by_api_keys()
-            app_logger.info("Done Pre Fetching API Keys")
+            app_logger.info("Cache Prefetched {total_apikeys} apikeys")
 
             # wait for 5 minutes then update API Keys records
             await asyncio.sleep(60 * 5)
@@ -284,27 +283,26 @@ async def startup_event():
         :return:
         """
         while True:
-            app_logger.info("Started Pre Fetching End Points")
-            await prefetch_endpoints()
-            app_logger.info("Done Pre Fetching End Points")
+            total_prefetched = await prefetch_endpoints()
+            app_logger.info(f"Cache Pre Fetched {total_prefetched} endpoints")
 
             #  wait for one hour 30 minutes then prefetch urls again
             await asyncio.sleep(60 * 60 * 1.5)
 
     async def backup_cf_firewall_data():
         while True:
-            await cf_firewall.save_bad_addresses_to_redis()
+            total_bad_addresses = await cf_firewall.save_bad_addresses_to_redis()
+            app_logger.info(f"CF Firewall Backed Up {total_bad_addresses} Bad Addresses")
             # Everyday
             # Runs every 24 hours in order to backup bad addresses list
             await asyncio.sleep(60 * 60 * 24)
-            app_logger.info("CF Firewall Bad Addresses Backed Up")
 
     async def clean_up_memcache():
         while True:
             # This cleans up the cache every ten minutes
-            await redis_cache.memcache_ttl_cleaner()
+            total_cleaned = await redis_cache.memcache_ttl_cleaner()
+            app_logger.info(f"Cleaned Up {total_cleaned} Expired Mem Cache Values")
             await asyncio.sleep(delay=60 * 10)
-            app_logger.info("Cleaning Up Expired Mem Cache Items")
 
     asyncio.create_task(setup_cf_firewall())
     asyncio.create_task(backup_cf_firewall_data())

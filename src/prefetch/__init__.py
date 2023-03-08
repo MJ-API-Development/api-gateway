@@ -5,7 +5,7 @@ from src.prefetch.dynamic_urls import build_dynamic_urls
 from src.requests import requester
 
 
-async def prefetch_endpoints():
+async def prefetch_endpoints() -> int:
     """will fetch the endpoints causing the endpoints to be cached"""
     urls = await build_dynamic_urls()
     # will wait for a maximum of 30 seconds for a response
@@ -13,3 +13,4 @@ async def prefetch_endpoints():
     for response, url in zip(responses, urls):
         if response and response.get("status", False):
             await redis_cache.set(key=url, value=response)
+    return len(responses)

@@ -79,7 +79,7 @@ class ApiKeyModel(Base):
         return session.query(cls).filter_by(is_active=True).all()
 
 
-async def cache_api_keys():
+async def cache_api_keys() -> int:
     with next(sessions) as session:
         db_keys = await ApiKeyModel.get_all_active(session=session)
         async with apikeys_lock:
@@ -87,7 +87,7 @@ async def cache_api_keys():
                                               'last_request_timestamp': 0,
                                               'duration': db_key.duration,
                                               'rate_limit': db_key.rate_limit} for db_key in db_keys})
-
+    return len(db_keys)
 #
 # async def create_admin_key():
 #     """

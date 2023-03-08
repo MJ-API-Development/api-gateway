@@ -124,14 +124,16 @@ class CloudFlareFirewall:
         self.bad_addresses.add(ip)
         return False
 
-    async def save_bad_addresses_to_redis(self):
+    async def save_bad_addresses_to_redis(self) -> int:
         """
             take a list of bad addresses and save to redis
         :return:
         """
         # This will store the list_of_bad_addresses for 3 hours
-        THIRTY_DAYS = 60 * 60 * 24 * 30
-        await redis_cache.set(key="list_of_bad_addresses", value=list(self.bad_addresses), ttl=THIRTY_DAYS)
+        if self.bad_addresses:
+            THIRTY_DAYS = 60 * 60 * 24 * 30
+            await redis_cache.set(key="list_of_bad_addresses", value=list(self.bad_addresses), ttl=THIRTY_DAYS)
+        return len(self.bad_addresses)
 
     async def restore_bad_addresses_from_redis(self):
         bad_addresses = await redis_cache.get(key="list_of_bad_addresses") or []
