@@ -24,13 +24,13 @@ async def get_exchange_lists():
         server_url = random.choice(api_server_urls)
         api_url = f"{server_url}/api/v1/exchanges"
         data = await requester(api_url=api_url)
-        payload = data.get("payload")
-        status = data.get("status")
-        if status and payload:
-            return payload
+        if data:
+            payload = data.get("payload")
+            status = data.get("status")
+            if status and payload:
+                return payload
+        return cached_exchange_lists
     except HTTPError as e:
-        pass
-    else:
         return cached_exchange_lists
 
 

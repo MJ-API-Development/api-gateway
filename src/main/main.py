@@ -272,7 +272,7 @@ async def startup_event():
             # Caching API Keys , plans and Subscriptions
             total_apikeys: int  = await cache_api_keys()
             await load_plans_by_api_keys()
-            app_logger.info("Cache Prefetched {total_apikeys} apikeys")
+            app_logger.info(f"Cache Prefetched {total_apikeys} apikeys")
 
             # wait for 5 minutes then update API Keys records
             await asyncio.sleep(60 * 5)
