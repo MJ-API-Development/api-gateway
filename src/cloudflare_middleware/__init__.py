@@ -119,7 +119,7 @@ class CloudFlareFirewall:
             if ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range):
                 return True
         self.bad_addresses.add(ip)
-        return True
+        return False
 
     async def save_bad_addresses_to_redis(self):
         """
