@@ -66,7 +66,8 @@ app.add_middleware(
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_error_handler(request: Request, exc: RateLimitExceeded):
     """
-
+    **rate_limit_error_handler**
+        will handle Rate Limits Exceeded Error
     :param request:
     :param exc:
     :return:
@@ -208,9 +209,6 @@ async def check_ip(request: Request, call_next):
 
 
 app.add_middleware(TrustedHostMiddleware)
-
-
-
 
 # TODO Admin Application Mounting Point should eventually Move this
 # To its own separate Application
