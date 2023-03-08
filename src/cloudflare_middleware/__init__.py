@@ -20,7 +20,7 @@ DEFAULT_IPV4 = ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31
 
 route_regexes = {
                 "all_general_fundamentals": "^/api/v1/fundamental/general$",
-                 "annual_or_quarterly_statements_by_stock_code": "^/api/v1/fundamentals/financial-statements/by-term/[a-zA-Z0-9]{16}\.[a-zA-Z0-9]{16}/[a-zA-Z0-9]{16}/[a-zA-Z0-9]{16}(?<!/)$",
+                 "annual_or_quarterly_statements_by_stock_code": "^/api/v1/fundamentals/financial-statements/by-term/(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])\.(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])/[a-zA-Z0-9_-]{1,16}/\b(?:annual|quarterly)\b(?<!/)$",
                  "company_financial_statements_by_year": "^/api/v1/fundamentals/financial-statements/exchange-year/[a-zA-Z0-9]{16}/\\d{4}$",
                  "company_fundamental_data_complete": "^/api/v1/fundamental/company/[a-zA-Z0-9]{128}(?<!/)$",
                  "complete_stock_list": "^/api/v1/stocks$",
@@ -28,20 +28,20 @@ route_regexes = {
                  "create_stocks_bulk": "^/api/v1/stocks$",
                  "fetch_exchange_list": "^/api/v1/exchanges$",
                  "fetch_listed_companies": "^/api/v1/exchange/listed-companies/[a-zA-Z0-9]{128}(?<!/)$",
-                 "fetch_listed_stocks": "^/api/v1/exchange/listed-stocks/[a-zA-Z0-9]{16}(?<!/)$",
-                 "fetch_listed_stocks_by_exchange_code": "^/api/v1/stocks/exchange/code/[a-zA-Z0-9]{16}(?<!/)$",
+                 "fetch_listed_stocks": "^/api/v1/exchange/listed-stocks/[a-zA-Z0-9]{1,16}(?<!/)$",
+                 "fetch_listed_stocks_by_exchange_code": "^/api/v1/stocks/exchange/code/[a-zA-Z0-9]{1,16}(?<!/)$",
                  "fetch_listed_stocks_by_exchange_id": "^/api/v1/stocks/exchange/id/[a-zA-Z0-9]{16}(?<!/)$",
-                 "fetch_stocks_listed_by_currency": "^/api/v1/stocks/currency/[a-zA-Z0-9]{16}(?<!/)$",
+                 "fetch_stocks_listed_by_currency": "^/api/v1/stocks/currency/[a-zA-Z0-9]{1,16}(?<!/)$",
                  "fetch_stocks_listed_in_country": "^/api/v1/stocks/country/[a-zA-Z0-9\\s_-](?<!/)$\n",
-                 "get_annual_balance_sheet": "^/api/v1/fundamentals/annual-balance-sheet/[2-9]\\d{3}-(0[1-9]|1[0-2])-\\d{2}/[a-zA-Z0-9]{16}(?<!/)$",
-                 "get_quarterly_balance_sheet": "^/api/v1/fundamentals/quarterly-balance-sheet/[2-9]\\d{3}-(0[1-9]|1[0-2])-\\d{2}/[a-zA-Z0-9]{16}(?<!/)$",
-                 "get_all_technical_indicators_in_an_exchange": "^/api/v1/fundamentals/tech-indicators-by-exchange/exchange-code/[a-zA-Z0-9]{16}/\\\\d{4}(?<!/)$\n",
-                 "get_bulk_eod_from_exchange_for_date_range": "^/api/v1/eod/[a-zA-Z0-9]{16}\\.[a-zA-Z0-9]{16}/[a-zA-Z0-9]{16}\\.[a-zA-Z0-9]{16}(?<!/)$",
-                 "get_companies_analyst_ranks_by_exchange_an_year": "^/api/v1/fundamentals/exchange-analyst-rankings/exchange-code/[a-zA-Z0-9]{16}/\\d{4}$/",
-                 "get_company_financial_statements_api": "^/api/v1/fundamentals/financial-statements/company-statement/[a-zA-Z0-9]{16}/\\d{4}$/",
-                 "get_company_insider_transaction": "^/api/v1/fundamentals/company-insider-transactions/stock-code/[a-zA-Z0-9]{16}/\\d{4}$/",
-                 "get_company_technical_indicators_for_a_year_given_stock_code": "^/api/v1/fundamentals/tech-indicators-by-company/stock-code/[a-zA-Z0-9]{16}/\\d{4}$/",
-                 "get_company_valuation_data_for_a_year": "^/api/v1/fundamentals/company-valuations/stock-code/[a-zA-Z0-9]{16}/\\d{4}$/",
+                 "get_annual_balance_sheet": "^/api/v1/fundamentals/quarterly-balance-sheet/(20[1-2][0-9]|203[0-3])-(0[1-9]|1[0-2])-\d{2}/[a-zA-Z0-9]{1,16}(?<!/)$",
+                 "get_quarterly_balance_sheet": "^/api/v1/fundamentals/quarterly-balance-sheet/[2-9]\\d{3}-(0[1-9]|1[0-2])-\\d{2}/[a-zA-Z0-9]{1,16}(?<!/)$",
+                 "get_all_technical_indicators_in_an_exchange": "^/api/v1/fundamentals/tech-indicators-by-exchange/exchange-code/[a-zA-Z0-9]{1,16}/(20[1-9][0-9]|203[0-3])(?<!/)$",
+                 "get_bulk_eod_from_exchange_for_date_range": "^/api/v1/eod/(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])\.(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])/(?=[-_\w]{1,16}$)[-_\w]{1,16}$",
+                 "get_companies_analyst_ranks_by_exchange_an_year": "^/api/v1/fundamentals/exchange-analyst-rankings/exchange-code/[a-zA-Z0-9_-]{1,16}/\\d{4}$",
+                 "get_company_financial_statements_api": "^/api/v1/fundamentals/financial-statements/company-statement/[a-zA-Z0-9-_]{1,16}/\\d{4}$",
+                 "get_company_insider_transaction": "^/api/v1/fundamentals/company-insider-transactions/stock-code/[a-zA-Z0-9-_]{1,16}/\\d{4}$",
+                 "get_company_technical_indicators_for_a_year_given_stock_code": "^/api/v1/fundamentals/tech-indicators-by-company/stock-code/[a-zA-Z0-9-_]{1,16}/\\d{4}$",
+                 "get_company_valuation_data_for_a_year": "^/api/v1/fundamentals/company-valuations/stock-code/[a-zA-Z0-9]{1,16}/\\d{4}$",
                  "get_contract": "^/api/v1/stocks/contract/[a-zA-Z0-9]{16}(?<!/)$",
                  "get_eod_data_multi_stock": "^/api/v1/eod/\\d{4}-\\d{2}-\\d{2}/[a-zA-Z0-9]{16}(?<!/)$",
                  "get_eod_data_single_stock": "^/api/v1/eod/\\d{4}-\\d{2}-\\d{2}/[a-zA-Z0-9]{16}\\.[a-zA-Z0-9]{16}(?<!/)$",
@@ -63,14 +63,15 @@ route_regexes = {
                  "get_update_delete_by_stock_code_company_details": "^/api/v1/fundamentals/company-details/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
                  "get_update_delete_by_stock_highlights": "^/api/v1/fundamentals/highlights/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
                  "get_update_delete_by_stock_postal_address": "^/api/v1/fundamentals/company-address/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "get_valuations_for_companies_listed_in_exchange": "^/api/v1/fundamentals/exchange-valuations/exchange-code/[a-zA-Z0-9_-]{1,16}+/\d{4}(?<!/)$",
+                 "get_valuations_for_companies_listed_in_exchange": "^/api/v1/fundamentals/exchange-valuations/exchange-code/[a-zA-Z0-9_-]{1,16}(?<!/)$",
                  "income_statement_by_filing_date_and_stock_code": "^/api/v1/fundamentals/financial-statements/filing-date-ticker/\d{2}-\d{2}-\d{4}/[a-zA-Z0-9_-]{1,16}(?<!/)$",
                  "income_statement_by_statement_id": "^/api/v1/fundamentals/financials/income-statements/[a-zA-Z0-9_-]{16}(?<!/)$",
                  "income_statements_by_ticker_and_date_range": "^/api/v1/fundamentals/financial-statements/ticker-date-range/\d{2}-\d{2}-\d{4}.\d{2}-\d{2}-\d{4}/[a-zA-Z0-9_-]{1,16}(?<!/)$",
                  "most_trending_sentiment_by_stock": "^/api/v1/sentiment/trending/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
                  "stock_trend_setters": "^/api/v1/sentiment/trend-setters/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
                  "stock_tweet_sentiments": "^/api/v1/sentiment/tweet/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "open_api": "^/open-api$"}
+                 "open_api": "^/open-api$"
+}
 
 
 class CloudFlareFirewall:
@@ -83,6 +84,7 @@ class CloudFlareFirewall:
         self.cloud_flare.api_from_openapi(url="https://www.eod-stock-api.site/open-api")
         self.ip_ranges = []
         self.bad_addresses = set()
+        self.compiled_patterns = [re.compile(_regex) for route, _regex in route_regexes.items()]
 
     @staticmethod
     async def get_ip_ranges() -> tuple[list[str], list[str]]:
@@ -98,12 +100,11 @@ class CloudFlareFirewall:
 
         return ipv4_cidrs, ipv6_cidrs
 
-    @staticmethod
-    async def path_matches_known_route(request: Request):
+    @redis_cached_ttl(ttl=60 * 30)
+    async def path_matches_known_route(self, request: Request):
         # NOTE: that at this stage if this request is not a get then its invalid
         path = request.url.path
-        return any(re.match(route_regex, path) for resource_name, route_regex
-                   in route_regexes.items()) if request.method.lower() == "get" else False
+        return any(pattern.match(path) for pattern in self.compiled_patterns) if request.method.lower() == "get" else False
 
     @redis_cached_ttl(ttl=60 * 30)
     async def check_ip_range(self, ip):
@@ -118,7 +119,7 @@ class CloudFlareFirewall:
             if ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range):
                 return True
         self.bad_addresses.add(ip)
-        return False
+        return True
 
     async def save_bad_addresses_to_redis(self):
         """
