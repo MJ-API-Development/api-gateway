@@ -10,10 +10,13 @@ __github_profile__ = "https://github.com/freelancing-solutions/"
 
 import random
 import re
+import socket
 import string
 import time
 from datetime import date
 from functools import wraps
+from typing import Callable
+
 from numba import jit
 
 # NOTE set of characters to use when generating Unique ID
@@ -21,6 +24,9 @@ _char_set = string.ascii_lowercase + string.ascii_uppercase + string.digits
 
 # NOTE input character set
 _input_character_set = string.printable
+
+def is_development(config_instance: Callable) -> bool:
+    return config_instance().DEVELOPMENT_SERVER_NAME.lower() == socket.gethostname().lower()
 
 
 def _retry(delay: int = 3, exception: Exception = None):

@@ -38,7 +38,7 @@ def redis_cached_ttl(ttl: int = 60 * 60 * 1):
             new_kwargs.update({k: v for k, v in kwargs.items() if k != 'session'})
             _key = await create_key(method=func.__name__, kwargs=new_kwargs)
             _data = await redis_cache.get(_key)
-            print(f"Found Cached Key : {_data}")
+
             if _data is None:
                 result = await func(*args, **kwargs)
                 if result:

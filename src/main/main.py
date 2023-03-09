@@ -21,6 +21,7 @@ from src.prefetch import prefetch_endpoints
 from src.ratelimit import ip_rate_limits, RateLimit
 from src.requests import requester
 from src.utils.my_logger import init_logger
+from src.utils.utils import is_development
 
 cf_firewall = CloudFlareFirewall()
 # API Servers
@@ -154,7 +155,10 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["gateway.eod-stock-api.site", "localhost", "127.0.0.1"])
+if is_development(config_instance=config_instance):
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["gateway.eod-stock-api.site", "localhost", "127.0.0.1"])
+else:
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["gateway.eod-stock-api.site"])
 
 
 # Rate Limit per IP Must Always Match The Rate Limit of the Highest Plan Allowed
@@ -170,16 +174,19 @@ async def global_request_throttle(request, call_next):
     """
     # rate limit by cloudflare edge address - which will
     ip_address = request.client.host
-    print(ip_address)
+
     if ip_address not in ip_rate_limits:
         # This will throttle the connection if there is too many requests coming from only one edge server
         ip_rate_limits[ip_address] = RateLimit()
 
-    if ip_rate_limits[ip_address].is_limit_exceeded():
-        await ip_rate_limits[ip_address].ip_throttle()
+    if await ip_rate_limits[ip_address].is_limit_exceeded():
+        await ip_rate_limits[ip_address].ip_throttle(request=request)
     # continue with the request
+    # either the request was throttled and now proceeding or all is well
     response = await call_next(request)
-    response.headers["X-Request-Throttled-Time"] = "5 Seconds"
+
+    # attaching a header showing throttling was in effect and proceeding
+    response.headers["X-Request-Throttled-Time"] = f"{ip_rate_limits[ip_address].throttle_duration} Seconds"
     return response
 
 

@@ -218,16 +218,15 @@ class Cache:
     async def delete_redis_key(self, key):
         """removes a single redis key"""
         with self._lock:
-            self._redis_client.delete([key])
+            self._redis_client.delete(key)
 
     async def delete_memcache_key(self, key):
         with self._lock:
             self._cache.pop(key)
 
     async def delete_key(self, key):
-        with self._lock:
-            await self.delete_redis_key(key)
-            await self.delete_memcache_key(key)
+        await self.delete_redis_key(key)
+        await self.delete_memcache_key(key)
 
     async def clear_mem_cache(self):
         """will completely empty mem cache"""
