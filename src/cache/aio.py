@@ -61,9 +61,9 @@ class Cache:
             redis_db = config_instance().REDIS_CACHE.CACHE_REDIS_DB
             try:
                 self._cache = RedisBackend(
-                endpoint=redis_host,
-                port=redis_port,
-                password=redis_password)
+                    endpoint=redis_host,
+                    port=redis_port,
+                    password=redis_password)
                 config_instance().DEBUG and self._logger.info("Using Redis -- Connection Successful")
             except Exception:
                 config_instance().DEBUG and self._logger.error(msg="Redis failed to connect....")
@@ -91,4 +91,3 @@ class Cache:
     async def clear(self):
         with self._lock:
             await self._cache.clear()
-

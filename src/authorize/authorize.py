@@ -90,7 +90,7 @@ async def load_plans_by_api_keys() -> None:
             await add_to_api_keys_to_plans_cache(api_key=api_key, plans_dict=plan_instance.to_dict())
             await add_to_api_keys_to_subscriptions_cache(api_key=api_key,
                                                          subscriptions_dict=subscription_instance.to_dict())
-
+            print(f"loaded plan : {str(plan_instance)}" )
 
 @redis_cached_ttl(ttl=ONE_DAY)
 async def is_resource_authorized(path_param: str, api_key: str) -> bool:

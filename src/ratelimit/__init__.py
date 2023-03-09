@@ -26,7 +26,9 @@ class RateLimit:
     @staticmethod
     async def ip_throttle():
         """sleeps for 5 seconds"""
-        return await asyncio.sleep(5)
+        print("throttling requests")
+        await asyncio.sleep(5)
+        return
 
 
 ip_rate_limits: dict[str, RateLimit] = {}

@@ -6,7 +6,7 @@ from json.decoder import JSONDecodeError
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from starlette.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
     load_plans_by_api_keys, RateLimitExceeded
@@ -16,7 +16,7 @@ from src.config import config_instance
 from src.database.apikeys.keys import cache_api_keys
 from src.database.plans.init_plans import RateLimits
 from src.email.email import email_process
-from src.management_api.routes import admin_app
+
 from src.prefetch import prefetch_endpoints
 from src.ratelimit import ip_rate_limits, RateLimit
 from src.requests import requester
@@ -55,13 +55,6 @@ app = FastAPI(
     },
     docs_url="/docs",
     redoc_url="/redoc"
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["GET"],
-    allow_headers=["*"]
 )
 
 
@@ -153,12 +146,23 @@ async def handle_json_decode_error(request, exc):
 # # # # # # # # # # # # # # MIDDLE WARES
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"]
+)
+
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["gateway.eod-stock-api.site", "localhost", "127.0.0.1"])
+
+
 # Rate Limit per IP Must Always Match The Rate Limit of the Highest Plan Allowed
 rate_limit, _, duration = RateLimits().ENTERPRISE
 
 
-@app.middleware("http")
-async def global_request_throttle(request: Request, call_next):
+@app.middleware(middleware_type="http")
+async def global_request_throttle(request, call_next):
     """
         Middleware will throttle requests if they are more than 100 requests per second
         per edge, other edge servers may be serviced just as before but the one server
@@ -166,21 +170,21 @@ async def global_request_throttle(request: Request, call_next):
     """
     # rate limit by cloudflare edge address - which will
     ip_address = request.client.host
-
+    print(ip_address)
     if ip_address not in ip_rate_limits:
         # This will throttle the connection if there is too many requests coming from only one edge server
         ip_rate_limits[ip_address] = RateLimit()
 
     if ip_rate_limits[ip_address].is_limit_exceeded():
         await ip_rate_limits[ip_address].ip_throttle()
-
     # continue with the request
     response = await call_next(request)
+    response.headers["X-Request-Throttled-Time"] = "5 Seconds"
     return response
 
 
-@app.middleware("http")
-async def check_ip(request: Request, call_next):
+@app.middleware(middleware_type="http")
+async def check_ip(request, call_next):
     """
         determines if call originate from cloudflare
     :param request:
@@ -189,18 +193,21 @@ async def check_ip(request: Request, call_next):
     """
     # TODO consider adding header checks
     ip = request.client.host
-    if not await cf_firewall.check_ip_range(ip=ip):
+    print(ip)
+    if await cf_firewall.check_ip_range(ip=ip):
+        response = await call_next(request)
+    else:
         return JSONResponse(
             content={"message": "Access denied, Suspicious Activity, Use a Proper Gateway to access our resources"},
             status_code=403)
 
-    return await call_next(request)
+    return response
 
 
 # Create a middleware function that checks the IP address of incoming requests and only allows requests from the
 # Cloudflare IP ranges. Here's an example of how you could do this:
-@app.middleware("http")
-async def validate_request_middleware(request: Request, call_next):
+@app.middleware(middleware_type="http")
+async def validate_request_middleware(request, call_next):
     """
     :param request:
     :param call_next:
@@ -217,10 +224,11 @@ async def validate_request_middleware(request: Request, call_next):
     _url: str = str(request.url)
     # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
     # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
+    path = request.url.path
     if _url.startswith("https://gateway.eod-stock-api.site/_admin"):
         response = await call_next(request)
 
-    elif await cf_firewall.path_matches_known_route(request=request):
+    elif await cf_firewall.path_matches_known_route(path=path):
         response = await call_next(request)
     else:
         app_logger.warning(msg=f"""
@@ -245,13 +253,6 @@ async def validate_request_middleware(request: Request, call_next):
     return response
 
 
-app.add_middleware(TrustedHostMiddleware)
-
-# TODO Admin Application Mounting Point should eventually Move this
-# To its own separate Application
-app.mount(path="/_admin", app=admin_app)
-
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # STARTUP EVENTS
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -270,12 +271,12 @@ async def startup_event():
     async def update_api_keys_background_task():
         while True:
             # Caching API Keys , plans and Subscriptions
-            total_apikeys: int  = await cache_api_keys()
-            await load_plans_by_api_keys()
+            total_apikeys: int = await cache_api_keys()
             app_logger.info(f"Cache Prefetched {total_apikeys} apikeys")
+            await load_plans_by_api_keys()
 
             # wait for 5 minutes then update API Keys records
-            await asyncio.sleep(60 * 5)
+            await asyncio.sleep(60 * 15)
 
     async def prefetch():
         """
@@ -302,7 +303,7 @@ async def startup_event():
             # This cleans up the cache every ten minutes
             total_cleaned = await redis_cache.memcache_ttl_cleaner()
             app_logger.info(f"Cleaned Up {total_cleaned} Expired Mem Cache Values")
-            await asyncio.sleep(delay=60 * 10)
+            await asyncio.sleep(delay=60 * 30)
 
     asyncio.create_task(setup_cf_firewall())
     asyncio.create_task(backup_cf_firewall_data())
@@ -317,7 +318,7 @@ async def startup_event():
 # # # # # # # # # # # # # # API GATEWAY
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-@app.api_route("/api/v1/{path:path}", methods=["GET"], include_in_schema=True)
+@app.get("/api/v1/{path:path}",  include_in_schema=True)
 @auth_and_rate_limit
 async def v1_gateway(request: Request, path: str):
     """
@@ -402,3 +403,9 @@ async def delete_resource_from_cache(request: Request):
             await redis_cache.delete_key(key=resource_key)
     except Exception as e:
         app_logger.error(msg=str(e))
+
+
+from src.management_api.routes import admin_app
+# TODO Admin Application Mounting Point should eventually Move this
+# To its own separate Application
+app.mount(path="/_admin", app=admin_app)

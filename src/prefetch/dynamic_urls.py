@@ -19,6 +19,7 @@ PREFETCH_ENDPOINTS = [
     '/api/v1/fundamental/general']
 
 
+@redis_cached_ttl(60*60*24)
 async def get_exchange_lists():
     try:
         server_url = random.choice(api_server_urls)

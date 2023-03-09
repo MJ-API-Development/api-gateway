@@ -7,7 +7,7 @@ from typing import Any, Callable
 import redis
 import asyncio_redis
 import ujson
-from redis import ConnectionError
+from redis import ConnectionError, RedisError, AuthenticationError
 from src.config import config_instance
 from src.utils.my_logger import init_logger
 from src.utils.utils import camel_to_snake
@@ -55,7 +55,7 @@ class Cache:
                 self._redis_pool: asyncio_redis.Pool = None
                 # self._redis_client = redis.Redis(host=redis_host, port=redis_port, username=username, password=password)
                 config_instance().DEBUG and self._logger.info("Cache -- Redis connected")
-            except ConnectionError:
+            except (ConnectionError, AuthenticationError):
                 config_instance().DEBUG and self._logger.error(msg="Redis failed to connect....")
                 self.turn_off_redis()
 
@@ -153,7 +153,7 @@ class Cache:
         if entry and time.monotonic() - entry['timestamp'] < self.expiration_time:
             value = entry['value']
         else:
-            await self.delete_key(key)
+            # await self.delete_key(key)
             value = None
         return value
 

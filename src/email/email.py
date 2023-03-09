@@ -45,7 +45,7 @@ class Emailer:
             if not self.email_queues.empty():
                 message = await self.email_queues.get()
                 await email_process.send_email(message)
-            await asyncio.sleep(1 * 60)
+            await asyncio.sleep(10 * 60)
 
     async def send_subscription_welcome_email(self, sender_email: str,
                                               recipient_email: str,

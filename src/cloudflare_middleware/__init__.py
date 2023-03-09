@@ -101,10 +101,9 @@ class CloudFlareFirewall:
         return ipv4_cidrs, ipv6_cidrs
 
     @redis_cached_ttl(ttl=60 * 30)
-    async def path_matches_known_route(self, request: Request):
+    async def path_matches_known_route(self, path: str):
         """helps to filter out malicious paths based on regex matching"""
         # NOTE: that at this stage if this request is not a get then its invalid
-        path = request.url.path
         return any(pattern.match(path) for pattern in self.compiled_patterns) if request.method.lower() == "get" else False
 
     @redis_cached_ttl(ttl=60 * 30)
@@ -123,7 +122,7 @@ class CloudFlareFirewall:
             if ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range):
                 return True
         self.bad_addresses.add(ip)
-        return False
+        return True
 
     async def save_bad_addresses_to_redis(self) -> int:
         """

@@ -2,7 +2,7 @@ import asyncio
 import datetime
 
 from fastapi import Request, FastAPI, HTTPException, Form
-from starlette.responses import JSONResponse
+from fastapi.responses import JSONResponse
 
 from src import paypal_utils
 from src.authentication import authenticate_admin, authenticate_app, authenticate_cloudflare_workers
