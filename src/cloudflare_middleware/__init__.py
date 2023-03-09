@@ -116,6 +116,7 @@ class CloudFlareFirewall:
         :param ip:
         :return:
         """
+        # TODO Debug this contains problems - some of the cloudflare addresses are being blocked
         if ip in self.bad_addresses:
             return False
         for ip_range in self.ip_ranges:
