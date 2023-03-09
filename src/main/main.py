@@ -16,6 +16,7 @@ from src.config import config_instance
 from src.database.apikeys.keys import cache_api_keys
 from src.database.plans.init_plans import RateLimits
 from src.email.email import email_process
+from src.make_request import async_client
 
 from src.prefetch import prefetch_endpoints
 from src.ratelimit import ip_rate_limits, RateLimit
@@ -203,8 +204,9 @@ async def check_ip(request, call_next):
     """
     # TODO consider adding header checks
     ip = request.client.host
-    print(ip)
     if await cf_firewall.check_ip_range(ip=ip):
+        response = await call_next(request)
+    elif is_development(config_instance=config_instance):
         response = await call_next(request)
     else:
         return JSONResponse(
@@ -294,8 +296,9 @@ async def startup_event():
         :return:
         """
         while True:
-            total_prefetched = await prefetch_endpoints()
-            app_logger.info(f"Cache Pre Fetched {total_prefetched} endpoints")
+            if not is_development(config_instance=config_instance):
+                total_prefetched = await prefetch_endpoints()
+                app_logger.info(f"Cache Pre Fetched {total_prefetched} endpoints")
 
             #  wait for one hour 30 minutes then prefetch urls again
             await asyncio.sleep(60 * 60 * 1.5)
@@ -386,6 +389,27 @@ async def v1_gateway(request: Request, path: str):
     await email_process.send_message_to_devs(**_args)
     return JSONResponse(content={"status": False, "message": mess}, status_code=404,
                         headers={"Content-Type": "application/json"})
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # CACHE MANAGEMENT UTILS
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+@app.get("/open-api")
+async def open_api(request: Request):
+    """
+        will return a json open api specification for the main API
+    :param request:
+    :return:
+    """
+    spec_url = "https://raw.githubusercontent.com/MJ-API-Development/open-api-spec/main/open-api.json"
+    response = await redis_cache.get(key=spec_url, timeout=1)
+    if response is None:
+        data = await async_client.get(url=spec_url, timeout=60*5)
+        if data:
+            response = data.json()
+            await redis_cache.set(key=spec_url, value=response, ttl=60 * 60)
+
+    return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
