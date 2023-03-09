@@ -321,7 +321,7 @@ async def startup_event():
     asyncio.create_task(setup_cf_firewall())
     asyncio.create_task(backup_cf_firewall_data())
     asyncio.create_task(update_api_keys_background_task())
-    asyncio.create_task(prefetch())
+    # asyncio.create_task(prefetch())  Disabled Prefetching will launch when we have more cores
     asyncio.create_task(process_credit_queue())
     asyncio.create_task(email_process.process_message_queues())
     asyncio.create_task(clean_up_memcache())
