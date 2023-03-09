@@ -8,6 +8,7 @@ from sendgrid.helpers.mail import Mail
 
 class Emailer:
     """
+        NOTE The Message Queue will send out messages every 5 minutes
         Emailing Class, used to create email servers and manage sending emails
     """
 
@@ -15,6 +16,7 @@ class Emailer:
         self.email_queues = Queue(maxsize=1024)
         self._dev_messages_queue = Queue(maxsize=100)
         self.server = SendGridAPIClient(config_instance().EMAIL_SETTINGS.SENDGRID_API_KEY)
+        self._queue_interval_seconds: int = 60*5
 
     @staticmethod
     async def create_message(sender_email: str, recipient_email: str,
@@ -45,7 +47,7 @@ class Emailer:
             if not self.email_queues.empty():
                 message = await self.email_queues.get()
                 await email_process.send_email(message)
-            await asyncio.sleep(10 * 60)
+            await asyncio.sleep(self._queue_interval_seconds)
 
     async def send_subscription_welcome_email(self, sender_email: str,
                                               recipient_email: str,
@@ -87,19 +89,23 @@ class Emailer:
         message_dict = dict(sender_email=sender_email, recipient_email=recipient_email, subject=subject, html=html)
         await self.put_message_on_queue(message=await self.create_message(**message_dict))
 
-    async def send_message_to_devs(self, message_type: str, request, api_key: str, priority: int = 1):
+    async def send_message_to_devs(self, message_type: str, request, api_key: str, priority: int = 1,
+                                   templates: EmailTemplate = EmailTemplate):
         """
 
+        :param templates:
         :param priority:
         :param request:
         :param message_type:
         :param api_key:
         :return:
         """
+        subject = f"Logs from EOD-STOCK-API.SITE : {message_type}"
         _request = dict(url=request.url, headers=request.headers, method=request.method)
-
-        await self._dev_messages_queue.put(dict(message_type=message_type, request=_request, api_key=api_key,
-                                                priority=priority))
+        html = await templates.devs_message(**_request)
+        message_dict = dict(sender_email="noreply@eod-stock-api.site", recipient_email="support@eod-stock-api.site",
+                            subject=subject, html=html)
+        await self.put_message_on_queue(message=await self.create_message(**message_dict))
 
 
 email_process = Emailer()
