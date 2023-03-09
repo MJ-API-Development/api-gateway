@@ -179,14 +179,17 @@ async def global_request_throttle(request, call_next):
         # This will throttle the connection if there is too many requests coming from only one edge server
         ip_rate_limits[ip_address] = RateLimit()
 
+    is_throttled = False
     if await ip_rate_limits[ip_address].is_limit_exceeded():
         await ip_rate_limits[ip_address].ip_throttle(request=request)
+        is_throttled = True
     # continue with the request
     # either the request was throttled and now proceeding or all is well
     response = await call_next(request)
 
     # attaching a header showing throttling was in effect and proceeding
-    response.headers["X-Request-Throttled-Time"] = f"{ip_rate_limits[ip_address].throttle_duration} Seconds"
+    if is_throttled:
+        response.headers["X-Request-Throttled-Time"] = f"{ip_rate_limits[ip_address].throttle_duration} Seconds"
     return response
 
 
