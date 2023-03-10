@@ -205,6 +205,7 @@ async def check_ip(request, call_next):
     """
     # TODO consider adding header checks
     cfConnectingIP = request.headers.get("cf-connecting-ip")
+    app_logger.info(f"Checking connecting IP: {cfConnectingIP}")
     if cfConnectingIP and await cf_firewall.check_ip_range(ip=cfConnectingIP):
         response = await call_next(request)
     elif is_development(config_instance=config_instance):
