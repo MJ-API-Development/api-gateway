@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import hmac
 import itertools
+import socket
 from json.decoder import JSONDecodeError
 
 from fastapi import FastAPI, Request, HTTPException
@@ -196,7 +197,7 @@ async def global_request_throttle(request, call_next):
 
 
 @app.middleware(middleware_type="http")
-async def check_ip(request, call_next):
+async def check_ip(request: Request, call_next):
     """
         determines if call originate from cloudflare
     :param request:
@@ -204,7 +205,7 @@ async def check_ip(request, call_next):
     :return:
     """
     # TODO consider adding header checks
-    cfConnectingIP = request.url.host
+    cfConnectingIP = socket.gethostbyname(request.url.hostname)
     app_logger.info(f"Checking connecting IP: {cfConnectingIP}")
     if cfConnectingIP and await cf_firewall.check_ip_range(ip=cfConnectingIP):
         response = await call_next(request)
