@@ -205,7 +205,7 @@ async def check_ip(request: Request, call_next):
     :return:
     """
     # TODO consider adding header checks
-    cfConnectingIP = socket.gethostbyname(request.url.hostname)
+    cfConnectingIP = socket.gethostbyname(request.client.host)
     app_logger.info(f"Checking connecting IP: {cfConnectingIP}")
     if cfConnectingIP and await cf_firewall.check_ip_range(ip=cfConnectingIP):
         response = await call_next(request)
