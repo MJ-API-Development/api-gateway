@@ -163,7 +163,6 @@ if is_development(config_instance=config_instance):
 else:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["gateway.eod-stock-api.site"])
 
-
 # Rate Limit per IP Must Always Match The Rate Limit of the Highest Plan Allowed
 rate_limit, _, duration = RateLimits().ENTERPRISE
 
@@ -239,11 +238,13 @@ async def validate_request_middleware(request, call_next):
     _cf_secret_token = request.headers.get('X-SECRET-TOKEN')
     _secret = config_instance().CLOUDFLARE_SETTINGS.CLOUDFLARE_SECRET_KEY
     if not (_secret and _cf_secret_token):
-        mess: dict[str, str] = {"message": "Request Is not valid please ensure you are routing this request through our gateway"}
+        mess: dict[str, str] = {
+            "message": "Request Is not valid please ensure you are routing this request through our gateway"}
         response = JSONResponse(content=mess, status_code=404)
 
     elif not hmac.compare_digest(_cf_secret_token.encode('utf-8'), _secret.encode('utf-8')):
-        mess: dict[str, str] = {"message": "Request Is not valid please ensure you are routing this request through our gateway"}
+        mess: dict[str, str] = {
+            "message": "Request Is not valid please ensure you are routing this request through our gateway"}
         response = JSONResponse(content=mess, status_code=404)
     else:
         path = str(request.url.path)
@@ -343,7 +344,7 @@ async def startup_event():
 # # # # # # # # # # # # # # API GATEWAY
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-@app.get("/api/v1/{path:path}",  include_in_schema=True)
+@app.get("/api/v1/{path:path}", include_in_schema=True)
 @auth_and_rate_limit
 async def v1_gateway(request: Request, path: str):
     """
@@ -416,7 +417,25 @@ async def open_api(request: Request):
     spec_url = "https://raw.githubusercontent.com/MJ-API-Development/open-api-spec/main/open-api.json"
     response = await redis_cache.get(key=spec_url, timeout=1)
     if response is None:
-        data = await async_client.get(url=spec_url, timeout=60*5)
+        data = await async_client.get(url=spec_url, timeout=60 * 5)
+        if data:
+            response = data.json()
+            await redis_cache.set(key=spec_url, value=response, ttl=60 * 60)
+
+    return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
+
+
+@app.get("/")
+async def home_route(request: Request):
+    """
+        will return a json open api specification for the main API
+    :param request:
+    :return:
+    """
+    spec_url = "https://raw.githubusercontent.com/MJ-API-Development/open-api-spec/main/open-api.json"
+    response = await redis_cache.get(key=spec_url, timeout=1)
+    if response is None:
+        data = await async_client.get(url=spec_url, timeout=60 * 5)
         if data:
             response = data.json()
             await redis_cache.set(key=spec_url, value=response, ttl=60 * 60)
@@ -450,10 +469,12 @@ async def delete_resource_from_cache(request: Request):
     except Exception as e:
         app_logger.error(msg=str(e))
 
+
 # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
 # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
 
 from src.management_api.routes import admin_app
+
 # TODO Admin Application Mounting Point should eventually Move this
 # To its own separate Application
 app.mount(path="/_admin", app=admin_app)

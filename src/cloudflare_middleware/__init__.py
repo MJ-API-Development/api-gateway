@@ -19,6 +19,7 @@ DEFAULT_IPV4 = ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31
                 '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22']
 
 route_regexes = {
+                "home": "^/$",
                 "all_general_fundamentals": "^/api/v1/fundamental/general$",
                  "annual_or_quarterly_statements_by_stock_code": "^/api/v1/fundamentals/financial-statements/by-term/(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])\.(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])/[a-zA-Z0-9_-]{1,16}/\b(?:annual|quarterly)\b(?<!/)$",
                  "company_financial_statements_by_year": "^/api/v1/fundamentals/financial-statements/exchange-year/[a-zA-Z0-9]{16}/\\d{4}$",
