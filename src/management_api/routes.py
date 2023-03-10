@@ -173,8 +173,8 @@ async def create_update_user(request: Request, user_data: dict[str, str | int | 
             session.merge(user_instance)
 
         session.commit()
-    headers = get_headers()
-    return JSONResponse(content=user_instance.to_dict(), status_code=201, headers=headers)
+        headers = await get_headers(user_data=user_instance.to_dict())
+        return JSONResponse(content=user_instance.to_dict(), status_code=201, headers=headers)
 
 
 @admin_app.api_route(path="/user/<path:path>", methods=["GET", "DELETE"], include_in_schema=True)
