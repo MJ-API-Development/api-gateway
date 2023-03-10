@@ -204,7 +204,7 @@ async def check_ip(request: Request, call_next):
     :param call_next:
     :return:
     """
-    # TODO consider adding header checks
+    # THE Cloudflare IP Address is a client in this case as its the one sending the requests
     cfConnectingIP = socket.gethostbyname(request.client.host)
     app_logger.info(f"Checking connecting IP: {cfConnectingIP}")
     if cfConnectingIP and await cf_firewall.check_ip_range(ip=cfConnectingIP):
