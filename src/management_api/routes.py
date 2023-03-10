@@ -1,11 +1,13 @@
 import asyncio
 import datetime
+import hashlib
+import hmac
 
 from fastapi import Request, FastAPI, HTTPException, Form
 from fastapi.responses import JSONResponse
 
 from src import paypal_utils
-from src.authentication import authenticate_admin, authenticate_app, authenticate_cloudflare_workers
+from src.authentication import authenticate_app, authenticate_cloudflare_workers
 from src.config import config_instance
 from src.const import UUID_LEN
 from src.database.account.account import Account
@@ -22,6 +24,66 @@ management_logger = init_logger("management_aoi")
 admin_app = FastAPI()
 
 
+async def create_header(secret_key: str, user_data: dict) -> str:
+    data_str = ','.join([str(user_data[k]) for k in sorted(user_data.keys())])
+    signature = hmac.new(secret_key.encode(), data_str.encode(), hashlib.sha256).hexdigest()
+    return f"{data_str},{signature}"
+
+
+async def get_headers(user_data: dict) -> dict[str, str]:
+    secret_key = config_instance().SECRET_KEY
+    signature = await create_header(secret_key, user_data)
+    return {'X-SIGNATURE': signature, 'Content-Type': 'application/json'}
+
+
+def verify_signature(request):
+    secret_key = config_instance().SECRET_KEY
+    data_str, signature_header = request.headers.get('X-SIGNATURE', '')
+    _signature = hmac.new(secret_key.encode(), data_str, hashlib.sha256).hexdigest()
+    return signature_header == _signature
+
+
+async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
+    """
+    Function to check if user is authorized to access a specific route.
+    Assume there is a map containing routes which normal users can access
+    and routes that only admin users can access.
+    :param uuid: The user's UUID.
+    :param path: The path being accessed.
+    :param method: The HTTP method being used.
+    :return: True if the user is authorized, False otherwise.
+    """
+    # Map containing routes accessible by normal users and admin users
+    user_routes = {
+        "/home": ["GET"],
+        "/dashboard": ["GET", "PUT"],
+        "/profile": ["GET", "PUT"]
+    }
+    admin_routes = {
+        "/admin/users": ["GET", "POST", "PUT", "DELETE"],
+        "/admin/subscriptions": ["GET", "POST", "PUT", "DELETE"],
+        "/admin/plans": ["GET", "POST", "PUT", "DELETE"]
+    }
+
+    if uuid is None or path is None or method is None:
+        return False
+
+    # Retrieve the user data based on the UUID
+    with next(sessions) as session:
+        user = await Account.get_by_uuid(uuid=uuid, session=session)
+
+    # Check if the user is authorized to access the path
+    if user is None:
+        return False
+
+    if path in user_routes and method in user_routes[path]:
+        return True
+
+    if user.is_admin and path in admin_routes and method in admin_routes[path]:
+        # Check if the path is accessible only to admin users
+        return True
+
+
 @admin_app.api_route(path="/_ipn/paypal/billing/subscription-created-activated",
                      methods=["GET", "POST"], include_in_schema=False)
 async def paypal_subscription_activated_ipn(request: Request):
@@ -34,7 +96,7 @@ async def paypal_subscription_activated_ipn(request: Request):
 
 
 @admin_app.api_route(path="/_ipn/paypal/<path:path>", methods=["GET", "POST"], include_in_schema=True)
-@authenticate_admin
+@authenticate_app
 async def paypal_ipn(request: Request, custom_data: str = Form(...), txn_type: str = Form(...)):
     paypal_url = 'https://ipnpb.paypal.com/cgi-bin/webscr'
     paypal_token = 'your_paypal_token_here'
@@ -111,7 +173,7 @@ async def create_update_user(request: Request, user_data: dict[str, str | int | 
             session.merge(user_instance)
 
         session.commit()
-
+    headers = get_headers()
     return JSONResponse(content=user_instance.to_dict(), status_code=201, headers=headers)
 
 
@@ -126,7 +188,6 @@ async def get_delete_user(request: Request, path: str):
     """
     management_logger.info("Get Delete USER")
 
-    headers = {'Content-Type': 'application/json'}
     uuid: str = path
     with next(sessions) as session:
         user_instance: Account = await Account.get_by_uuid(uuid=uuid, session=session)
@@ -135,17 +196,60 @@ async def get_delete_user(request: Request, path: str):
             session.merge(user_instance)
             session.commit()
             # TODO send a Goodbye Email
-            return JSONResponse(content={'message': 'successfully deleted user'},
+            message = {'message': 'successfully deleted user'}
+            headers = await get_headers(user_data=message)
+            return JSONResponse(content=message,
                                 status_code=201,
                                 headers=headers)
 
         elif request.method == "GET":
             # TODO Send a Login Email
+            headers = await get_headers(user_data=user_instance.to_dict())
             return JSONResponse(content=user_instance.to_dict(),
                                 status_code=201,
                                 headers=headers)
 
-    return JSONResponse(content={'message': 'deleted user'}, status_code=201)
+    message = {'message': 'successfully deleted user'}
+    headers = await get_headers(user_data=message)
+    return JSONResponse(content={'message': 'deleted user'}, status_code=201, headers=headers)
+
+
+@admin_app.api_route(path="/user/<path:path>", methods=["GET", "DELETE"], include_in_schema=True)
+@authenticate_app
+async def authentication(request: Request, path: str):
+    """
+        used to update a user
+    :param request:
+    :param path:
+    :return:
+    """
+    management_logger.info("Login user")
+    if path == "login":
+
+        user_data: dict[str, str] = request.json()
+        email = user_data.get("email")
+        password = user_data.get("password")
+
+        with next(sessions) as session:
+            user_instance = await Account.login(username=email, password=password, session=session)
+            if user_instance:
+                payload = dict(status=True, payload=user_instance.to_dict(), message="successfully logged in")
+            else:
+                payload = dict(status=False, payload={}, message="user not found")
+        headers = await get_headers(user_data=user_instance.to_dict())
+        return JSONResponse(content=payload, status_code=200, headers=headers)
+
+    elif path == "check_authorization":
+        user_data = request.json()
+        uuid = user_data.get("uuid")
+        path = user_data.get("path")
+        method = user_data.get("method")
+
+        is_authorized = await check_authorization(uuid=uuid, path=path, method=method)
+        message = "user is authorized" if is_authorized else "user not authorized"
+        payload = dict(status=True, payload=dict(is_authorized=is_authorized), message=message)
+        headers = await get_headers(user_data=payload)
+        return JSONResponse(content=payload, status_code=200, headers=headers)
 
 
 @admin_app.api_route(path="/subscriptions", methods=["POST", "PUT"], include_in_schema=True)
@@ -227,7 +331,7 @@ async def subscriptions(request: Request, subscription_data: dict[str, str | int
 
 
 @admin_app.api_route(path="/subscription/<path:path>", methods=["GET", "DELETE"], include_in_schema=True)
-@authenticate_admin
+@authenticate_app
 async def get_delete_subscriptions(request: Request, path: str):
     """
         retrieve or delete subscriptions
@@ -241,7 +345,7 @@ async def get_delete_subscriptions(request: Request, path: str):
 
 
 @admin_app.api_route(path="/paypal/subscriptions", methods=["GET"], include_in_schema=True)
-@authenticate_admin
+@authenticate_app
 async def create_paypal_subscriptions(request: Request):
     """
 

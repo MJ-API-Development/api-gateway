@@ -1,3 +1,4 @@
+import hashlib
 from functools import wraps
 from fastapi import Request
 import hmac
@@ -34,12 +35,8 @@ def authenticate_app(func):
     async def wrapper(*args, **kwargs):
         # TODO find a way of authenticating APPS, not BASED on API, Suggestion SECRET_KEY
         request: Request = kwargs.get('request')
-        api_key = request.query_params.get('api_key')
-        with next(sessions) as session:
-            api_keys_model = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
-            account_instance = await Account.get_by_uuid(api_keys_model.uuid, session=session)
-            if account_instance.is_admin:
-                return await func(*args, **kwargs)
+        if await verify_signature(request=request):
+            return await func(*args, **kwargs)
 
         raise NotAuthorized(message="This Resource is only Accessible to Admins")
 
@@ -59,3 +56,11 @@ def authenticate_cloudflare_workers(func):
             raise NotAuthorized(message="Invalid X-SECRET-KEY header")
 
     return _cloudflare_auth
+
+
+async def verify_signature(request):
+    secret_key = config_instance().SECRET_KEY
+    request_header = request.headers.get('X-SIGNATURE', '')
+    data_str, signature_header = request_header.split('|')
+    _signature = hmac.new(secret_key.encode(), data_str, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(_signature, signature_header)
