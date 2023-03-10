@@ -95,9 +95,9 @@ class CloudFlareFirewall:
         _uri = 'https://api.cloudflare.com/client/v4/ips'
         _headers = {'Accept': 'application/json', 'X-Auth-Email': EMAIL}
         response = await send_request(api_url=_uri, headers=_headers)
+
         ipv4_cidrs = response.get('result', {}).get('ipv4_cidrs', DEFAULT_IPV4)
         ipv6_cidrs = response.get('result', {}).get('ipv6_cidrs', [])
-
         return ipv4_cidrs, ipv6_cidrs
 
     @redis_cached_ttl(ttl=60 * 30)

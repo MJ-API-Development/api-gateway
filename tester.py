@@ -1,5 +1,6 @@
 import ipaddress
 import re
+
 # Define the list of IP ranges
 ip_ranges = ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18',
              '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17',
@@ -7,9 +8,12 @@ ip_ranges = ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.
 
 
 # Function to check if an IP address falls within one of the IPV4 ranges
-def check_ip_range(path: str):
-    print(re.match(pattern="^/api/v1/exchanges/$", string="/api/v1/exchanges/"))
+def output(*args, **kwargs):
+    print(f"{args=}")
+    print(f"{kwargs=}")
 
 
 if __name__ == '__main__':
-    check_ip_range("/api/v1/exchanges")
+    my_tuple = (1, 2, 3)
+    my_dict = {'one': 1, 'two': 2}
+    output(my_tuple, **my_dict)

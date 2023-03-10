@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import hmac
 import itertools
 from json.decoder import JSONDecodeError
 
@@ -203,8 +204,8 @@ async def check_ip(request, call_next):
     :return:
     """
     # TODO consider adding header checks
-    ip = request.client.host
-    if await cf_firewall.check_ip_range(ip=ip):
+    cfConnectingIP = request.headers.get("cf-connecting-ip")
+    if cfConnectingIP and await cf_firewall.check_ip_range(ip=cfConnectingIP):
         response = await call_next(request)
     elif is_development(config_instance=config_instance):
         response = await call_next(request)
@@ -221,6 +222,8 @@ async def check_ip(request, call_next):
 @app.middleware(middleware_type="http")
 async def validate_request_middleware(request, call_next):
     """
+        checks if the request comes from cloudflare through a token
+        also check if the path is going to a good path / route if not it blocks the request
     :param request:
     :param call_next:
     :return:
@@ -231,30 +234,36 @@ async def validate_request_middleware(request, call_next):
     # pre-processing that you need.
 
     # TODO - consider reintegrating signature verification
-    signature = request.headers.get('X-Signature')
-    _secret = config_instance().SECRET_KEY
-    _url: str = str(request.url)
-    # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
-    # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
-    path = request.url.path
-    if _url.startswith("https://gateway.eod-stock-api.site/_admin"):
-        response = await call_next(request)
+    _cf_secret_token = request.headers.get('X-SECRET-TOKEN')
+    _secret = config_instance().CLOUDFLARE_SETTINGS.CLOUDFLARE_SECRET_KEY
+    if not (_secret and _cf_secret_token):
+        mess: dict[str, str] = {"message": "Request Is not valid please ensure you are routing this request through our gateway"}
+        response = JSONResponse(content=mess, status_code=404)
 
-    elif await cf_firewall.path_matches_known_route(path=path):
-        response = await call_next(request)
+    elif not hmac.compare_digest(_cf_secret_token.encode('utf-8'), _secret.encode('utf-8')):
+        mess: dict[str, str] = {"message": "Request Is not valid please ensure you are routing this request through our gateway"}
+        response = JSONResponse(content=mess, status_code=404)
     else:
-        app_logger.warning(msg=f"""
-            Potentially Bad Route Being Accessed
-                    request.url = {request.url}
+        path = str(request.url.path)
+        _url = str(request.url)
+        if _url.startswith("https://gateway.eod-stock-api.site/_admin"):
+            response = await call_next(request)
 
-                    request.method = {request.method}
-
-                    request.headers = {request.headers}
-
-                    request_time = {datetime.datetime.now().isoformat(sep="-")}
-        """)
-        # raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
-        response = JSONResponse(content="Request Does not Match Any Known Route", status_code=404)
+        elif await cf_firewall.path_matches_known_route(path=path):
+            response = await call_next(request)
+        else:
+            app_logger.warning(msg=f"""
+                Potentially Bad Route Being Accessed
+                        request.url = {request.url}
+    
+                        request.method = {request.method}
+    
+                        request.headers = {request.headers}
+    
+                        request_time = {datetime.datetime.now().isoformat(sep="-")}
+            """)
+            # raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
+            response = JSONResponse(content="Request Does not Match Any Known Route", status_code=404)
 
     # This code will be executed for each outgoing response
     # before it is sent back to the client.
@@ -276,6 +285,7 @@ async def startup_event():
         app_logger.info("Application Setup")
         ipv4_cdrs, ipv6_cdrs = await cf_firewall.get_ip_ranges()
         cf_firewall.ip_ranges = list(itertools.chain(*[ipv4_cdrs, ipv6_cdrs]))
+
         app_logger.info(f"CF Firewall Added {len(ipv4_cdrs)} IP-V4 & {len(ipv6_cdrs)} IP-V6 Addresses")
         # This will restore a list of known Bad IP Addresses
         await cf_firewall.restore_bad_addresses_from_redis()
@@ -438,6 +448,8 @@ async def delete_resource_from_cache(request: Request):
     except Exception as e:
         app_logger.error(msg=str(e))
 
+# TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
+# TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
 
 from src.management_api.routes import admin_app
 # TODO Admin Application Mounting Point should eventually Move this

@@ -282,7 +282,8 @@ async def admin_startup():
 @authenticate_cloudflare_workers
 async def init_cloudflare_gateway(request: Request):
     """
-
+        **init_cloudflare_gateway**
+                initialize cloudflare
     :param request:
     :return:
     """
