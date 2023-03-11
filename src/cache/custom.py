@@ -172,6 +172,7 @@ class Cache:
         async def _async_redis_get(get: Callable, _key: str):
             """async stub to fetch data from redis"""
             return get(_key)
+
         try:
             # Wait for the result of the memcache lookup with a timeout
             value = await asyncio.wait_for(self._get_memcache(key=key), timeout=timeout)
@@ -223,7 +224,7 @@ class Cache:
     async def delete_memcache_key(self, key):
         """ Note: do not use pop"""
         with self._lock:
-           del self._cache[key]
+            del self._cache[key]
 
     async def delete_key(self, key):
         await self.delete_redis_key(key)
@@ -252,7 +253,7 @@ class Cache:
             # Time has progressed past the allocated time for this resource
             # NOTE for those values where timeout is not previously declared the Assumption is 1 Hour
             value = self._cache[key]
-            if value.get('timestamp', 0) + value.get('ttl', 60*60) < now:
+            if value.get('timestamp', 0) + value.get('ttl', 60 * 60) < now:
                 await self.delete_memcache_key(key=key)
                 t_c += 1
         return t_c
@@ -269,4 +270,3 @@ class Cache:
                                                            port=redis_port,
                                                            password=password,
                                                            poolsize=5)
-
