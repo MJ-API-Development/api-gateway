@@ -3,7 +3,7 @@ import datetime
 import hashlib
 import hmac
 
-from fastapi import Request, FastAPI, HTTPException, Form
+from fastapi import Request, FastAPI, HTTPException, Form, Path
 from fastapi.responses import JSONResponse
 
 from src import paypal_utils
@@ -21,7 +21,23 @@ from src.utils.my_logger import init_logger
 from src.utils.utils import create_id, calculate_invoice_date_range
 
 management_logger = init_logger("management_aoi")
-admin_app = FastAPI()
+admin_app = FastAPI(
+    title="EOD-STOCK-API - ADMINISTRATOR",
+    description="Administration Application for EOD Stock API",
+    version="1.0.0",
+    terms_of_service="https://www.eod-stock-api.site/terms",
+    contact={
+        "name": "EOD-STOCK-API",
+        "url": "/contact",
+        "email": "info@eod-stock-api.site"
+    },
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    },
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 
 async def create_header(secret_key: str, user_data: dict) -> str:
@@ -95,7 +111,7 @@ async def paypal_subscription_activated_ipn(request: Request):
     return JSONResponse(content={'status': 'success'}, status_code=201)
 
 
-@admin_app.api_route(path="/_ipn/paypal/<path:path>", methods=["GET", "POST"], include_in_schema=True)
+@admin_app.api_route(path="/_ipn/paypal/{path}", methods=["GET", "POST"], include_in_schema=True)
 @authenticate_app
 async def paypal_ipn(request: Request, custom_data: str = Form(...), txn_type: str = Form(...)):
     paypal_url = 'https://ipnpb.paypal.com/cgi-bin/webscr'
@@ -153,7 +169,7 @@ async def create_update_user(request: Request, user_data: dict[str, str | int | 
                 session.add(user_instance)
                 account_dict = dict()
                 # this will schedule an account confirmation email to be sent
-                # TODO look at this
+                # TODO look at this - Make this an ephemeral link, it other words it should expire after sometime
                 verification_link = f"https://gateway.eod-stock-api.site/_admin/account/confirm/{account_dict.get('uuid')}"
 
                 sender_email = config_instance().EMAIL_SETTINGS.ADMIN
@@ -177,7 +193,7 @@ async def create_update_user(request: Request, user_data: dict[str, str | int | 
         return JSONResponse(content=user_instance.to_dict(), status_code=201, headers=headers)
 
 
-@admin_app.api_route(path="/user/<path:path>", methods=["GET", "DELETE"], include_in_schema=True)
+@admin_app.api_route(path="/user/{path}", methods=["GET", "DELETE"], include_in_schema=True)
 @authenticate_app
 async def get_delete_user(request: Request, path: str):
     """
@@ -214,7 +230,7 @@ async def get_delete_user(request: Request, path: str):
     return JSONResponse(content={'message': 'deleted user'}, status_code=201, headers=headers)
 
 
-@admin_app.api_route(path="/user/<path:path>", methods=["GET", "DELETE"], include_in_schema=True)
+@admin_app.api_route(path="/auth/{path}", methods=["GET", "POST", "DELETE"], include_in_schema=True)
 @authenticate_app
 async def authentication(request: Request, path: str):
     """
@@ -330,7 +346,7 @@ async def subscriptions(request: Request, subscription_data: dict[str, str | int
         return JSONResponse(content=subscription_instance.to_dict(), status_code=201, headers=headers)
 
 
-@admin_app.api_route(path="/subscription/<path:path>", methods=["GET", "DELETE"], include_in_schema=True)
+@admin_app.api_route(path="/subscription/{path}", methods=["GET", "DELETE"], include_in_schema=True)
 @authenticate_app
 async def get_delete_subscriptions(request: Request, path: str):
     """

@@ -154,7 +154,6 @@ async def handle_json_decode_error(request, exc):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
     allow_headers=["*"]
 )
 
@@ -237,7 +236,14 @@ async def validate_request_middleware(request, call_next):
     # TODO - consider reintegrating signature verification
     _cf_secret_token = request.headers.get('X-SECRET-TOKEN')
     _secret = config_instance().CLOUDFLARE_SETTINGS.CLOUDFLARE_SECRET_KEY
-    if not (_secret and _cf_secret_token):
+    path = str(request.url.path)
+    _url = str(request.url)
+    # ADMIN section has its own Authentication Mechanism
+    if path.startswith("/_admin"):
+        app_logger.info(f"Routed to admin : {path}")
+        response = await call_next(request)
+
+    elif not (_secret and _cf_secret_token):
         mess: dict[str, str] = {
             "message": "Request Is not valid please ensure you are routing this request through our gateway"}
         response = JSONResponse(content=mess, status_code=404)
@@ -246,27 +252,22 @@ async def validate_request_middleware(request, call_next):
         mess: dict[str, str] = {
             "message": "Request Is not valid please ensure you are routing this request through our gateway"}
         response = JSONResponse(content=mess, status_code=404)
+    # Going to API
+    elif await cf_firewall.path_matches_known_route(path=path):
+        response = await call_next(request)
     else:
-        path = str(request.url.path)
-        _url = str(request.url)
-        if _url.startswith("https://gateway.eod-stock-api.site/_admin"):
-            response = await call_next(request)
+        app_logger.warning(msg=f"""
+            Potentially Bad Route Being Accessed
+                    request.url = {request.url}
 
-        elif await cf_firewall.path_matches_known_route(path=path):
-            response = await call_next(request)
-        else:
-            app_logger.warning(msg=f"""
-                Potentially Bad Route Being Accessed
-                        request.url = {request.url}
-    
-                        request.method = {request.method}
-    
-                        request.headers = {request.headers}
-    
-                        request_time = {datetime.datetime.now().isoformat(sep="-")}
-            """)
-            # raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
-            response = JSONResponse(content="Request Does not Match Any Known Route", status_code=404)
+                    request.method = {request.method}
+
+                    request.headers = {request.headers}
+
+                    request_time = {datetime.datetime.now().isoformat(sep="-")}
+        """)
+        # raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
+        response = JSONResponse(content="Request Does not Match Any Known Route", status_code=404)
 
     # This code will be executed for each outgoing response
     # before it is sent back to the client.
@@ -274,6 +275,7 @@ async def validate_request_middleware(request, call_next):
     # post-processing that you need.
     # _out_signature = await cf_firewall.create_signature(response=response, secret=_secret)
     # response.headers.update({'X-Signature': _out_signature})
+    app_logger.info("Cleared Request Validation")
     return response
 
 
@@ -338,6 +340,20 @@ async def startup_event():
     asyncio.create_task(process_credit_queue())
     asyncio.create_task(email_process.process_message_queues())
     asyncio.create_task(clean_up_memcache())
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # ADMIN APP
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+# TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
+# TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
+
+from src.management_api.routes import admin_app
+
+# TODO Admin Application Mounting Point should eventually Move this
+# To its own separate Application
+app.mount(path="/_admin", app=admin_app)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -469,12 +485,3 @@ async def delete_resource_from_cache(request: Request):
     except Exception as e:
         app_logger.error(msg=str(e))
 
-
-# TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
-# TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
-
-from src.management_api.routes import admin_app
-
-# TODO Admin Application Mounting Point should eventually Move this
-# To its own separate Application
-app.mount(path="/_admin", app=admin_app)
