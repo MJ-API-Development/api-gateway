@@ -221,8 +221,9 @@ class Cache:
             self._redis_client.delete(key)
 
     async def delete_memcache_key(self, key):
+        """ Note: do not use pop"""
         with self._lock:
-            self._cache.pop(key)
+           del self._cache[key]
 
     async def delete_key(self, key):
         await self.delete_redis_key(key)
@@ -247,9 +248,10 @@ class Cache:
         now = time.monotonic()
         # Cache Items are no more than 1024 therefore this is justifiable
         t_c = 0
-        for key, value in self._cache.items():
+        for key in list(self._cache.keys()):
             # Time has progressed past the allocated time for this resource
             # NOTE for those values where timeout is not previously declared the Assumption is 1 Hour
+            value = self._cache[key]
             if value.get('timestamp', 0) + value.get('ttl', 60*60) < now:
                 await self.delete_memcache_key(key=key)
                 t_c += 1
