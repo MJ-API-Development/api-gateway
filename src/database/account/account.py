@@ -78,7 +78,8 @@ class Account(Base):
     async def login(cls, username: str, password: str, session: sessionType) -> Self:
         # Get the user with the specified email address
         user: Account = session.query(cls).filter(cls.email == username).first()
-        if user.is_deleted:
+        if (user is None) or user.is_deleted:
+
             raise NotAuthorized(message="You are not authorized to login to this account")
         # Hash the entered password using a secure hash function (SHA-256 in this example)
         password_hash = hashlib.sha256(password.encode()).hexdigest()

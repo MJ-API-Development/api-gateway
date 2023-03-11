@@ -5,9 +5,11 @@ import hmac
 
 from fastapi import Request, FastAPI, HTTPException, Form, Path
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from src import paypal_utils
 from src.authentication import authenticate_app, authenticate_cloudflare_workers
+from src.authorize.authorize import NotAuthorized
 from src.config import config_instance
 from src.const import UUID_LEN
 from src.database.account.account import Account
@@ -40,10 +42,26 @@ admin_app = FastAPI(
 )
 
 
+class LoginData(BaseModel):
+    email: str
+    password: str
+
+
+class AuthorizationRequest(BaseModel):
+    """
+        uuid: the client uuid
+        path: the path in the admin app the client wants access to
+        method = method of request which will be used to access the path
+    """
+    uid: str
+    path: str
+    method: str
+
+
 async def create_header(secret_key: str, user_data: dict) -> str:
     data_str = ','.join([str(user_data[k]) for k in sorted(user_data.keys())])
-    signature = hmac.new(secret_key.encode(), data_str.encode(), hashlib.sha256).hexdigest()
-    return f"{data_str},{signature}"
+    signature = hmac.new(secret_key.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
+    return f"{data_str}|{signature}"
 
 
 async def get_headers(user_data: dict) -> dict[str, str]:
@@ -55,8 +73,10 @@ async def get_headers(user_data: dict) -> dict[str, str]:
 def verify_signature(request):
     secret_key = config_instance().SECRET_KEY
     data_str, signature_header = request.headers.get('X-SIGNATURE', '')
-    _signature = hmac.new(secret_key.encode(), data_str, hashlib.sha256).hexdigest()
-    return signature_header == _signature
+    _signature = hmac.new(secret_key.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
+    result = hmac.compare_digest(signature_header, _signature)
+    print(f"Request Validation Result : {result}")
+    return result
 
 
 async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
@@ -230,42 +250,48 @@ async def get_delete_user(request: Request, path: str):
     return JSONResponse(content={'message': 'deleted user'}, status_code=201, headers=headers)
 
 
-@admin_app.api_route(path="/auth/{path}", methods=["GET", "POST", "DELETE"], include_in_schema=True)
+@admin_app.api_route(path="/auth/login", methods=["POST"], include_in_schema=True)
 @authenticate_app
-async def authentication(request: Request, path: str):
+async def login(login_data: LoginData):
     """
         used to update a user
-    :param request:
-    :param path:
+
+    :param login_data:
     :return:
     """
-    management_logger.info("Login user")
-    if path == "login":
+    user_data: dict[str, str] = login_data.dict()
+    email = user_data.get("email")
+    password = user_data.get("password")
+    with next(sessions) as session:
+        user_instance = await Account.login(username=email, password=password, session=session)
+        if user_instance:
+            payload = dict(status=True, payload=user_instance.to_dict(), message="successfully logged in")
+        else:
+            payload = dict(status=False, payload={}, message="user not found")
+    headers = await get_headers(user_data=user_instance.to_dict())
+    return JSONResponse(content=payload, status_code=200, headers=headers)
 
-        user_data: dict[str, str] = request.json()
-        email = user_data.get("email")
-        password = user_data.get("password")
 
-        with next(sessions) as session:
-            user_instance = await Account.login(username=email, password=password, session=session)
-            if user_instance:
-                payload = dict(status=True, payload=user_instance.to_dict(), message="successfully logged in")
-            else:
-                payload = dict(status=False, payload={}, message="user not found")
-        headers = await get_headers(user_data=user_instance.to_dict())
-        return JSONResponse(content=payload, status_code=200, headers=headers)
+@admin_app.api_route(path="/auth/authorize", methods=["POST"], include_in_schema=True)
+@authenticate_app
+async def authorization(auth_data: AuthorizationRequest):
+    """
+    **authorization**
+        authorizes requests to specific resources within the admin application
 
-    elif path == "check_authorization":
-        user_data = request.json()
-        uuid = user_data.get("uuid")
-        path = user_data.get("path")
-        method = user_data.get("method")
+    :param auth_data: authorization data
+    :return: payload : dict[str, str| bool dict[str|bool]], status_code
+    """
+    user_data = auth_data.dict()
+    uuid = user_data.get("uuid")
+    path = user_data.get("path")
+    method = user_data.get("method")
 
-        is_authorized = await check_authorization(uuid=uuid, path=path, method=method)
-        message = "user is authorized" if is_authorized else "user not authorized"
-        payload = dict(status=True, payload=dict(is_authorized=is_authorized), message=message)
-        headers = await get_headers(user_data=payload)
-        return JSONResponse(content=payload, status_code=200, headers=headers)
+    is_authorized = await check_authorization(uuid=uuid, path=path, method=method)
+    message = "user is authorized" if is_authorized else "user not authorized"
+    payload = dict(status=True, payload=dict(is_authorized=is_authorized), message=message)
+    headers = await get_headers(user_data=payload)
+    return JSONResponse(content=payload, status_code=200, headers=headers)
 
 
 @admin_app.api_route(path="/subscriptions", methods=["POST", "PUT"], include_in_schema=True)
@@ -279,7 +305,7 @@ async def subscriptions(request: Request, subscription_data: dict[str, str | int
     """
     management_logger.info("Subscriptions")
     headers = {'Content-Type': 'application:json'}
-
+    # TODO Refactor this method to include request authorization headers
     with next(sessions) as session:
 
         if request.method == "POST":
@@ -369,7 +395,6 @@ async def create_paypal_subscriptions(request: Request):
     :return:
     """
     response = await paypal_service.create_paypal_billing_plans()
-    print(response)
     return JSONResponse(content=response, status_code=201)
 
 
@@ -411,3 +436,12 @@ async def init_cloudflare_gateway(request: Request):
         api_keys = await ApiKeyModel.get_all_active(session=session)
         payload = [api_key.to_dict() for api_key in api_keys]
     return JSONResponse(content=dict(status=True, api_keys=payload), status_code=200)
+
+
+@admin_app.exception_handler(NotAuthorized)
+async def admin_not_authorized(request: Request, exc: NotAuthorized):
+    user_data = {"message": exc.message}
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=user_data, headers=await get_headers(user_data))

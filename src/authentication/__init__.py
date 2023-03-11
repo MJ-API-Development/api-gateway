@@ -36,6 +36,7 @@ def authenticate_app(func):
         # TODO find a way of authenticating APPS, not BASED on API, Suggestion SECRET_KEY
         request: Request = kwargs.get('request')
         if await verify_signature(request=request):
+            print("Signature Verified")
             return await func(*args, **kwargs)
 
         raise NotAuthorized(message="This Resource is only Accessible to Admins")
@@ -61,6 +62,8 @@ def authenticate_cloudflare_workers(func):
 async def verify_signature(request):
     secret_key = config_instance().SECRET_KEY
     request_header = request.headers.get('X-SIGNATURE', '')
-    data_str, signature_header = tuple(request_header.split('|'))
-    _signature = hmac.new(secret_key.encode(), data_str, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(_signature, signature_header)
+    data_str, signature_header = request_header.split('|')
+    _signature = hmac.new(secret_key.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
+    result = hmac.compare_digest(_signature, signature_header)
+    print(f"comparison result is {result}")
+    return result
