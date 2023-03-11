@@ -390,7 +390,7 @@ async def get_delete_subscriptions(request: Request, path: str):
 @authenticate_app
 async def create_paypal_subscriptions(request: Request):
     """
-
+        TODO - create a PayPal Subscriptions Model
     :param request:
     :return:
     """
@@ -427,6 +427,9 @@ async def admin_startup():
 @authenticate_cloudflare_workers
 async def init_cloudflare_gateway(request: Request):
     """
+        # TODO - if possible the gateway worker could use this endpoint to update the apikeys held
+        at the gateway -
+
         **init_cloudflare_gateway**
                 initialize cloudflare
     :param request:
@@ -434,14 +437,14 @@ async def init_cloudflare_gateway(request: Request):
     """
     with next(sessions) as session:
         api_keys = await ApiKeyModel.get_all_active(session=session)
-        payload = [api_key.to_dict() for api_key in api_keys]
+        payload = [api_key.to_dict()['api_key'] for api_key in api_keys]
+    #     TODO maybe important to hash the keys here so that comparison is made with hashes rather than actual keys
     return JSONResponse(content=dict(status=True, api_keys=payload), status_code=200)
 
 
 @admin_app.exception_handler(NotAuthorized)
 async def admin_not_authorized(request: Request, exc: NotAuthorized):
     user_data = {"message": exc.message}
-
     return JSONResponse(
         status_code=exc.status_code,
         content=user_data, headers=await get_headers(user_data))
