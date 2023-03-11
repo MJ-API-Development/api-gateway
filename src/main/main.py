@@ -3,6 +3,7 @@ import datetime
 import hmac
 import itertools
 import socket
+import time
 from json.decoder import JSONDecodeError
 
 from fastapi import FastAPI, Request, HTTPException
@@ -205,6 +206,7 @@ async def check_ip(request: Request, call_next):
     # THE Cloudflare IP Address is a client in this case as its the one sending the requests
     cfConnectingIP = socket.gethostbyname(request.client.host)
     app_logger.info(f"Checking connecting IP: {cfConnectingIP}")
+
     if cfConnectingIP and await cf_firewall.check_ip_range(ip=cfConnectingIP):
         response = await call_next(request)
     elif is_development(config_instance=config_instance):
@@ -238,7 +240,17 @@ async def validate_request_middleware(request, call_next):
     _secret = config_instance().CLOUDFLARE_SETTINGS.CLOUDFLARE_SECRET_KEY
     path = str(request.url.path)
     _url = str(request.url)
-    # ADMIN section has its own Authentication Mechanism
+    start_time = time.monotonic()
+    if await cf_firewall.is_request_malicious(headers=request.headers, url=request.url, body=str(request.body)):
+        """
+            If we are here then there is something wrong with the request 
+        """
+        mess: dict[str, str] = {
+            "message": "Request Contains Suspicious patterns cannot continue"}
+        response = JSONResponse(content=mess, status_code=404)
+        return response
+    end_time = time.monotonic()
+    print(f"elapsed time : {end_time - start_time}")
     if path.startswith("/_admin"):
         app_logger.info(f"Routed to admin : {path}")
         response = await call_next(request)

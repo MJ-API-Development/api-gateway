@@ -27,5 +27,5 @@ def init_logger(name: str = "eod-stock-api"):
     :return:
     """
     is_development = socket.gethostname() == config_instance().DEVELOPMENT_SERVER_NAME
-    logger = AppLogger(name=name, is_file_logger=not is_development, log_level=logging.INFO)
+    logger = AppLogger(name=name, is_file_logger=not is_development, log_level=logging.CRITICAL)
     return logger.logger

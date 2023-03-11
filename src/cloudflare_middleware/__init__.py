@@ -1,3 +1,5 @@
+import collections
+
 from starlette.requests import Request
 
 from src.config import config_instance
@@ -19,59 +21,88 @@ DEFAULT_IPV4 = ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31
                 '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22']
 
 route_regexes = {
-                "home": "^/$",
-                "all_general_fundamentals": "^/api/v1/fundamental/general$",
-                 "annual_or_quarterly_statements_by_stock_code": "^/api/v1/fundamentals/financial-statements/by-term/(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])\.(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])/[a-zA-Z0-9_-]{1,16}/\b(?:annual|quarterly)\b(?<!/)$",
-                 "company_financial_statements_by_year": "^/api/v1/fundamentals/financial-statements/exchange-year/[a-zA-Z0-9]{16}/\\d{4}$",
-                 "company_fundamental_data_complete": "^/api/v1/fundamental/company/[a-zA-Z0-9]{128}(?<!/)$",
-                 "complete_stock_list": "^/api/v1/stocks$",
-                 "create_exchange": "^/api/v1/exchange$",
-                 "create_stocks_bulk": "^/api/v1/stocks$",
-                 "fetch_exchange_list": "^/api/v1/exchanges$",
-                 "fetch_listed_companies": "^/api/v1/exchange/listed-companies/[a-zA-Z0-9]{128}(?<!/)$",
-                 "fetch_listed_stocks": "^/api/v1/exchange/listed-stocks/[a-zA-Z0-9]{1,16}(?<!/)$",
-                 "fetch_listed_stocks_by_exchange_code": "^/api/v1/stocks/exchange/code/[a-zA-Z0-9]{1,16}(?<!/)$",
-                 "fetch_listed_stocks_by_exchange_id": "^/api/v1/stocks/exchange/id/[a-zA-Z0-9]{16}(?<!/)$",
-                 "fetch_stocks_listed_by_currency": "^/api/v1/stocks/currency/[a-zA-Z0-9]{1,16}(?<!/)$",
-                 "fetch_stocks_listed_in_country": "^/api/v1/stocks/country/[a-zA-Z]{1,4}(?<!/)$",
-                 "get_annual_balance_sheet": "^/api/v1/fundamentals/quarterly-balance-sheet/(20[1-2][0-9]|203[0-3])-(0[1-9]|1[0-2])-\d{2}/[a-zA-Z0-9]{1,16}(?<!/)$",
-                 "get_quarterly_balance_sheet": "^/api/v1/fundamentals/quarterly-balance-sheet/[2-9]\\d{3}-(0[1-9]|1[0-2])-\\d{2}/[a-zA-Z0-9]{1,16}(?<!/)$",
-                 "get_all_technical_indicators_in_an_exchange": "^/api/v1/fundamentals/tech-indicators-by-exchange/exchange-code/[a-zA-Z0-9]{1,16}/(20[1-9][0-9]|203[0-3])(?<!/)$",
-                 "get_bulk_eod_from_exchange_for_date_range": "^/api/v1/eod/(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])\.(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])/(?=[-_\w]{1,16}$)[-_\w]{1,16}$",
-                 "get_companies_analyst_ranks_by_exchange_an_year": "^/api/v1/fundamentals/exchange-analyst-rankings/exchange-code/[a-zA-Z0-9_-]{1,16}/\\d{4}$",
-                 "get_company_financial_statements_api": "^/api/v1/fundamentals/financial-statements/company-statement/[a-zA-Z0-9-_]{1,16}/\\d{4}$",
-                 "get_company_insider_transaction": "^/api/v1/fundamentals/company-insider-transactions/stock-code/[a-zA-Z0-9-_]{1,16}/\\d{4}$",
-                 "get_company_technical_indicators_for_a_year_given_stock_code": "^/api/v1/fundamentals/tech-indicators-by-company/stock-code/[a-zA-Z0-9-_]{1,16}/\\d{4}$",
-                 "get_company_valuation_data_for_a_year": "^/api/v1/fundamentals/company-valuations/stock-code/[a-zA-Z0-9]{1,16}/\\d{4}$",
-                 "get_contract": "^/api/v1/stocks/contract/[a-zA-Z0-9]{16}(?<!/)$",
-                 "get_eod_data_multi_stock": "^/api/v1/eod/\\d{4}-\\d{2}-\\d{2}/[a-zA-Z0-9]{16}(?<!/)$",
-                 "get_eod_data_single_stock": "^/api/v1/eod/\\d{4}-\\d{2}-\\d{2}/[a-zA-Z0-9]{16}\\.[a-zA-Z0-9]{16}(?<!/)$",
-                 "get_eod_from_to_date_for_stock": "^/api/v1/eod/\\d{4}-\\d{2}-\\d{2}\\.\\d{4}-\\d{2}-\\d{2}/[a-zA-Z0-9]{16}(?<!/)$",
-                 "get_exchange_by_code": "^/api/v1/exchange/code/[a-zA-Z0-9]{2,16}(?<!/)$",
-                 "get_exchange_by_id": "^/api/v1/exchange/id/[a-zA-Z0-9]{16}(?<!/)$",
-                 "get_exchange_with_tickers_by_code": "^/api/v1/exchange/exchange-with-tickers/code/[a-zA-Z0-9]{2,16}(?<!/)$",
-                 "get_insider_transactions_from_exchange": "^/api/v1/fundamentals/ex-technical-indicators/exchange-code/[a-zA-Z0-9]{2,16}/\\d{4}(?<!/)$",
-                 "get_news": "^/api/v1/news/article/[a-zA-Z0-9]{1,64}(?<!/)$",
-                 "get_news_articles_bounded": "^/api/v1/news/articles-bounded/(?:(?:[1-9]|[1-8][0-9]|9[0-9])(?<!0))$",
-                 "get_news_articles_by_date": "^/api/v1/news/articles-by-date/\d{4}-\d{2}-\d{2}(?<!/)$",
-                 "get_news_articles_by_publisher": "^/api/v1/news/articles-by-publisher/[a-zA-Z0-9_-]{2,128}(?<!/)$",
-                 "get_news_articles_by_ticker": "^/api/v1/news/articles-by-ticker/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "get_stock_by_code": "^/api/v1/stock/code/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "get_stock_option": "^/api/v1/stocks/options/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "get_update_delete_by_fundamental_id_company_details": "^/api/v1/fundamentals/company-details/id/[a-zA-Z0-9_-]{16}(?<!/)$",
-                 "get_update_delete_by_id_highlights": "^/api/v1/fundamentals/highlights/id/[a-zA-Z0-9_-]{16}(?<!/)$",
-                 "get_update_delete_by_id_postal_address": "^/api/v1/fundamentals/company-address/id/[a-zA-Z0-9_-]{16}(?<!/)$",
-                 "get_update_delete_by_stock_code_company_details": "^/api/v1/fundamentals/company-details/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "get_update_delete_by_stock_highlights": "^/api/v1/fundamentals/highlights/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "get_update_delete_by_stock_postal_address": "^/api/v1/fundamentals/company-address/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "get_valuations_for_companies_listed_in_exchange": "^/api/v1/fundamentals/exchange-valuations/exchange-code/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "income_statement_by_filing_date_and_stock_code": "^/api/v1/fundamentals/financial-statements/filing-date-ticker/\d{2}-\d{2}-\d{4}/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "income_statement_by_statement_id": "^/api/v1/fundamentals/financials/income-statements/[a-zA-Z0-9_-]{16}(?<!/)$",
-                 "income_statements_by_ticker_and_date_range": "^/api/v1/fundamentals/financial-statements/ticker-date-range/\d{2}-\d{2}-\d{4}.\d{2}-\d{2}-\d{4}/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "most_trending_sentiment_by_stock": "^/api/v1/sentiment/trending/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "stock_trend_setters": "^/api/v1/sentiment/trend-setters/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "stock_tweet_sentiments": "^/api/v1/sentiment/tweet/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-                 "open_api": "^/open-api$"
+    "home": "^/$",
+    "all_general_fundamentals": "^/api/v1/fundamental/general$",
+    "annual_or_quarterly_statements_by_stock_code": "^/api/v1/fundamentals/financial-statements/by-term/(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])\.(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])/[a-zA-Z0-9_-]{1,16}/\b(?:annual|quarterly)\b(?<!/)$",
+    "company_financial_statements_by_year": "^/api/v1/fundamentals/financial-statements/exchange-year/[a-zA-Z0-9]{16}/\\d{4}$",
+    "company_fundamental_data_complete": "^/api/v1/fundamental/company/[a-zA-Z0-9]{128}(?<!/)$",
+    "complete_stock_list": "^/api/v1/stocks$",
+    "create_exchange": "^/api/v1/exchange$",
+    "create_stocks_bulk": "^/api/v1/stocks$",
+    "fetch_exchange_list": "^/api/v1/exchanges$",
+    "fetch_listed_companies": "^/api/v1/exchange/listed-companies/[a-zA-Z0-9]{128}(?<!/)$",
+    "fetch_listed_stocks": "^/api/v1/exchange/listed-stocks/[a-zA-Z0-9]{1,16}(?<!/)$",
+    "fetch_listed_stocks_by_exchange_code": "^/api/v1/stocks/exchange/code/[a-zA-Z0-9]{1,16}(?<!/)$",
+    "fetch_listed_stocks_by_exchange_id": "^/api/v1/stocks/exchange/id/[a-zA-Z0-9]{16}(?<!/)$",
+    "fetch_stocks_listed_by_currency": "^/api/v1/stocks/currency/[a-zA-Z0-9]{1,16}(?<!/)$",
+    "fetch_stocks_listed_in_country": "^/api/v1/stocks/country/[a-zA-Z]{1,4}(?<!/)$",
+    "get_annual_balance_sheet": "^/api/v1/fundamentals/quarterly-balance-sheet/(20[1-2][0-9]|203[0-3])-(0[1-9]|1[0-2])-\d{2}/[a-zA-Z0-9]{1,16}(?<!/)$",
+    "get_quarterly_balance_sheet": "^/api/v1/fundamentals/quarterly-balance-sheet/[2-9]\\d{3}-(0[1-9]|1[0-2])-\\d{2}/[a-zA-Z0-9]{1,16}(?<!/)$",
+    "get_all_technical_indicators_in_an_exchange": "^/api/v1/fundamentals/tech-indicators-by-exchange/exchange-code/[a-zA-Z0-9]{1,16}/(20[1-9][0-9]|203[0-3])(?<!/)$",
+    "get_bulk_eod_from_exchange_for_date_range": "^/api/v1/eod/(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])\.(20[1-9][0-9]|203[0-3])-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])/(?=[-_\w]{1,16}$)[-_\w]{1,16}$",
+    "get_companies_analyst_ranks_by_exchange_an_year": "^/api/v1/fundamentals/exchange-analyst-rankings/exchange-code/[a-zA-Z0-9_-]{1,16}/\\d{4}$",
+    "get_company_financial_statements_api": "^/api/v1/fundamentals/financial-statements/company-statement/[a-zA-Z0-9-_]{1,16}/\\d{4}$",
+    "get_company_insider_transaction": "^/api/v1/fundamentals/company-insider-transactions/stock-code/[a-zA-Z0-9-_]{1,16}/\\d{4}$",
+    "get_company_technical_indicators_for_a_year_given_stock_code": "^/api/v1/fundamentals/tech-indicators-by-company/stock-code/[a-zA-Z0-9-_]{1,16}/\\d{4}$",
+    "get_company_valuation_data_for_a_year": "^/api/v1/fundamentals/company-valuations/stock-code/[a-zA-Z0-9]{1,16}/\\d{4}$",
+    "get_contract": "^/api/v1/stocks/contract/[a-zA-Z0-9]{16}(?<!/)$",
+    "get_eod_data_multi_stock": "^/api/v1/eod/\\d{4}-\\d{2}-\\d{2}/[a-zA-Z0-9]{16}(?<!/)$",
+    "get_eod_data_single_stock": "^/api/v1/eod/\\d{4}-\\d{2}-\\d{2}/[a-zA-Z0-9]{16}\\.[a-zA-Z0-9]{16}(?<!/)$",
+    "get_eod_from_to_date_for_stock": "^/api/v1/eod/\\d{4}-\\d{2}-\\d{2}\\.\\d{4}-\\d{2}-\\d{2}/[a-zA-Z0-9]{16}(?<!/)$",
+    "get_exchange_by_code": "^/api/v1/exchange/code/[a-zA-Z0-9]{2,16}(?<!/)$",
+    "get_exchange_by_id": "^/api/v1/exchange/id/[a-zA-Z0-9]{16}(?<!/)$",
+    "get_exchange_with_tickers_by_code": "^/api/v1/exchange/exchange-with-tickers/code/[a-zA-Z0-9]{2,16}(?<!/)$",
+    "get_insider_transactions_from_exchange": "^/api/v1/fundamentals/ex-technical-indicators/exchange-code/[a-zA-Z0-9]{2,16}/\\d{4}(?<!/)$",
+    "get_news": "^/api/v1/news/article/[a-zA-Z0-9]{1,64}(?<!/)$",
+    "get_news_articles_bounded": "^/api/v1/news/articles-bounded/(?:(?:[1-9]|[1-8][0-9]|9[0-9])(?<!0))$",
+    "get_news_articles_by_date": "^/api/v1/news/articles-by-date/\d{4}-\d{2}-\d{2}(?<!/)$",
+    "get_news_articles_by_publisher": "^/api/v1/news/articles-by-publisher/[a-zA-Z0-9_-]{2,128}(?<!/)$",
+    "get_news_articles_by_ticker": "^/api/v1/news/articles-by-ticker/[a-zA-Z0-9_-]{1,16}(?<!/)$",
+    "get_stock_by_code": "^/api/v1/stock/code/[a-zA-Z0-9_-]{1,16}(?<!/)$",
+    "get_stock_option": "^/api/v1/stocks/options/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
+    "get_update_delete_by_fundamental_id_company_details": "^/api/v1/fundamentals/company-details/id/[a-zA-Z0-9_-]{16}(?<!/)$",
+    "get_update_delete_by_id_highlights": "^/api/v1/fundamentals/highlights/id/[a-zA-Z0-9_-]{16}(?<!/)$",
+    "get_update_delete_by_id_postal_address": "^/api/v1/fundamentals/company-address/id/[a-zA-Z0-9_-]{16}(?<!/)$",
+    "get_update_delete_by_stock_code_company_details": "^/api/v1/fundamentals/company-details/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
+    "get_update_delete_by_stock_highlights": "^/api/v1/fundamentals/highlights/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
+    "get_update_delete_by_stock_postal_address": "^/api/v1/fundamentals/company-address/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
+    "get_valuations_for_companies_listed_in_exchange": "^/api/v1/fundamentals/exchange-valuations/exchange-code/[a-zA-Z0-9_-]{1,16}(?<!/)$",
+    "income_statement_by_filing_date_and_stock_code": "^/api/v1/fundamentals/financial-statements/filing-date-ticker/\d{2}-\d{2}-\d{4}/[a-zA-Z0-9_-]{1,16}(?<!/)$",
+    "income_statement_by_statement_id": "^/api/v1/fundamentals/financials/income-statements/[a-zA-Z0-9_-]{16}(?<!/)$",
+    "income_statements_by_ticker_and_date_range": "^/api/v1/fundamentals/financial-statements/ticker-date-range/\d{2}-\d{2}-\d{4}.\d{2}-\d{2}-\d{4}/[a-zA-Z0-9_-]{1,16}(?<!/)$",
+    "most_trending_sentiment_by_stock": "^/api/v1/sentiment/trending/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
+    "stock_trend_setters": "^/api/v1/sentiment/trend-setters/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
+    "stock_tweet_sentiments": "^/api/v1/sentiment/tweet/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
+    "open_api": "^/open-api$"
+}
+
+# Define dictionary of malicious patterns
+malicious_patterns = {
+    "buffer_overflow": "^\?unix:A{1000,}",  # pattern for buffer overflow attack
+    "SQL_injection": "'?([\w\s]+)'?\s*OR\s*'?([\w\s]+)'?\s*=\s*'?([\w\s]+)'?",  # pattern for SQL injection attack
+    "XSS": "<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>",  # pattern for cross-site scripting (XSS) attack
+    "path_traversal": "\.\.[\\\/]?|\.[\\\/]{2,}",  # pattern for path traversal attack
+    # "LDAP_injection": "[()\\\/*\x00-\x1f\x80-\xff]",  # pattern for LDAP injection attack
+    "command_injection": ";\s*(?:sh|bash|cmd|powershell)\b",  # pattern for command injection attack
+    "file_inclusion": "(?:file|php|zip|glob|data)\s*:",  # pattern for file inclusion attack
+    "RCE_attack": "^.*\b(?:eval|assert|exec|system|passthru|popen|proc_open)\b.*$",
+    # pattern for remote code execution attack
+    "CSRF_attack": "^.*(GET|POST)\s+.*\b(?:referer|origin)\b\s*:\s*(?!https?://(?:localhost|127\.0\.0\.1)).*$",
+    # # pattern for cross-site request forgery attack
+    "SSRF_attack": "^.*\b(?:curl|wget|file_get_contents|fsockopen|stream_socket_client|socket_create)\b.*$",
+    # pattern for server-side request forgery attack
+    "CSWSH_attack": "^.*\b(?:Sec-WebSocket-Key|Sec-WebSocket-Accept)\b.*$",
+    "BRUTEFORCE_attack": "^.*\b(?:admin|root|test|user|guest)\b.*$",
+    "Credential_Stuffing": "(?:\badmin\b|\broot\b|\bpassword\b|\b123456\b|\bqwerty\b|\b123456789\b|\b12345678\b|\b1234567890\b|\b12345\b|\b1234567\b|\b12345678910\b|\b123123\b|\b1234\b|\b111111\b|\babc123\b|\bmonkey\b|\bdragon\b|\bletmein\b|\bsunshine\b|\bprincess\b|\b123456789\b|\bfootball\b|\bcharlie\b|\bshadow\b|\bmichael\b|\bjennifer\b|\bcomputer\b|\bsecurity\b|\btrustno1\b)",
+    # "Remote_File_Inclusion": "^.*(include|require)(_once)?\s*\(?\s*[\]\s*(https?:)?//",
+    "Clickjacking": '<iframe\s*src="[^"]+"|<iframe\s*src=\'[^\']+\'|\bX-Frame-Options\b\s*:\s*\b(DENY|SAMEORIGIN)\b',
+    "XML_External_Entity_Injection": "<!ENTITY[^>]*>",
+    "Server_Side_Template_Injection": "\{\{\s*(?:config|app|request|session|env|get|post|server|cookie|_|\|\|)\..+?\}\}",
+    "Business_Logic_Attacks": "^\b(?:price|discount|quantity|shipping|coupon|tax|refund|voucher|payment)\b",
+    "Javascript_injection": "(?:<\sscript\s>\s*|\blocation\b\s*=|\bwindow\b\s*.\slocation\s=|\bdocument\b\s*.\slocation\s=)",
+    "HTML_injection": "<\siframe\s|<\simg\s|<\sobject\s|<\sembed\s",
+    # "HTTP_PARAMETER_POLLUTION":  '(?<=^|&)[\w-]+=[^&]*&[\w-]+=',
+    "DOM_BASED_XSS": "(?:\blocation\b\s*.\s*(?:hash|search|pathname)|document\s*.\s*(?:location|referrer).hash)"
 }
 
 
@@ -81,11 +112,13 @@ class CloudFlareFirewall:
     """
 
     def __init__(self):
+        self._max_payload_size: int = 64
         self.cloud_flare = CloudFlare(email=EMAIL, token=TOKEN)
         self.cloud_flare.api_from_openapi(url="https://www.eod-stock-api.site/open-api")
         self.ip_ranges = []
         self.bad_addresses = set()
-        self.compiled_patterns = [re.compile(_regex) for route, _regex in route_regexes.items()]
+        self.compiled_patterns = [re.compile(_regex) for _regex in route_regexes.values()]
+        self.compiled_bad_patterns = [re.compile(pattern) for pattern in malicious_patterns.values()]
 
     @staticmethod
     async def get_ip_ranges() -> tuple[list[str], list[str]]:
@@ -101,13 +134,30 @@ class CloudFlareFirewall:
         ipv6_cidrs = response.get('result', {}).get('ipv6_cidrs', [])
         return ipv4_cidrs, ipv6_cidrs
 
-    @redis_cached_ttl(ttl=60 * 30)
     async def path_matches_known_route(self, path: str):
         """helps to filter out malicious paths based on regex matching"""
         # NOTE: that at this stage if this request is not a get then its invalid
         return any(pattern.match(path) for pattern in self.compiled_patterns)
 
-    @redis_cached_ttl(ttl=60 * 30)
+    async def is_request_malicious(self, headers: dict[str, str], url: Request.url, body: str | bytes):
+        # Check request for malicious patterns
+        if 'Content-Length' in headers and int(headers['Content-Length']) > self._max_payload_size:
+            # Request payload is too large,
+            self.bad_addresses.add(str(url))
+            return True
+
+        if body:
+            # Set default regex pattern for string-like request bodies
+            payload_regex = "^[A-Za-z0-9+/]{1024,}={0,2}$"
+            if re.match(payload_regex, body):
+                print(f"Request Matched : {payload_regex}")
+                self.bad_addresses.add(str(url))
+                return True
+
+        path = str(url.path)
+        return any((pattern.match(path) for pattern in self.compiled_bad_patterns))
+
+    # @redis_cached_ttl(ttl=60 * 30)
     async def check_ip_range(self, ip):
         """
             This IP Range check only prevents direct server access from an Actual IP Address thereby
