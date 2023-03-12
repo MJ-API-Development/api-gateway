@@ -7,7 +7,7 @@ from src.config import config_instance
 from cryptography.fernet import Fernet
 
 
-class MyFormatter(logging.Formatter):
+class EncryptedFormatter(logging.Formatter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.key: bytes = config_instance().FERNET_KEY
@@ -23,7 +23,7 @@ class MyFormatter(logging.Formatter):
 
     def encrypt_log(self, log: str):
         # encrypt the log message
-        return Fernet(self.key).encrypt(log.encode('utf-8'))
+        return Fernet(self.key).encrypt(log.encode('utf-8')).decode('utf-8')
 
     def decrypt_log(self, log: bytes) -> str:
         """decrypting logs"""
@@ -33,10 +33,8 @@ class MyFormatter(logging.Formatter):
         # Extract the encrypted message from the formatted log string
         parts = formatted_log.split(":")
         encrypted_message = parts[-1].strip()
-
         # Decrypt the message and replace the encrypted message in the formatted string with the decrypted message
-        decrypted_message = self.decrypt_log(encrypted_message.encode("utf-8")).strip()
-        parts[-1] = decrypted_message
+        parts[-1] = self.decrypt_log(encrypted_message.encode("utf-8")).strip()
         return ":".join(parts)
 
 

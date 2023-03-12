@@ -58,12 +58,33 @@ def authenticate_cloudflare_workers(func):
 
     return _cloudflare_auth
 
+#
+# async def verify_signature(request):
+#     secret_key = config_instance().SECRET_KEY
+#     request_header = request.headers.get('X-SIGNATURE', '')
+#     data_str, signature_header = request_header.split('|')
+#     _signature = hmac.new(secret_key.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
+#     result = hmac.compare_digest(_signature, signature_header)
+#     print(f"comparison result is {result}")
+#     return result
 
-async def verify_signature(request):
+async def create_header(secret_key: str, user_data: dict) -> str:
+    data_str = ','.join([str(user_data[k]) for k in sorted(user_data.keys())])
+    signature = hmac.new(secret_key.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
+    return f"{data_str}|{signature}"
+
+
+async def get_headers(user_data: dict) -> dict[str, str]:
     secret_key = config_instance().SECRET_KEY
-    request_header = request.headers.get('X-SIGNATURE', '')
-    data_str, signature_header = request_header.split('|')
+    signature = await create_header(secret_key, user_data)
+    return {'X-SIGNATURE': signature, 'Content-Type': 'application/json'}
+
+
+def verify_signature(request):
+    secret_key = config_instance().SECRET_KEY
+    data_str, signature_header = request.headers.get('X-SIGNATURE', '')
     _signature = hmac.new(secret_key.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
-    result = hmac.compare_digest(_signature, signature_header)
-    print(f"comparison result is {result}")
+    result = hmac.compare_digest(signature_header, _signature)
+    print(f"Request Validation Result : {result}")
     return result
+
