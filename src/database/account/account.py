@@ -28,7 +28,6 @@ class Account(Base):
     is_admin: bool = Column(Boolean, default=False)
     is_deleted: bool = Column(Boolean, default=False)
     apikey = relationship('ApiKeyModel', uselist=False, foreign_keys=[ApiKeyModel.uuid])
-    subscription = relationship('Subscriptions', uselist=False, foreign_keys=[Subscriptions.uuid])
 
     @classmethod
     def create_if_not_exists(cls):
@@ -58,7 +57,6 @@ class Account(Base):
         self.password_hash = hashlib.sha256(plaintext_password.encode()).hexdigest()
 
     def to_dict(self) -> dict[str, str]:
-        if self.subscription.is_active():
             return {
                 "uuid": self.uuid,
                 "first_name": self.first_name,
@@ -67,17 +65,7 @@ class Account(Base):
                 "email": self.email,
                 "cell": self.cell,
                 "is_admin": self.is_admin,
-                "subscription": self.subscription.to_dict()
-            }
-        else:
-            return {
-                "uuid": self.uuid,
-                "first_name": self.first_name,
-                "second_name": self.second_name,
-                "surname": self.surname,
-                "email": self.email,
-                "cell": self.cell,
-                "is_admin": self.is_admin,
+                "apikey": self.apikey,
             }
 
 

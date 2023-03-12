@@ -73,6 +73,11 @@ async def create_subscription(subscription_data: SubscriptionCreate):
         sub_dict = dict(sender_email=ADMIN, recipient_email=account.email, client_name=account.name,
                         plan_name=plan.name)
         await email_process.send_subscription_welcome_email(**sub_dict)
+        payload = dict(status=True,
+                       payload=subscription_instance.to_dict(),
+                       message="successfully created a new subscription")
+        _headers = await get_headers(user_data=payload)
+        return JSONResponse(content=payload, status_code=201, headers=_headers)
 
 
 @subscriptions_router.api_route(path="/subscriptions", methods=["PUT"], include_in_schema=True)
@@ -109,15 +114,93 @@ async def update_subscription(subscription_data: SubscriptionUpdate):
     return JSONResponse(content=payload, status_code=201, headers=_headers)
 
 
-@subscriptions_router.api_route(path="/subscription/{path}", methods=["GET", "DELETE"], include_in_schema=True)
+@subscriptions_router.api_route(path="/subscription/{subscription_id}", methods=["DELETE"], include_in_schema=True)
 @authenticate_app
-async def get_delete_subscriptions(request: Request, path: str):
+async def de_activate_subscriptions(subscription_id: str):
     """
         retrieve or delete subscriptions
         the delete action may usually mark records as deleted
-    :param path:
-    :param request:
+    :param subscription_id {str}:
+
     :return:
     """
-    sub_logger.info("Delete Subscriptions")
-    return JSONResponse(content={'message': 'deleted subscription'}, status_code=201)
+    with next(sessions) as session:
+        subscription_instance: Subscriptions = await Subscriptions.get_by_subscription_id(
+            subscription_id=subscription_id,
+            session=session)
+
+        if subscription_instance:
+            subscription_instance.set_is_active(is_active=False)
+            session.merge(subscription_instance)
+            session.commit()
+            payload = dict(status=True, payload=subscription_instance.to_dict(),
+                           message='successfully deactivated subscription')
+
+            _headers = await get_headers(user_data=payload)
+
+        else:
+            payload = dict(status=True, payload={},
+                           message='Successfully retrieved subscription')
+            _headers = await get_headers(user_data=payload)
+
+    return JSONResponse(content=payload, status_code=200, headers=_headers)
+
+
+@subscriptions_router.api_route(path="/subscription/{subscription_id}", methods=["DELETE"], include_in_schema=True)
+@authenticate_app
+async def re_activate_subscriptions(subscription_id: str):
+    """
+    **re_activate_subscription**
+        re-activate previously de-activated subscription
+    :param subscription_id {str}:
+
+    :return:
+    """
+    with next(sessions) as session:
+        subscription_instance: Subscriptions = await Subscriptions.get_by_subscription_id(
+            subscription_id=subscription_id,
+            session=session)
+
+        if subscription_instance:
+            subscription_instance.set_is_active(is_active=True)
+            session.merge(subscription_instance)
+            session.commit()
+            payload = dict(status=True, payload=subscription_instance.to_dict(),
+                           message='successfully activated subscription')
+
+            _headers = await get_headers(user_data=payload)
+
+        else:
+            payload = dict(status=True, payload={},
+                           message='Successfully retrieved subscription')
+            _headers = await get_headers(user_data=payload)
+
+    return JSONResponse(content=payload, status_code=200, headers=_headers)
+
+
+@subscriptions_router.api_route(path="/subscription/{subscription_id}", methods=["DELETE"], include_in_schema=True)
+@authenticate_app
+async def get_subscription(subscription_id: str):
+    """
+    **get_subscription**
+
+        retrieve or delete subscriptions
+        the delete action may usually mark records as deleted
+
+    :param subscription_id: id of the subscription to fetch
+
+    :return:
+    """
+    with next(sessions) as session:
+        subscription_instance = await Subscriptions.get_by_subscription_id(subscription_id=subscription_id,
+                                                                           session=session)
+        if subscription_instance:
+            payload = dict(status=True, payload=subscription_instance.to_dict(),
+                           message='Successfully retrieved subscription')
+            _headers = await get_headers(user_data=payload)
+        else:
+            payload = dict(status=True, payload={},
+                           message='Successfully retrieved subscription')
+            _headers = await get_headers(user_data=payload)
+
+    return JSONResponse(content=payload, status_code=200, headers=_headers)

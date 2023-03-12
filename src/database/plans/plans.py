@@ -22,6 +22,15 @@ class Subscriptions(Base):
     approval_url: str = Column(String(255))
     paypal_id: str = Column(String(255))
 
+    def set_is_active(self, is_active: bool):
+        """
+            **set_is_active**
+                used to activate or de-activate subscription
+        :return:
+        """
+        self._is_active = is_active
+
+
     @classmethod
     def create_if_not_exists(cls):
         if not inspect(engine).has_table(cls.__tablename__):
