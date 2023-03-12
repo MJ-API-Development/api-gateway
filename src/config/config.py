@@ -108,6 +108,7 @@ class Settings(BaseSettings):
     EMAIL_SETTINGS: EmailSettings = EmailSettings()
     PAYPAL_SETTINGS: PayPalSettings = PayPalSettings()
     CLOUDFLARE_SETTINGS: CloudflareSettings = CloudflareSettings()
+    FERNET_KEY: bytes = Field(..., env="FERNET_KEY")
 
     class Config:
         case_sensitive = True
