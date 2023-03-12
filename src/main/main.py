@@ -11,11 +11,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import JSONResponse
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from sqlalchemy import true
+from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
     load_plans_by_api_keys, RateLimitExceeded
-from src.cache.cache import redis_cache
+from src.cache.cache import redis_cache, redis_cached_ttl
 from src.cloudflare_middleware import CloudFlareFirewall
 from src.config import config_instance
 from src.database.apikeys.keys import cache_api_keys
@@ -47,7 +49,7 @@ description = """
 """
 
 app = FastAPI(
-    title="EOD-STOCK-API - GATEWAY",
+    title="EOD-STOCK-API - API GATEWAY",
     description=description,
     version="1.0.0",
     terms_of_service="https://www.eod-stock-api.site/terms",
@@ -481,14 +483,18 @@ async def home_route():
 
     return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
+redoc_html = get_redoc_html(
+    openapi_url='/open-api',
+    title=app.title + " - ReDoc",
+    redoc_js_url="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js",
+    with_google_fonts=true
+)
 
-@app.get("/redoc", include_in_schema=False)
+
+@app.get("/redoc", include_in_schema=False, response_class=HTMLResponse)
+@redis_cached_ttl(ttl=60 * 60 * 1)
 async def redoc_html():
-    return get_redoc_html(
-        openapi_url='/open-api',
-        title=app.title + " - ReDoc",
-        redoc_js_url="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js",
-    )
+    return redoc_html
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #

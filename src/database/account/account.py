@@ -10,6 +10,7 @@ from src.authorize.authorize import NotAuthorized
 from src.const import UUID_LEN, NAME_LEN, EMAIL_LEN, STR_LEN, CELL_LEN
 from src.database.apikeys.keys import ApiKeyModel
 from src.database.database_sessions import Base, sessionType, engine
+from src.database.plans.plans import Subscriptions
 
 
 class Account(Base):
@@ -27,6 +28,7 @@ class Account(Base):
     is_admin: bool = Column(Boolean, default=False)
     is_deleted: bool = Column(Boolean, default=False)
     apikey = relationship('ApiKeyModel', uselist=False, foreign_keys=[ApiKeyModel.uuid])
+    subscription = relationship('Subscriptions', uselist=False, foreign_keys=[Subscriptions.uuid])
 
     @classmethod
     def create_if_not_exists(cls):
@@ -56,15 +58,28 @@ class Account(Base):
         self.password_hash = hashlib.sha256(plaintext_password.encode()).hexdigest()
 
     def to_dict(self) -> dict[str, str]:
-        return {
-            "uuid": self.uuid,
-            "first_name": self.first_name,
-            "second_name": self.second_name,
-            "surname": self.surname,
-            "email": self.email,
-            "cell": self.cell,
-            "is_admin": self.is_admin
-        }
+        if self.subscription.is_active():
+            return {
+                "uuid": self.uuid,
+                "first_name": self.first_name,
+                "second_name": self.second_name,
+                "surname": self.surname,
+                "email": self.email,
+                "cell": self.cell,
+                "is_admin": self.is_admin,
+                "subscription": self.subscription.to_dict()
+            }
+        else:
+            return {
+                "uuid": self.uuid,
+                "first_name": self.first_name,
+                "second_name": self.second_name,
+                "surname": self.surname,
+                "email": self.email,
+                "cell": self.cell,
+                "is_admin": self.is_admin,
+            }
+
 
     @classmethod
     async def get_by_uuid(cls, uuid: str, session: sessionType) -> Self:
@@ -86,3 +101,12 @@ class Account(Base):
         # Compare the hashed password to the stored hash using secrets.compare_digest,
         # and return either the user object or None depending on the result
         return user if user and secrets.compare_digest(password_hash, user.password) else None
+
+    @classmethod
+    async def fetch_all(cls, session: sessionType) -> list[Self]:
+        """
+            Returns a complete list of users
+        :param session:
+        :return:
+        """
+        return session.query(cls).all()

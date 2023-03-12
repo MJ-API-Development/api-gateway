@@ -8,7 +8,6 @@ class AccountUpdate(BaseModel):
     first_name: str | None = None
     second_name: str | None = None
     surname: str | None = None
-    password: str | None = None
     email: str | None = None
     cell: str | None = None
     is_admin: bool | None = None
@@ -34,4 +33,10 @@ class UserResponseSchema(BaseModel):
 
 class DeleteResponseSchema(BaseModel):
     status: bool = True
+    message: str
+
+
+class UsersResponseSchema(BaseModel):
+    status: bool = True
+    payload: list[AccountUpdate | None]
     message: str

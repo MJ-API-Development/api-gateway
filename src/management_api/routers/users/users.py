@@ -5,9 +5,11 @@ from src.config import config_instance
 from src.const import UUID_LEN
 from src.database.account.account import Account
 from src.database.database_sessions import sessions
+from src.database.plans.plans import Subscriptions
 from src.email.email import email_process
 from src.management_api.admin.authentication import authenticate_app, get_headers
-from src.management_api.models.users import AccountUpdate, AccountCreate, UserResponseSchema, DeleteResponseSchema
+from src.management_api.models.users import AccountUpdate, AccountCreate, UserResponseSchema, DeleteResponseSchema, \
+    UsersResponseSchema
 
 from src.utils.my_logger import init_logger
 from src.utils.utils import create_id
@@ -122,3 +124,45 @@ async def delete_user(uuid: str) -> DeleteResponseSchema:
         return JSONResponse(content=message,
                             status_code=201,
                             headers=headers)
+
+
+@users_router.api_route(path="/users", methods=["GET"], include_in_schema=True)
+@authenticate_app
+async def get_all_users() -> UsersResponseSchema:
+    """
+        **delete_user**
+            will return a complete list of all users of the api
+
+    :return: dict of status: boolean, list of users, and message indicating how the operation went
+    """
+    with next(sessions) as session:
+        users_list: Account = await Account.fetch_all(session=session)
+        users = [AccountUpdate.from_orm(user) for user in users_list]
+        payload = dict(status=True, payload=[user.dict() for user in users], message='successfully fetched all user')
+
+        headers = await get_headers(user_data=payload)
+        return JSONResponse(content=payload,
+                            status_code=201,
+                            headers=headers)
+
+
+@users_router.api_route(path="/users/subscription/{status}", methods=["GET"], include_in_schema=True)
+@authenticate_app
+async def get_users_by_subscription_status(status: str) -> UsersResponseSchema:
+    """
+        **delete_user**
+            will return a complete list of all users of the api
+
+    :return: dict of status: boolean, list of users, and message indicating how the operation went
+    """
+    with next(sessions) as session:
+        users_list: Account = await Account.fetch_all(session=session)
+        users_list = [user for user in users_list if (user.subscription.is_active() and not user.is_deleted)]
+        payload = dict(status=True, payload=[user.dict() for user in users_list],
+                       message='successfully fetched all user')
+
+        headers = await get_headers(user_data=payload)
+        return JSONResponse(content=payload,
+                            status_code=201,
+                            headers=headers)
+
