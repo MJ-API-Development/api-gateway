@@ -3,7 +3,7 @@ from functools import wraps
 from fastapi import Request
 import hmac
 from src.config import config_instance
-from src.database.account.account import Account
+
 from src.database.apikeys.keys import ApiKeyModel, sessions
 from src.authorize.authorize import NotAuthorized
 
@@ -58,6 +58,7 @@ def authenticate_cloudflare_workers(func):
 
     return _cloudflare_auth
 
+
 #
 # async def verify_signature(request):
 #     secret_key = config_instance().SECRET_KEY
@@ -80,11 +81,10 @@ async def get_headers(user_data: dict) -> dict[str, str]:
     return {'X-SIGNATURE': signature, 'Content-Type': 'application/json'}
 
 
-def verify_signature(request):
+async def verify_signature(request):
     secret_key = config_instance().SECRET_KEY
     data_str, signature_header = request.headers.get('X-SIGNATURE', '')
     _signature = hmac.new(secret_key.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
     result = hmac.compare_digest(signature_header, _signature)
     print(f"Request Validation Result : {result}")
     return result
-

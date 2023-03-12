@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from fastapi import APIRouter
-from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from src.config import config_instance
@@ -118,7 +117,7 @@ async def update_subscription(subscription_data: SubscriptionUpdate):
 @authenticate_app
 async def de_activate_subscriptions(subscription_id: str):
     """
-        retrieve or delete subscriptions
+        de activate subscriptions
         the delete action may usually mark records as deleted
     :param subscription_id {str}:
 
@@ -152,7 +151,8 @@ async def re_activate_subscriptions(subscription_id: str):
     """
     **re_activate_subscription**
         re-activate previously de-activated subscription
-    :param subscription_id {str}:
+
+    :param subscription_id: id of the subscription to activate
 
     :return:
     """
