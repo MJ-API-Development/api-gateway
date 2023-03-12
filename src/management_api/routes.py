@@ -29,7 +29,7 @@ admin_app = FastAPI(
     terms_of_service="https://www.eod-stock-api.site/terms",
     contact={
         "name": "EOD-STOCK-API",
-        "url": "/contact",
+        "url": "https://www.eod-stock-api.site/contact",
         "email": "info@eod-stock-api.site"
     },
     license_info={
@@ -43,10 +43,8 @@ admin_app = FastAPI(
 
 @admin_app.api_route(path="/plans", methods=["GET"], include_in_schema=True)
 @authenticate_app
-async def get_client_plans(request: Request):
+async def get_client_plans():
     """
-
-    :param request:
     :return:
     """
     with next(sessions) as session:
@@ -68,7 +66,7 @@ async def admin_startup():
 
 @admin_app.api_route(path="/cloudflare/init-gateway", methods=["GET", "POST"], include_in_schema=False)
 @authenticate_cloudflare_workers
-async def init_cloudflare_gateway(request: Request):
+async def init_cloudflare_gateway():
     """
         # TODO - if possible the gateway worker could use this endpoint to update the apikeys held
         at the gateway -

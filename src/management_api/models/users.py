@@ -8,9 +8,9 @@ class AccountUpdate(BaseModel):
     first_name: str | None = None
     second_name: str | None = None
     surname: str | None = None
+    password: str | None = None
     email: str | None = None
     cell: str | None = None
-    password_hash: str | None = None
     is_admin: bool | None = None
     is_deleted: bool | None = None
 
@@ -24,3 +24,14 @@ class AccountCreate(BaseModel):
     password: str
     is_admin: bool | None = False
     is_deleted: bool | None = False
+
+
+class UserResponseSchema(BaseModel):
+    status: bool
+    payload: Optional[AccountUpdate]
+    message: str
+
+
+class DeleteResponseSchema(BaseModel):
+    status: bool = True
+    message: str

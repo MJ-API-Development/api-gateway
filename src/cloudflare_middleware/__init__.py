@@ -73,7 +73,9 @@ route_regexes = {
     "most_trending_sentiment_by_stock": "^/api/v1/sentiment/trending/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
     "stock_trend_setters": "^/api/v1/sentiment/trend-setters/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
     "stock_tweet_sentiments": "^/api/v1/sentiment/tweet/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
-    "open_api": "^/open-api$"
+    "open_api": "^/open-api$",
+    "redoc": "^/redoc$",
+    "swagger": "^/swagger$",
 }
 
 # Define dictionary of malicious patterns

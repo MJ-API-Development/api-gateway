@@ -8,8 +8,10 @@ from json.decoder import JSONDecodeError
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import JSONResponse
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from starlette.staticfiles import StaticFiles
 
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
     load_plans_by_api_keys, RateLimitExceeded
@@ -51,22 +53,25 @@ app = FastAPI(
     terms_of_service="https://www.eod-stock-api.site/terms",
     contact={
         "name": "EOD-STOCK-API",
-        "url": "/contact",
+        "url": "https://www.eod-stock-api.site/contact",
         "email": "info@eod-stock-api.site"
     },
     license_info={
         "name": "Apache 2.0",
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url=None,
+    openapi_url=None,
+    redoc_url=None
 )
+
+
+# app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # ERROR HANDLERS
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_error_handler(request: Request, exc: RateLimitExceeded):
@@ -255,6 +260,11 @@ async def validate_request_middleware(request, call_next):
         app_logger.info(f"Routed to admin : {path}")
         response = await call_next(request)
 
+    elif path in ["/open-api", "/redoc", "/docs", "/"]:
+        """letting through specific URLS for Documentation"""
+        app_logger.info(f"Routing to Documentations : {path}")
+        response = await call_next(request)
+
     elif not (_secret and _cf_secret_token):
         mess: dict[str, str] = {
             "message": "Request Is not valid please ensure you are routing this request through our gateway"}
@@ -353,6 +363,7 @@ async def startup_event():
     asyncio.create_task(email_process.process_message_queues())
     asyncio.create_task(clean_up_memcache())
 
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # ADMIN APP
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -361,7 +372,7 @@ async def startup_event():
 # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
 # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
 
-from src.admin_app.routes import admin_app
+from src.management_api.routes import admin_app
 
 # TODO Admin Application Mounting Point should eventually Move this
 # To its own separate Application
@@ -435,7 +446,7 @@ async def v1_gateway(request: Request, path: str):
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # CACHE MANAGEMENT UTILS
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-@app.get("/open-api")
+@app.get("/open-api", include_in_schema=False)
 async def open_api(request: Request):
     """
         will return a json open api specification for the main API
@@ -453,8 +464,8 @@ async def open_api(request: Request):
     return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
 
-@app.get("/")
-async def home_route(request: Request):
+@app.get("/", include_in_schema=True)
+async def home_route():
     """
         will return a json open api specification for the main API
     :param request:
@@ -469,6 +480,15 @@ async def home_route(request: Request):
             await redis_cache.set(key=spec_url, value=response, ttl=60 * 60)
 
     return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
+
+
+@app.get("/redoc", include_in_schema=False)
+async def redoc_html():
+    return get_redoc_html(
+        openapi_url='/open-api',
+        title=app.title + " - ReDoc",
+        redoc_js_url="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js",
+    )
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -496,4 +516,3 @@ async def delete_resource_from_cache(request: Request):
             await redis_cache.delete_key(key=resource_key)
     except Exception as e:
         app_logger.error(msg=str(e))
-

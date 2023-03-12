@@ -7,7 +7,7 @@ from src.database.account.account import Account
 from src.database.database_sessions import sessions
 from src.email.email import email_process
 from src.management_api.admin.authentication import authenticate_app, get_headers
-from src.management_api.models.users import AccountUpdate, AccountCreate
+from src.management_api.models.users import AccountUpdate, AccountCreate, UserResponseSchema, DeleteResponseSchema
 
 from src.utils.my_logger import init_logger
 from src.utils.utils import create_id
@@ -18,13 +18,14 @@ users_logger = init_logger("users_router")
 
 @users_router.api_route(path="/user", methods=["POST"], include_in_schema=True)
 @authenticate_app
-async def create_user(user_data: AccountCreate):
+async def create_user(user_data: AccountCreate) -> UserResponseSchema:
     """
     **create user**
         used to create new user record
+
     :param user_data: data containing user information
 
-    :return:
+    :return: status payload, message -> see Responses
     """
 
     with next(sessions) as session:
@@ -58,10 +59,14 @@ async def create_user(user_data: AccountCreate):
 
 @users_router.api_route(path="/user", methods=["PUT"], include_in_schema=True)
 @authenticate_app
-async def update_user(user_data: AccountUpdate):
+async def update_user(user_data: AccountUpdate) -> UserResponseSchema:
     """
     **update_user**
         given some fields on user_data update the user instance with those fields
+
+    param: user_data: {dict}
+
+    return: status: {boolean}, payload: {dict}, message: {string}
     """
     with next(sessions) as session:
         uuid = user_data.uuid
@@ -81,11 +86,12 @@ async def update_user(user_data: AccountUpdate):
 
 @users_router.api_route(path="/user/{uuid}", methods=["GET"], include_in_schema=True)
 @authenticate_app
-async def get_user(uuid: str):
+async def get_user(uuid: str) -> UserResponseSchema:
     """
-        used to update a user
+    **get_user**
+        will retrieve user data
     :param uuid:
-    :return:
+    :return: UserResponseSchema
     """
     with next(sessions) as session:
         user_instance: Account = await Account.get_by_uuid(uuid=uuid, session=session)
@@ -97,14 +103,14 @@ async def get_user(uuid: str):
     return JSONResponse(content=payload, status_code=201, headers=headers)
 
 
-@users_router.api_route(path="/user/{path}", methods=["DELETE"], include_in_schema=True)
+@users_router.api_route(path="/user/{uuid}", methods=["DELETE"], include_in_schema=True)
 @authenticate_app
-async def delete_user(path: str):
+async def delete_user(uuid: str) -> DeleteResponseSchema:
     """
-
-    :return:
+        **delete_user**
+            used to mark a user as deleted
+    :return: DeleteResponseSchema
     """
-    uuid: str = path
     with next(sessions) as session:
         user_instance: Account = await Account.get_by_uuid(uuid=uuid, session=session)
         user_instance.is_deleted = True
