@@ -9,6 +9,7 @@ from src.authorize.authorize import NotAuthorized
 
 
 # TODO find a way to cache the results of this methods
+
 def authenticate_admin(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
