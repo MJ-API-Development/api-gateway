@@ -20,8 +20,9 @@ users_logger = init_logger("users_router")
 @authenticate_app
 async def create_user(user_data: AccountCreate):
     """
+    **create user**
         used to create new user record
-    :param user_data:
+    :param user_data: data containing user information
 
     :return:
     """
