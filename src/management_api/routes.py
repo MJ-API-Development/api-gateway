@@ -17,6 +17,8 @@ from src.management_api.routers.logs.logs import log_router
 from src.management_api.routers.paypal.paypal import paypal_router
 from src.management_api.routers.subscriptions.subscriptions import subscriptions_router
 from src.management_api.routers.users.users import users_router
+
+from src.management_api.admin.authentication import get_headers
 from src.utils.my_logger import init_logger
 
 management_logger = init_logger("management_aoi")
@@ -37,7 +39,6 @@ admin_app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
-
 
 
 @admin_app.api_route(path="/plans", methods=["GET"], include_in_schema=True)

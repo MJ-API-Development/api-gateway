@@ -13,6 +13,7 @@ from src.utils.my_logger import init_logger
 users_router = APIRouter()
 users_logger = init_logger("users_router")
 
+
 @users_router.api_route(path="/user", methods=["POST", "PUT"], include_in_schema=True)
 @authenticate_app
 async def create_update_user(request: Request, user_data: dict[str, str | int | bool]):

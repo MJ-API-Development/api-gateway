@@ -361,7 +361,7 @@ async def startup_event():
 # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
 # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
 
-from src.management_api.routes import admin_app
+from src.admin_app.routes import admin_app
 
 # TODO Admin Application Mounting Point should eventually Move this
 # To its own separate Application

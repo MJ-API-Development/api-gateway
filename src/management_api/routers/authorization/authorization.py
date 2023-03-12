@@ -1,28 +1,13 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
+
 from starlette.responses import JSONResponse
 
 from src.database.account.account import Account
 from src.database.database_sessions import sessions
 from src.management_api.admin.authentication import authenticate_app, get_headers
+from src.management_api.models.authentication import LoginData, AuthorizationRequest
 
 auth_router = APIRouter()
-
-
-class LoginData(BaseModel):
-    email: str
-    password: str
-
-
-class AuthorizationRequest(BaseModel):
-    """
-        uuid: the client uuid
-        path: the path in the admin app the client wants access to
-        method = method of request which will be used to access the path
-    """
-    uid: str
-    path: str
-    method: str
 
 
 async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
