@@ -245,21 +245,19 @@ async def validate_request_middleware(request, call_next):
 
     # TODO - consider reintegrating signature verification
     async def compare_tokens():
-        # TODO find a way to manipulate request headers from cloudflare at this moment
-        # i cant find the correct headers
+        """will check headers to see if the request comes from cloudflare"""
         _cf_secret_token = request.headers.get('X-SECRET-TOKEN')
         _cloudflare_token = config_instance().CLOUDFLARE_SETTINGS.CLOUDFLARE_SECRET_KEY
         app_logger.info(f"Cloudflare Headers : {request.headers}")
         if _cf_secret_token is None:
-            # Have to return False but cannot properly set header on cloudflare
-            return True
+            return False
 
         hash_func = hashlib.sha256  # choose a hash function
         secret_key = config_instance().SECRET_KEY
         digest1 = hmac.new(secret_key.encode(), _cf_secret_token.encode(), hash_func).digest()
         digest2 = hmac.new(secret_key.encode(), _cloudflare_token.encode(), hash_func).digest()
-        # return hmac.compare_digest(digest1, digest2)
-        return True
+        return hmac.compare_digest(digest1, digest2)
+        # return True
 
     path = str(request.url.path)
     _url = str(request.url)
