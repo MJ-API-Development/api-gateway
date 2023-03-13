@@ -248,7 +248,7 @@ async def validate_request_middleware(request, call_next):
         """will check headers to see if the request comes from cloudflare"""
         _cf_secret_token = request.headers.get('X-SECRET-TOKEN')
         _cloudflare_token = config_instance().CLOUDFLARE_SETTINGS.CLOUDFLARE_SECRET_KEY
-        app_logger.info(f"Cloudflare Headers : {request.headers}")
+        app_logger.info(f"Request Headers : {request.headers}")
         if _cf_secret_token is None:
             return False
 
