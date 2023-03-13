@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import hashlib
 import hmac
 import itertools
 import socket
@@ -8,12 +9,11 @@ from json.decoder import JSONDecodeError
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import JSONResponse
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy import true
 from starlette.responses import HTMLResponse
-from starlette.staticfiles import StaticFiles
 
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
     load_plans_by_api_keys, RateLimitExceeded
@@ -24,7 +24,6 @@ from src.database.apikeys.keys import cache_api_keys
 from src.database.plans.init_plans import RateLimits
 from src.email.email import email_process
 from src.make_request import async_client
-
 from src.prefetch import prefetch_endpoints
 from src.ratelimit import ip_rate_limits, RateLimit
 from src.requests import requester
@@ -175,7 +174,7 @@ rate_limit, _, duration = RateLimits().ENTERPRISE
 
 
 @app.middleware(middleware_type="http")
-async def global_request_throttle(request, call_next):
+async def global_request_throttle(request: Request, call_next):
     """
         Middleware will throttle requests if they are more than 100 requests per second
         per edge, other edge servers may be serviced just as before but the one server
@@ -194,6 +193,7 @@ async def global_request_throttle(request, call_next):
         is_throttled = True
     # continue with the request
     # either the request was throttled and now proceeding or all is well
+    app_logger.info(f"On Entry to : {request.url.path}")
     response = await call_next(request)
 
     # attaching a header showing throttling was in effect and proceeding
@@ -241,13 +241,25 @@ async def validate_request_middleware(request, call_next):
     # before it is processed by the route handlers.
     # You can modify the request here, or perform any other
     # pre-processing that you need.
+    allowedPaths = ["/", "/api/", "/redoc", "/docs", "/_admin/"]
 
     # TODO - consider reintegrating signature verification
-    _cf_secret_token = request.headers.get('X-SECRET-TOKEN')
-    _secret = config_instance().CLOUDFLARE_SETTINGS.CLOUDFLARE_SECRET_KEY
+    async def compare_tokens():
+        _cf_secret_token = request.headers.get('X-SECRET-TOKEN')
+        _cloudflare_token = config_instance().CLOUDFLARE_SETTINGS.CLOUDFLARE_SECRET_KEY
+
+        if _cf_secret_token is None:
+            return False
+        hash_func = hashlib.sha256  # choose a hash function
+        secret_key = config_instance().SECRET_KEY
+        digest1 = hmac.new(secret_key.encode(), _cf_secret_token.encode(), hash_func).digest()
+        digest2 = hmac.new(secret_key.encode(), _cloudflare_token.encode(), hash_func).digest()
+        return hmac.compare_digest(digest1, digest2)
+
     path = str(request.url.path)
     _url = str(request.url)
     start_time = time.monotonic()
+
     if await cf_firewall.is_request_malicious(headers=request.headers, url=request.url, body=str(request.body)):
         """
             If we are here then there is something wrong with the request 
@@ -256,26 +268,20 @@ async def validate_request_middleware(request, call_next):
             "message": "Request Contains Suspicious patterns cannot continue"}
         response = JSONResponse(content=mess, status_code=404)
         return response
-    end_time = time.monotonic()
-    print(f"elapsed time : {end_time - start_time}")
-    if path.startswith("/_admin"):
-        app_logger.info(f"Routed to admin : {path}")
+
+    if path.startswith("/_admin") or path.startswith("/redoc") or path.startswith("/docs"):
         response = await call_next(request)
 
-    elif path in ["/open-api", "/redoc", "/docs", "/"]:
+    elif path in ["/open-api",  "/"]:
         """letting through specific URLS for Documentation"""
         app_logger.info(f"Routing to Documentations : {path}")
         response = await call_next(request)
 
-    elif not (_secret and _cf_secret_token):
+    elif not await compare_tokens():
         mess: dict[str, str] = {
             "message": "Request Is not valid please ensure you are routing this request through our gateway"}
         response = JSONResponse(content=mess, status_code=404)
 
-    elif not hmac.compare_digest(_cf_secret_token.encode('utf-8'), _secret.encode('utf-8')):
-        mess: dict[str, str] = {
-            "message": "Request Is not valid please ensure you are routing this request through our gateway"}
-        response = JSONResponse(content=mess, status_code=404)
     # Going to API
     elif await cf_firewall.path_matches_known_route(path=path):
         response = await call_next(request)
@@ -299,6 +305,9 @@ async def validate_request_middleware(request, call_next):
     # post-processing that you need.
     # _out_signature = await cf_firewall.create_signature(response=response, secret=_secret)
     # response.headers.update({'X-Signature': _out_signature})
+    end_time = time.monotonic()
+    print(f"Elapsed Time Validate Request : {end_time - start_time}")
+
     app_logger.info("Cleared Request Validation")
     return response
 
@@ -470,7 +479,6 @@ async def open_api(request: Request):
 async def home_route():
     """
         will return a json open api specification for the main API
-    :param request:
     :return:
     """
     spec_url = "https://raw.githubusercontent.com/MJ-API-Development/open-api-spec/main/open-api.json"
@@ -492,7 +500,6 @@ redoc_html = get_redoc_html(
 
 
 @app.get("/redoc", include_in_schema=False, response_class=HTMLResponse)
-@redis_cached_ttl(ttl=60 * 60 * 1)
 async def redoc_html():
     return redoc_html
 

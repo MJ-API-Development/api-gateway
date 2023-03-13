@@ -27,6 +27,8 @@ def authenticate_admin(func):
 
 def authenticate_app(func):
     """
+
+
         this will only authenticate application example client and admin app
     :param func:
     :return:

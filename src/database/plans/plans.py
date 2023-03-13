@@ -30,7 +30,6 @@ class Subscriptions(Base):
         """
         self._is_active = is_active
 
-
     @classmethod
     def create_if_not_exists(cls):
         if not inspect(engine).has_table(cls.__tablename__):
