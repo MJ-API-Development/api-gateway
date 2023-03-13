@@ -83,10 +83,10 @@ async def authorization(auth_data: AuthorizationRequest):
     :param auth_data: authorization data
     :return: payload : dict[str, str| bool dict[str|bool]], status_code
     """
-    user_data = auth_data.dict()
-    uuid = user_data.get("uuid")
-    path = user_data.get("path")
-    method = user_data.get("method")
+    data = auth_data.dict()
+    uuid = data.get("uuid")
+    path = data.get("path")
+    method = data.get("method")
 
     is_authorized = await check_authorization(uuid=uuid, path=path, method=method)
     message = "user is authorized" if is_authorized else "user not authorized"

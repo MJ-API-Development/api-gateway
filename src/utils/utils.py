@@ -25,6 +25,7 @@ _char_set = string.ascii_lowercase + string.ascii_uppercase + string.digits
 # NOTE input character set
 _input_character_set = string.printable
 
+
 def is_development(config_instance: Callable) -> bool:
     return config_instance().DEVELOPMENT_SERVER_NAME.lower() == socket.gethostname().lower()
 

@@ -2,6 +2,8 @@
 from typing import Optional
 from pydantic import BaseModel
 
+from src.management_api.models.apikeys import ApiKeysModel
+
 
 class AccountUpdate(BaseModel):
     uuid: str
@@ -36,7 +38,20 @@ class DeleteResponseSchema(BaseModel):
     message: str
 
 
+class LoginResponseSchema(BaseModel):
+    uuid: str
+    first_name: str
+    second_name: str | None
+    surname: str
+    email: str
+    cell: str
+    password: str
+    is_admin: bool | None
+    is_deleted: bool | None
+    apikeys: ApiKeysModel
+
+
 class UsersResponseSchema(BaseModel):
     status: bool = True
-    payload: list[AccountUpdate | None]
+    payload: list[LoginResponseSchema]
     message: str

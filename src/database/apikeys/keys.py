@@ -51,8 +51,8 @@ class ApiKeyModel(Base):
             "duration": self.duration,
             "rate_limit": self.rate_limit,
             "is_active": self.is_active,
-            "subscription": self.subscription,
-            "account": self.account}
+            "subscription": self.subscription
+        }
 
     @classmethod
     async def get_by_apikey(cls, api_key: str, session: sessionType) -> ApiKeyModel:
