@@ -258,7 +258,6 @@ async def validate_request_middleware(request, call_next):
         digest2 = hmac.new(secret_key.encode(), _cloudflare_token.encode(), hash_func).digest()
         return hmac.compare_digest(digest1, digest2)
 
-
     path = str(request.url.path)
     _url = str(request.url)
     start_time = time.monotonic()
@@ -397,7 +396,7 @@ app.mount(path="/_admin", app=admin_app)
 # # # # # # # # # # # # # # API GATEWAY
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-@app.get("/api/v1/{path:path}", include_in_schema=True)
+@app.get("/api/v1/{path:path}", include_in_schema=False)
 @auth_and_rate_limit
 async def v1_gateway(request: Request, path: str):
     """
