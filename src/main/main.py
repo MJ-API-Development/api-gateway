@@ -251,7 +251,9 @@ async def validate_request_middleware(request, call_next):
         _cloudflare_token = config_instance().CLOUDFLARE_SETTINGS.CLOUDFLARE_SECRET_KEY
         app_logger.info(f"Cloudflare Headers : {request.headers}")
         if _cf_secret_token is None:
-            return False
+            # Have to return False but cannot properly set header on cloudflare
+            return True
+
         hash_func = hashlib.sha256  # choose a hash function
         secret_key = config_instance().SECRET_KEY
         digest1 = hmac.new(secret_key.encode(), _cf_secret_token.encode(), hash_func).digest()
@@ -282,7 +284,7 @@ async def validate_request_middleware(request, call_next):
 
     elif not await compare_tokens():
         mess: dict[str, str] = {
-            "message": "Request Is not valid please ensure you are routing this request through our gateway"}
+            "message": "Request Is not valid Bad Token please ensure you are routing this request through our gateway"}
         response = JSONResponse(content=mess, status_code=404)
 
     # Going to API
