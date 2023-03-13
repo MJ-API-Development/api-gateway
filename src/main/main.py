@@ -257,7 +257,7 @@ async def validate_request_middleware(request, call_next):
         digest1 = hmac.new(secret_key.encode(), _cf_secret_token.encode(), hash_func).digest()
         digest2 = hmac.new(secret_key.encode(), _cloudflare_token.encode(), hash_func).digest()
         return hmac.compare_digest(digest1, digest2)
-        # return True
+
 
     path = str(request.url.path)
     _url = str(request.url)
