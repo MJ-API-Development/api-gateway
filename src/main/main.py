@@ -32,7 +32,8 @@ from src.utils.utils import is_development
 
 cf_firewall = CloudFlareFirewall()
 # API Servers
-api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_instance().API_SERVERS.SLAVE_API_SERVER]
+# TODO NOTE will add more Server URLS Later
+api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER]
 api_server_counter = 0
 
 # used to logging debug information for the application
@@ -182,7 +183,7 @@ async def global_request_throttle(request: Request, call_next):
     """
     # rate limit by cloudflare edge address - which will
     ip_address = request.client.host
-
+    # TODO from request headers get the original user IP
     if ip_address not in ip_rate_limits:
         # This will throttle the connection if there is too many requests coming from only one edge server
         ip_rate_limits[ip_address] = RateLimit()
@@ -274,7 +275,7 @@ async def validate_request_middleware(request, call_next):
     if path.startswith("/_admin") or path.startswith("/redoc") or path.startswith("/docs"):
         response = await call_next(request)
 
-    elif path in ["/open-api",  "/"]:
+    elif path in ["/open-api", "/"]:
         """letting through specific URLS for Documentation"""
         app_logger.info(f"Routing to Documentations : {path}")
         response = await call_next(request)
@@ -493,6 +494,7 @@ async def home_route():
 
     return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
+
 redoc_html = get_redoc_html(
     openapi_url='/open-api',
     title=app.title + " - ReDoc",
@@ -504,6 +506,12 @@ redoc_html = get_redoc_html(
 @app.get("/redoc", include_in_schema=False, response_class=HTMLResponse)
 async def redoc_html():
     return redoc_html
+
+
+@app.get("/_ah/warmup", include_in_schema=False)
+async def status_check():
+    response = await check_all_services()
+    return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -531,3 +539,11 @@ async def delete_resource_from_cache(request: Request):
             await redis_cache.delete_key(key=resource_key)
     except Exception as e:
         app_logger.error(msg=str(e))
+
+
+async def check_all_services():
+    """
+        compile a full list of services and show if they are available
+    :return:
+    """
+    return {}

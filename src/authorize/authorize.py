@@ -22,14 +22,6 @@ take_credit_queue = []
 ONE_DAY: int = 60 * 60 * 24
 auth_logger = init_logger("auth-logger")
 
-# cache_api_keys_to_plans = {}
-# get_plans_dict = cache_api_keys_to_plans.get
-# add_to_api_keys_to_plans_cache = cache_api_keys_to_plans.update
-# cache_api_keys_to_subscriptions = {}
-# get_subscriptions_dict = cache_api_keys_to_subscriptions.get
-# add_to_api_keys_to_subscriptions_cache = cache_api_keys_to_subscriptions.update
-
-
 # Define cache keys
 API_KEYS_TO_PLANS_KEY = "api_keys_to_plans"
 API_KEYS_TO_SUBSCRIPTIONS_KEY = "api_keys_to_subscriptions"
