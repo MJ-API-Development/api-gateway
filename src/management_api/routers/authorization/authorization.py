@@ -6,8 +6,11 @@ from src.database.account.account import Account
 from src.database.database_sessions import sessions
 from src.management_api.admin.authentication import authenticate_app, get_headers
 from src.management_api.models.authentication import LoginData, AuthorizationRequest
+from src.utils.my_logger import init_logger
 
 auth_router = APIRouter()
+
+auth_logger = init_logger("auth_logger")
 
 
 async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
@@ -63,6 +66,7 @@ async def login(login_data: LoginData):
     user_data: dict[str, str] = login_data.dict()
     email = user_data.get("email")
     password = user_data.get("password")
+    auth_logger.info(f"login into account : {email}")
     with next(sessions) as session:
         user_instance = await Account.login(username=email, password=password, session=session)
         if user_instance:

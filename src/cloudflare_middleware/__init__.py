@@ -1,5 +1,6 @@
 import collections
 
+from CloudFlare.exceptions import CloudFlareAPIError
 from starlette.requests import Request
 
 from src.config import config_instance
@@ -115,8 +116,11 @@ class CloudFlareFirewall:
 
     def __init__(self):
         self._max_payload_size: int = 64
-        self.cloud_flare = CloudFlare(email=EMAIL, token=TOKEN)
-        self.cloud_flare.api_from_openapi(url="https://www.eod-stock-api.site/open-api")
+        try:
+            self.cloud_flare = CloudFlare(email=EMAIL, token=TOKEN)
+            # self.cloud_flare.api_from_openapi(url="https://www.eod-stock-api.site/open-api")
+        except CloudFlareAPIError:
+            pass
         self.ip_ranges = []
         self.bad_addresses = set()
         self.compiled_patterns = [re.compile(_regex) for _regex in route_regexes.values()]
@@ -130,11 +134,14 @@ class CloudFlareFirewall:
         """
         _uri = 'https://api.cloudflare.com/client/v4/ips'
         _headers = {'Accept': 'application/json', 'X-Auth-Email': EMAIL}
-        response = await send_request(api_url=_uri, headers=_headers)
+        try:
+            response = await send_request(api_url=_uri, headers=_headers)
+            ipv4_cidrs = response.get('result', {}).get('ipv4_cidrs', DEFAULT_IPV4)
+            ipv6_cidrs = response.get('result', {}).get('ipv6_cidrs', [])
+            return ipv4_cidrs, ipv6_cidrs
 
-        ipv4_cidrs = response.get('result', {}).get('ipv4_cidrs', DEFAULT_IPV4)
-        ipv6_cidrs = response.get('result', {}).get('ipv6_cidrs', [])
-        return ipv4_cidrs, ipv6_cidrs
+        except CloudFlareAPIError as e:
+            return [], []
 
     async def path_matches_known_route(self, path: str):
         """helps to filter out malicious paths based on regex matching"""
@@ -171,11 +178,14 @@ class CloudFlareFirewall:
         """
         # TODO Debug this contains problems - some of the cloudflare addresses are being blocked
         if ip in self.bad_addresses:
+            print("found in bad addresses")
             return False
         for ip_range in self.ip_ranges:
+
             if ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range):
                 return True
 
+        print("did not find a valid ip")
         self.bad_addresses.add(ip)
         return False
 

@@ -1,24 +1,17 @@
-import asyncio
-import hashlib
-import hmac
-
 from fastapi import Request, FastAPI
 from fastapi.responses import JSONResponse
 
 from src.authentication import authenticate_app, authenticate_cloudflare_workers
 from src.authorize.authorize import NotAuthorized
-from src.config import config_instance
 from src.database.apikeys.keys import ApiKeyModel
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Plans
-from src.event_queues.invoice_queue import process_invoice_queues
+from src.management_api.admin.authentication import get_headers
 from src.management_api.routers.authorization.authorization import auth_router
 from src.management_api.routers.logs.logs import log_router
 from src.management_api.routers.paypal.paypal import paypal_router
 from src.management_api.routers.subscriptions.subscriptions import subscriptions_router
 from src.management_api.routers.users.users import users_router
-
-from src.management_api.admin.authentication import get_headers
 from src.utils.my_logger import init_logger
 
 management_logger = init_logger("management_aoi")
@@ -41,6 +34,27 @@ admin_app = FastAPI(
 )
 
 
+@admin_app.middleware(middleware_type="http")
+async def check_if_valid_request(request, call_next):
+    """
+
+    :param request:
+    :param call_next:
+    :return:
+    """
+    # print(f"inside admin : {await request.body()}")
+    response = await call_next(request)
+    print(f"response from admin : {response}")
+    return response
+
+
+admin_app.include_router(users_router)
+admin_app.include_router(auth_router)
+admin_app.include_router(log_router)
+admin_app.include_router(paypal_router)
+admin_app.include_router(subscriptions_router)
+
+
 @admin_app.api_route(path="/plans", methods=["GET"], include_in_schema=True)
 @authenticate_app
 async def get_client_plans():
@@ -61,7 +75,8 @@ async def admin_startup():
         :return:
     """
     # Needs more processes here
-    asyncio.create_task(process_invoice_queues())
+    print("admin app started")
+    # asyncio.create_task(process_invoice_queues())
 
 
 @admin_app.api_route(path="/cloudflare/init-gateway", methods=["GET", "POST"], include_in_schema=False)
@@ -86,13 +101,16 @@ async def init_cloudflare_gateway():
 @admin_app.exception_handler(NotAuthorized)
 async def admin_not_authorized(request: Request, exc: NotAuthorized):
     user_data = {"message": exc.message}
+    print(user_data)
     return JSONResponse(
         status_code=exc.status_code,
         content=user_data, headers=await get_headers(user_data))
 
 
-admin_app.include_router(log_router)
-admin_app.include_router(paypal_router)
-admin_app.include_router(auth_router)
-admin_app.include_router(users_router)
-admin_app.include_router(subscriptions_router)
+@admin_app.exception_handler(Exception)
+async def handle_all_exceptions(request: Request, exc: Exception):
+    management_logger.info(f"Error processing request : {str(exc)}")
+    error_data = {'message': 'error processing request'}
+    return JSONResponse(content=error_data,
+                        status_code=500,
+                        headers=await get_headers(error_data))

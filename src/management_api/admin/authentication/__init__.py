@@ -1,14 +1,16 @@
 import hashlib
 from functools import wraps
-from fastapi import Request
+from fastapi import Request, requests
 import hmac
 from src.config import config_instance
 
 from src.database.apikeys.keys import ApiKeyModel, sessions
 from src.authorize.authorize import NotAuthorized
-
+from src.utils.my_logger import init_logger
 
 # TODO find a way to cache the results of this methods
+authenticate_logger = init_logger("authenticate_logger")
+
 
 def authenticate_admin(func):
     @wraps(func)
@@ -38,6 +40,7 @@ def authenticate_app(func):
     async def wrapper(*args, **kwargs):
         # TODO find a way of authenticating APPS, not BASED on API, Suggestion SECRET_KEY
         request: Request = kwargs.get('request')
+        authenticate_logger.info(f"Authenticating : {request.headers.get('X-SIGNATURE')}")
         if await verify_signature(request=request):
             print("Signature Verified")
             return await func(*args, **kwargs)
@@ -84,9 +87,9 @@ async def get_headers(user_data: dict) -> dict[str, str]:
     return {'X-SIGNATURE': signature, 'Content-Type': 'application/json'}
 
 
-async def verify_signature(request):
+async def verify_signature(request: Request):
     secret_key = config_instance().SECRET_KEY
-    data_str, signature_header = request.headers.get('X-SIGNATURE', '')
+    data_str, signature_header = request.headers.get('X-SIGNATURE', '').split("|")
     _signature = hmac.new(secret_key.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
     result = hmac.compare_digest(signature_header, _signature)
     print(f"Request Validation Result : {result}")

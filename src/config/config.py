@@ -4,6 +4,7 @@ from pydantic import BaseSettings, Field
 
 class DatabaseSettings(BaseSettings):
     SQL_DB_URL: str = Field(..., env='SQL_DB_URL')
+    LOCAL_DB_URL: str = Field(..., env='LOCAL_DB_URL')
     TOTAL_CONNECTIONS: int = Field(default=100)
 
     class Config:

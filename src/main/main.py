@@ -14,6 +14,7 @@ from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import JSONResponse
 from sqlalchemy import true
 from starlette.responses import HTMLResponse
+from src.management_api.routes import admin_app
 
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
     load_plans_by_api_keys, RateLimitExceeded
@@ -107,7 +108,7 @@ async def rate_limit_error_handler(request: Request, exc: RateLimitExceeded):
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
     """HTTP Error Handler Will display HTTP Errors in JSON Format to the client"""
-    app_logger.error(msg=f"""
+    app_logger.info(msg=f"""
     HTTP Exception Occurred 
 
     Debug Information
@@ -125,7 +126,7 @@ async def http_exception_handler(request, exc):
 
 @app.exception_handler(NotAuthorized)
 async def handle_not_authorized(request, exc):
-    app_logger.error(f"""
+    app_logger.info(f"""
         Not Authorized Error
 
         Debug Information
@@ -140,7 +141,7 @@ async def handle_not_authorized(request, exc):
 
 @app.exception_handler(JSONDecodeError)
 async def handle_json_decode_error(request, exc):
-    app_logger.error(f"""
+    app_logger.info(f"""
     Error Decoding JSON    
         Debug Information
         request_url: {request.url}
@@ -218,6 +219,7 @@ async def check_ip(request: Request, call_next):
     if cfConnectingIP and await cf_firewall.check_ip_range(ip=cfConnectingIP):
         response = await call_next(request)
     elif is_development(config_instance=config_instance):
+        print("its a development server going in ")
         response = await call_next(request)
     else:
         return JSONResponse(
@@ -238,11 +240,12 @@ async def validate_request_middleware(request, call_next):
     :param call_next:
     :return:
     """
+
     # This code will be executed for each incoming request
     # before it is processed by the route handlers.
     # You can modify the request here, or perform any other
     # pre-processing that you need.
-    allowedPaths = ["/", "/api/", "/redoc", "/docs", "/_admin/"]
+    # allowedPaths = ["/", "/api/", "/redoc", "/docs", "/_admin/"]
 
     # TODO - consider reintegrating signature verification
     async def compare_tokens():
@@ -263,16 +266,17 @@ async def validate_request_middleware(request, call_next):
     _url = str(request.url)
     start_time = time.monotonic()
 
-    if await cf_firewall.is_request_malicious(headers=request.headers, url=request.url, body=str(request.body)):
-        """
-            If we are here then there is something wrong with the request 
-        """
-        mess: dict[str, str] = {
-            "message": "Request Contains Suspicious patterns cannot continue"}
-        response = JSONResponse(content=mess, status_code=404)
-        return response
+    # if await cf_firewall.is_request_malicious(headers=request.headers, url=request.url, body=str(request.body)):
+    #     """
+    #         If we are here then there is something wrong with the request
+    #     """
+    #     mess: dict[str, str] = {
+    #         "message": "Request Contains Suspicious patterns cannot continue"}
+    #     response = JSONResponse(content=mess, status_code=404)
+    #     return response
 
     if path.startswith("/_admin") or path.startswith("/redoc") or path.startswith("/docs"):
+        print("starts with admin going in ")
         response = await call_next(request)
 
     elif path in ["/open-api", "/"]:
@@ -386,11 +390,10 @@ async def startup_event():
 # TODO ensure that the admin APP is running on the Admin Sub Domain Meaning this should Change
 # TODO Also the Admin APP must be removed from the gateway it will just slow down the gateway
 
-from src.management_api.routes import admin_app
 
 # TODO Admin Application Mounting Point should eventually Move this
 # To its own separate Application
-app.mount(path="/_admin", app=admin_app)
+app.mount(path="/_admin", app=admin_app, name="admin_app")
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -479,7 +482,7 @@ async def open_api(request: Request):
 
 
 @app.get("/", include_in_schema=True)
-async def home_route():
+async def home_route(request: Request):
     """
         will return a json open api specification for the main API
     :return:
@@ -504,12 +507,12 @@ redoc_html = get_redoc_html(
 
 
 @app.get("/redoc", include_in_schema=False, response_class=HTMLResponse)
-async def redoc_html():
+async def redoc_html(request: Request):
     return redoc_html
 
 
 @app.get("/_ah/warmup", include_in_schema=False)
-async def status_check():
+async def status_check(request: Request):
     response = await check_all_services()
     return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 

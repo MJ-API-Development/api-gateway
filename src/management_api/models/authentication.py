@@ -16,7 +16,7 @@ class LoginData(BaseModel):
     @validator('email')
     def validate_email(cls, v):
         if "@" not in v:
-            raise ValueError('Only example.com emails are allowed')
+            raise ValueError('Not a Valid Email Address')
         return v
 
 

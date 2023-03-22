@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from starlette.responses import JSONResponse
 
 from src.config import config_instance
@@ -18,7 +18,7 @@ users_logger = init_logger("users_router")
 
 @users_router.api_route(path="/user", methods=["POST"], include_in_schema=True)
 @authenticate_app
-async def create_user(user_data: AccountCreate) -> UserResponseSchema:
+async def create_user(user_data: AccountCreate, request: Request) -> UserResponseSchema:
     """
     **create user**
         used to create new user record
@@ -27,7 +27,7 @@ async def create_user(user_data: AccountCreate) -> UserResponseSchema:
 
     :return: status payload, message -> see Responses
     """
-
+    users_logger.info(f"creating user : {user_data}")
     with next(sessions) as session:
         users_logger.info(f"creating user with the following user data : {user_data}")
         email = user_data.email
