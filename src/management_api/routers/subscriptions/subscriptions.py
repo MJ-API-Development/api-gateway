@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from starlette.responses import JSONResponse
 
 from src.config import config_instance
@@ -8,7 +8,7 @@ from src.const import UUID_LEN
 from src.database.account.account import Account
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Plans, Subscriptions, Invoices
-from src.email.email import email_process
+from src.management_api.email.email import email_process
 from src.event_queues.invoice_queue import add_invoice_to_send
 from src.management_api.admin.authentication import authenticate_app, get_headers
 from src.management_api.models.subscriptions import SubscriptionCreate, SubscriptionUpdate
@@ -22,7 +22,7 @@ sub_logger = init_logger("subscriptions_router")
 
 @subscriptions_router.api_route(path="/subscriptions", methods=["POST", "PUT"], include_in_schema=True)
 @authenticate_app
-async def create_subscription(subscription_data: SubscriptionCreate):
+async def create_subscription(subscription_data: SubscriptionCreate, request: Request):
     """
         create and update subscriptions
     :param subscription_data:
@@ -81,7 +81,7 @@ async def create_subscription(subscription_data: SubscriptionCreate):
 
 @subscriptions_router.api_route(path="/subscriptions", methods=["PUT"], include_in_schema=True)
 @authenticate_app
-async def update_subscription(subscription_data: SubscriptionUpdate):
+async def update_subscription(subscription_data: SubscriptionUpdate, request: Request):
     """
             Upgrade or Downgrade Plan, thi only affect the net invoice
         """
@@ -115,11 +115,12 @@ async def update_subscription(subscription_data: SubscriptionUpdate):
 
 @subscriptions_router.api_route(path="/subscription/{subscription_id}", methods=["DELETE"], include_in_schema=True)
 @authenticate_app
-async def de_activate_subscriptions(subscription_id: str):
+async def de_activate_subscriptions(subscription_id: str, request: Request):
     """
         de activate subscriptions
         the delete action may usually mark records as deleted
-    :param subscription_id {str}:
+    :param request:
+    :param subscription_id:
 
     :return:
     """
@@ -147,11 +148,12 @@ async def de_activate_subscriptions(subscription_id: str):
 
 @subscriptions_router.api_route(path="/subscription/{subscription_id}", methods=["DELETE"], include_in_schema=True)
 @authenticate_app
-async def re_activate_subscriptions(subscription_id: str):
+async def re_activate_subscriptions(subscription_id: str, request: Request):
     """
     **re_activate_subscription**
         re-activate previously de-activated subscription
 
+    :param request:
     :param subscription_id: id of the subscription to activate
 
     :return:
@@ -180,13 +182,14 @@ async def re_activate_subscriptions(subscription_id: str):
 
 @subscriptions_router.api_route(path="/subscription/{subscription_id}", methods=["DELETE"], include_in_schema=True)
 @authenticate_app
-async def get_subscription(subscription_id: str):
+async def get_subscription(subscription_id: str, request: Request):
     """
     **get_subscription**
 
         retrieve or delete subscriptions
         the delete action may usually mark records as deleted
 
+    :param request:
     :param subscription_id: id of the subscription to fetch
 
     :return:

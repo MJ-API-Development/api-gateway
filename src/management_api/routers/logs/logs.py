@@ -1,6 +1,6 @@
 import os
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from starlette.responses import JSONResponse
 
 from src.config import config_instance
@@ -12,7 +12,7 @@ log_router = APIRouter()
 
 @log_router.get("/_admin/logs/{num_logs}")
 @authenticate_app
-async def get_logs(num_logs: int = 50):
+async def get_logs(request: Request, num_logs: int = 50):
     """will retrieve encrypted logs and display on the admin app"""
     log_filename = config_instance().LOGGING.filename
     log_file_path = os.path.join("logs", log_filename)

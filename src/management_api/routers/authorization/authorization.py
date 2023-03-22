@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from starlette.responses import JSONResponse
 
@@ -56,10 +56,11 @@ async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
 
 @auth_router.api_route(path="/auth/login", methods=["POST"], include_in_schema=True)
 @authenticate_app
-async def login(login_data: LoginData):
+async def login(login_data: LoginData, request: Request):
     """
         used to update a user
 
+    :param request:
     :param login_data:
     :return:
     """
@@ -67,8 +68,11 @@ async def login(login_data: LoginData):
     email = user_data.get("email")
     password = user_data.get("password")
     auth_logger.info(f"login into account : {email}")
+    auth_logger.info(f"password : {password}")
+    auth_logger.info(f"email : {email}")
     with next(sessions) as session:
         user_instance = await Account.login(username=email, password=password, session=session)
+        auth_logger.info(f"user instance : {user_instance.to_dict()}")
         if user_instance:
             payload = dict(status=True, payload=user_instance.to_dict(), message="successfully logged in")
         else:
@@ -79,7 +83,7 @@ async def login(login_data: LoginData):
 
 @auth_router.api_route(path="/auth/authorize", methods=["POST"], include_in_schema=True)
 @authenticate_app
-async def authorization(auth_data: AuthorizationRequest):
+async def authorization(auth_data: AuthorizationRequest, request: Request):
     """
     **authorization**
         authorizes requests to specific resources within the admin application

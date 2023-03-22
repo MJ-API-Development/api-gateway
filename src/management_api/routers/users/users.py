@@ -5,7 +5,7 @@ from src.config import config_instance
 from src.const import UUID_LEN
 from src.database.account.account import Account
 from src.database.database_sessions import sessions
-from src.email.email import email_process
+from src.management_api.email.email import email_process
 from src.management_api.admin.authentication import authenticate_app, get_headers
 from src.management_api.models.users import AccountUpdate, AccountCreate, UserResponseSchema, DeleteResponseSchema, \
     UsersResponseSchema
@@ -23,6 +23,7 @@ async def create_user(user_data: AccountCreate, request: Request) -> UserRespons
     **create user**
         used to create new user record
 
+    :param request:
     :param user_data: data containing user information
 
     :return: status payload, message -> see Responses
@@ -37,6 +38,7 @@ async def create_user(user_data: AccountCreate, request: Request) -> UserRespons
             user_dict.update(uuid=create_id(UUID_LEN))
             user_instance = Account(**user_dict)
             session.add(user_instance)
+            session.commit()
             # this will schedule an account confirmation email to be sent
             # TODO look at this - Make this an ephemeral link, it other words it should expire after sometime
             verification_link = f"https://gateway.eod-stock-api.site/_admin/account/confirm/{user_dict.get('uuid')}"
@@ -59,7 +61,7 @@ async def create_user(user_data: AccountCreate, request: Request) -> UserRespons
 
 @users_router.api_route(path="/user", methods=["PUT"], include_in_schema=True)
 @authenticate_app
-async def update_user(user_data: AccountUpdate) -> UserResponseSchema:
+async def update_user(user_data: AccountUpdate, request: Request) -> UserResponseSchema:
     """
     **update_user**
         given some fields on user_data update the user instance with those fields
@@ -86,10 +88,11 @@ async def update_user(user_data: AccountUpdate) -> UserResponseSchema:
 
 @users_router.api_route(path="/user/{uuid}", methods=["GET"], include_in_schema=True)
 @authenticate_app
-async def get_user(uuid: str) -> UserResponseSchema:
+async def get_user(uuid: str, request: Request) -> UserResponseSchema:
     """
     **get_user**
         will retrieve user data
+    :param request:
     :param uuid:
     :return: UserResponseSchema
     """
@@ -105,7 +108,7 @@ async def get_user(uuid: str) -> UserResponseSchema:
 
 @users_router.api_route(path="/user/{uuid}", methods=["DELETE"], include_in_schema=True)
 @authenticate_app
-async def delete_user(uuid: str) -> DeleteResponseSchema:
+async def delete_user(uuid: str, request: Request) -> DeleteResponseSchema:
     """
         **delete_user**
             used to mark a user as deleted
@@ -126,7 +129,7 @@ async def delete_user(uuid: str) -> DeleteResponseSchema:
 
 @users_router.api_route(path="/users", methods=["GET"], include_in_schema=True)
 @authenticate_app
-async def get_all_users() -> UsersResponseSchema:
+async def get_all_users(request: Request) -> UsersResponseSchema:
     """
         **delete_user**
             will return a complete list of all users of the api
@@ -146,7 +149,7 @@ async def get_all_users() -> UsersResponseSchema:
 
 @users_router.api_route(path="/users/subscription/{is_active}", methods=["GET"], include_in_schema=True)
 @authenticate_app
-async def get_users_by_subscription_status(is_active: bool) -> UsersResponseSchema:
+async def get_users_by_subscription_status(is_active: bool, request: Request) -> UsersResponseSchema:
     """
         **get users by subscription status**
             accepts status to filter subscriptions by

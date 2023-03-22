@@ -23,7 +23,7 @@ from src.cloudflare_middleware import CloudFlareFirewall
 from src.config import config_instance
 from src.database.apikeys.keys import cache_api_keys
 from src.database.plans.init_plans import RateLimits
-from src.email.email import email_process
+from src.management_api.email.email import email_process
 from src.make_request import async_client
 from src.prefetch import prefetch_endpoints
 from src.ratelimit import ip_rate_limits, RateLimit

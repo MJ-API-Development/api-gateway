@@ -109,7 +109,7 @@ async def admin_not_authorized(request: Request, exc: NotAuthorized):
 
 @admin_app.exception_handler(Exception)
 async def handle_all_exceptions(request: Request, exc: Exception):
-    management_logger.info(f"Error processing request : {str(exc)}")
+    management_logger.error(f"Error processing request : {str(exc)}")
     error_data = {'message': 'error processing request'}
     return JSONResponse(content=error_data,
                         status_code=500,
