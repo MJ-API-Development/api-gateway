@@ -100,10 +100,11 @@ async def get_user(uuid: str, request: Request) -> UserResponseSchema:
         user_instance: Account = await Account.get_by_uuid(uuid=uuid, session=session)
         users_logger.info("Get Delete USER")
         # TODO Send a Login Email
+        user_dict = user_instance.to_dict()
 
-    payload = dict(status=True, payload=user_instance.to_dict(), message="user found")
+    payload = dict(status=True, payload=user_dict, message="user found")
     headers = await get_headers(user_data=payload)
-    return JSONResponse(content=payload, status_code=201, headers=headers)
+    return JSONResponse(content=payload, status_code=200, headers=headers)
 
 
 @users_router.api_route(path="/user/{uuid}", methods=["DELETE"], include_in_schema=True)
