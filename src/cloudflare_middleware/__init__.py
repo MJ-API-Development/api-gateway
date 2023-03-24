@@ -1,4 +1,5 @@
 import collections
+import hmac
 
 from CloudFlare.exceptions import CloudFlareAPIError
 from starlette.requests import Request
@@ -214,8 +215,7 @@ class CloudFlareFirewall:
         for bad_address in bad_addresses:
             self.bad_addresses.add(bad_address)
 
-    @staticmethod
-    async def confirm_signature(signature, request, secret):
+    async def confirm_signature(self, signature, request, secret):
         """
             signature based request authentication works to further enhance gateway secyrity
             by authenticating requests.
@@ -228,22 +228,29 @@ class CloudFlareFirewall:
         url = request.url
         method = request.method.upper()
         headers = request.headers
-        expected_signature = hashlib.sha256(f"{method}{url}{headers}{secret}".encode('UTF-8'))
-        return signature == expected_signature
+        message: str = f"{method}{url}{headers}{secret}"
+        expected_signature = await self.sha256(message)
+        return hmac.compare_digest(signature, expected_signature)
 
     @staticmethod
-    async def sha256(message):
-        data = message.encode('utf-8')
-        hash_bytes = hashlib.sha256(data).digest()
-        hash_hex = hash_bytes.hex()
-        return hash_hex
+    async def sha256(message: str) -> str:
+        """
+            convert a string to byte
+            convert to a digest using sha256 algo from hashlib then return a hex string
+        :param message:
+        :return:
+        """
+        return hashlib.sha256(message.encode('utf-8')).digest().hex()
 
-    @staticmethod
-    async def create_signature(response, url, secret):
+    async def create_signature(self, response, url: str, secret: str) -> str:
+        """
+            creates a signature based request authentication
+        :param response:
+        :param url:
+        :param secret:
+        :return:
+        """
         method = response.method.upper()
         headers = response.headers
-
         message = f"{method}{url}{headers}{secret}"
-        signature = hashlib.sha256(message)
-
-        return signature
+        return await self.sha256(message)
