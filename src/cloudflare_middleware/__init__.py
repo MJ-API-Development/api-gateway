@@ -114,7 +114,18 @@ malicious_patterns = {
 
 class CloudFlareFirewall:
     """
-        TODO add more functionality to further enhance the security of our gateway
+        Attributes:
+        -----------
+        _max_payload_size: int
+            The maximum payload size allowed by CloudFlare API.
+        cloud_flare: CloudFlare
+            An instance of CloudFlare class to interact with CloudFlare API.
+        ip_ranges: list
+            A list of IP ranges added to CloudFlare Firewall.
+        bad_addresses: set
+            A set of IP addresses marked as bad.
+        compiled_pat:
+            A compiled regex pattern to match IP addresses.
     """
 
     def __init__(self):

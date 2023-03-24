@@ -166,6 +166,17 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    """adding security headers"""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
 if is_development(config_instance=config_instance):
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["gateway.eod-stock-api.site", "localhost", "127.0.0.1"])
 else:
