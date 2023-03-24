@@ -7,13 +7,13 @@ from starlette import status
 
 from src.authorize.resources import get_resource_name, resource_name_request_size
 from src.cache.cache import redis_cache, redis_cached_ttl
-from src.database.apikeys.keys import api_keys, cache_api_keys, ApiKeyModel
+from src.database.apikeys.keys import api_keys, cache_api_keys, ApiKeyModel, apikeys_lock
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions, Plans, PlanType
 from src.utils.my_logger import init_logger
 
 lock = asyncio.Lock()
-
+# TODO convert api_keys_lookup to a function that looksup api_keys from a redis cache
 api_keys_lookup = api_keys.get
 cache_api_keys_func = cache_api_keys
 
@@ -180,8 +180,37 @@ def auth_and_rate_limit(func):
         path = kwargs.get('path')
         return api_key, path
 
+    async def rate_limiter(api_key):
+        """this method applies the actual rate_limiter"""
+        # Rate Limiting Section
+        async with apikeys_lock:
+            api_keys_model_dict: dict[str, str | int] = api_keys_lookup(api_key)
+            now = time.monotonic()
+            duration: int = api_keys_model_dict.get('duration')
+            limit: int = api_keys_model_dict.get('rate_limit')
+            last_request_timestamp: float = api_keys_model_dict.get('last_request_timestamp')
+            # Note that APiKeysModel must be updated with plan rate_limit
+            if now - last_request_timestamp > duration:
+                api_keys_model_dict['requests_count'] = 0
+            if api_keys_model_dict['requests_count'] >= limit:
+                # TODO consider returning a JSON String with data on the rate rate_limit and how long to wait
+                time_left = last_request_timestamp + duration - now
+                mess: str = f"EOD Stock API - Rate Limit Exceeded. Please wait {time_left:.0f} seconds before making " \
+                            f"another request, or upgrade your plan to better take advantage of extra resources " \
+                            f"available on better plans."
+
+                rate_limit_dict = {'duration': duration, 'rate_limit': limit, 'time_left': f"{time_left:.0f}"}
+                raise RateLimitExceeded(rate_limit=rate_limit_dict, status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                                        detail=mess)
+            # NOTE Updating number of requests and timestamp
+            api_keys_model_dict['requests_count'] += 1
+            # noinspection PyTypeChecker
+            api_keys_model_dict['last_request_timestamp'] = now
+            api_keys[api_key] = api_keys_model_dict
+
     @wraps(func)
     async def wrapper(*args, **kwargs):
+        """main wrapper"""
         api_key, path = await return_kwargs(kwargs)
 
         path = f"/api/v1/{path}"
@@ -195,31 +224,8 @@ def auth_and_rate_limit(func):
             mess = "EOD Stock API - Invalid API Key, or Cancelled API Key please subscribe to get a valid API Key"
             raise NotAuthorized(message=mess)
 
-        # Rate Limiting Section
-        api_keys_model_dict: dict[str, str | int] = api_keys_lookup(api_key)
-        now = time.monotonic()
-        duration: int = api_keys_model_dict.get('duration')
-        limit: int = api_keys_model_dict.get('rate_limit')
-        last_request_timestamp: float = api_keys_model_dict.get('last_request_timestamp')
-        # Note that APiKeysModel must be updated with plan rate_limit
-        if now - last_request_timestamp > duration:
-            api_keys[api_key]['requests_count'] = 0
-
-        if api_keys[api_key]['requests_count'] >= limit:
-            # TODO consider returning a JSON String with data on the rate rate_limit and how long to wait
-            time_left = last_request_timestamp + duration - now
-            mess: str = f"EOD Stock API - Rate Limit Exceeded. Please wait {time_left:.0f} seconds before making " \
-                        f"another request, or upgrade your plan to better take advantage of extra resources " \
-                        f"available on better plans."
-
-            rate_limit_dict = {'duration': duration, 'rate_limit': limit, 'time_left': f"{time_left:.0f}"}
-            raise RateLimitExceeded(rate_limit=rate_limit_dict, status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                                    detail=mess)
-
-        # updating number of requests and timestamp
-        api_keys[api_key]['requests_count'] += 1
-        # noinspection PyTypeChecker
-        api_keys[api_key]['last_request_timestamp'] = now
+        # actual rate limiter
+        await rate_limiter(api_key)
 
         # Authorization Section
         # Use asyncio.gather to run is_resource_authorized and monthly_credit_available concurrently
