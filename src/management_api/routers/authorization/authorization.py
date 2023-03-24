@@ -27,7 +27,8 @@ async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
     user_routes = {
         "/home": ["GET"],
         "/dashboard": ["GET", "PUT"],
-        "/profile": ["GET", "PUT"]
+        "/profile": ["GET", "PUT"],
+        "/user": ["GET", "PUT"]
     }
     admin_routes = {
         "/admin/users": ["GET", "POST", "PUT", "DELETE"],
@@ -59,7 +60,6 @@ async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
 async def login(login_data: LoginData, request: Request):
     """
         used to update a user
-
     :param request:
     :param login_data:
     :return:

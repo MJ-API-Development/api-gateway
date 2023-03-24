@@ -21,6 +21,8 @@ DEFAULT_IPV4 = ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31
                 '198.41.128.0/17',
                 '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22']
 
+
+# Patterns for known publicly acceptable routes
 route_regexes = {
     "home": "^/$",
     "all_general_fundamentals": "^/api/v1/fundamental/general$",
@@ -115,7 +117,7 @@ class CloudFlareFirewall:
     """
 
     def __init__(self):
-        self._max_payload_size: int = 64
+        self._max_payload_size: int = 8 * 64
         try:
             self.cloud_flare = CloudFlare(email=EMAIL, token=TOKEN)
             # self.cloud_flare.api_from_openapi(url="https://www.eod-stock-api.site/open-api")
@@ -144,8 +146,16 @@ class CloudFlareFirewall:
             return [], []
 
     async def path_matches_known_route(self, path: str):
-        """helps to filter out malicious paths based on regex matching"""
-        # NOTE: that at this stage if this request is not a get then its invalid
+        """
+        **path_matches_known_route**
+            helps to filter out malicious paths based on regex matching
+        parameters:
+            path: this is the path parameter of the request being requested
+
+        """
+        # NOTE: that at this stage if this request is not a get then it has already been rejected
+        # NOTE: this will return true if there is at least one route that matches with the requested path.
+        # otherwise it will return false and block the request
         return any(pattern.match(path) for pattern in self.compiled_patterns)
 
     async def is_request_malicious(self, headers: dict[str, str], url: Request.url, body: str | bytes):
@@ -159,7 +169,6 @@ class CloudFlareFirewall:
             # Set default regex pattern for string-like request bodies
             payload_regex = "^[A-Za-z0-9+/]{1024,}={0,2}$"
             if re.match(payload_regex, body):
-                print(f"Request Matched : {payload_regex}")
                 self.bad_addresses.add(str(url))
                 return True
 
@@ -178,14 +187,12 @@ class CloudFlareFirewall:
         """
         # TODO Debug this contains problems - some of the cloudflare addresses are being blocked
         if ip in self.bad_addresses:
-            print("found in bad addresses")
             return False
         for ip_range in self.ip_ranges:
 
             if ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range):
                 return True
 
-        print("did not find a valid ip")
         self.bad_addresses.add(ip)
         return False
 
@@ -207,6 +214,15 @@ class CloudFlareFirewall:
 
     @staticmethod
     async def confirm_signature(signature, request, secret):
+        """
+            signature based request authentication works to further enhance gateway secyrity
+            by authenticating requests.
+
+            requests without the correct signature will be assumed to be invalid requests and rejected. this ensures
+            that by the time requests reaches this gateway they went through other security checks.
+
+            Only our Apps and Cloudflare Edge workers can sign requests.
+        """
         url = request.url
         method = request.method.upper()
         headers = request.headers
