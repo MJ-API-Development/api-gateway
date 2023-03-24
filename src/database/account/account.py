@@ -84,7 +84,6 @@ class Account(Base):
         if (user is None) or user.is_deleted:
             raise NotAuthorized(message="You are not authorized to login to this account")
 
-        print(user.to_dict())
         # Hash the entered password using a secure hash function (SHA-256 in this example)
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         # Compare the hashed password to the stored hash using secrets.compare_digest,

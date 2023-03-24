@@ -98,7 +98,7 @@ async def get_user(uuid: str, request: Request) -> UserResponseSchema:
     """
     with next(sessions) as session:
         user_instance: Account = await Account.get_by_uuid(uuid=uuid, session=session)
-        users_logger.info("Get Delete USER")
+
         # TODO Send a Login Email
         user_dict = user_instance.to_dict()
 
