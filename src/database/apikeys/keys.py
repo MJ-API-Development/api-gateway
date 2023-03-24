@@ -16,7 +16,6 @@ apikeys_lock = asyncio.Lock()
 # Cache tp store API KEys
 # TODO use Async QUEUE
 api_keys: dict[str, dict[str, int]] = {}
-
 ONE_MINUTE = 60 * 60
 UUID_LEN: int = 16
 STR_LEN: int = 255
