@@ -1,7 +1,7 @@
 import hashlib
 import secrets
 
-
+from pydantic import BaseModel
 from sqlalchemy import Column, String, inspect, Boolean
 from sqlalchemy.orm import relationship
 from typing_extensions import Self
@@ -11,6 +11,11 @@ from src.const import UUID_LEN, NAME_LEN, EMAIL_LEN, STR_LEN, CELL_LEN
 from src.database.apikeys.keys import ApiKeyModel
 from src.database.database_sessions import Base, sessionType, engine
 from src.database.plans.plans import Subscriptions
+
+
+class TwoFactorLoginData(BaseModel):
+    email: str
+    code: str
 
 
 class Account(Base):

@@ -122,8 +122,16 @@ class Cache:
 
     async def set(self, key: str, value: Any, ttl: int = 0):
         """
-            Store the value in the cache. If the key already exists, the value is updated.
-            If use_redis=True the value is stored in Redis, otherwise it is stored in-memory
+             Store the value in the cache. If the key already exists, the value is updated.
+
+            :param key: str - a unique identifier for the cached value
+            :param value: Any - the value to be cached
+            :param ttl: int, optional - the time-to-live of the cached value in seconds;
+                       if not provided, the default expiration time of the cache is used.
+
+            If use_redis=True the value is stored in Redis, otherwise it is stored in-memory.
+
+            :return: None
         """
         value = await self._serialize_value(value, value)
         # setting expiration time

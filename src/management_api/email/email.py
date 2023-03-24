@@ -108,5 +108,14 @@ class Emailer:
                             subject=subject, html=html)
         await self.put_message_on_queue(message=await self.create_message(**message_dict))
 
+    async def send_two_factor_code_email(self, email: str, code: str):
+        """
+        Send an email with the two-factor code to the specified email address.
+        """
+        # Use an email library to send the email
+        # The email should include the code and a message informing the user that they have requested a login
+        # You may need to configure your email service provider credentials and settings
+        pass
+
 
 email_process = Emailer()

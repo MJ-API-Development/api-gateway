@@ -1,10 +1,15 @@
 from fastapi import APIRouter, Request
-
+import asyncio
+import hmac
+import random
+import string
 from starlette.responses import JSONResponse
 
-from src.database.account.account import Account
+from src.cache.cache import redis_cache
+from src.database.account.account import Account, TwoFactorLoginData
 from src.database.database_sessions import sessions
 from src.management_api.admin.authentication import authenticate_app, get_headers
+from src.management_api.email.email import email_process
 from src.management_api.models.authentication import LoginData, AuthorizationRequest
 from src.utils.my_logger import init_logger
 
@@ -68,15 +73,57 @@ async def login(login_data: LoginData, request: Request):
     email = user_data.get("email")
     password = user_data.get("password")
     auth_logger.info(f"login into account : {email}")
-    auth_logger.info(f"password : {password}")
-    auth_logger.info(f"email : {email}")
     with next(sessions) as session:
         user_instance = await Account.login(username=email, password=password, session=session)
         auth_logger.info(f"user instance : {user_instance.to_dict()}")
         if user_instance:
+            # Once the user is logged in generate and send two factor auth
+            code = await generate_and_send_two_factor_code(email=email)
+            two_factor_key = f"two_factor_code_{user_instance.to_dict().get('uuid')}"
+            # Two factor authentication will expire after 5 minutes
+            redis_cache.set(key=two_factor_key, code=code, ttl=60*5)
+
             payload = dict(status=True, payload=user_instance.to_dict(), message="successfully logged in")
         else:
             payload = dict(status=False, payload={}, message="user not found")
+    headers = await get_headers(user_data=user_instance.to_dict())
+
+    return JSONResponse(content=payload, status_code=200, headers=headers)
+
+
+@auth_router.api_route(path="/auth/login/two-factor", methods=["POST"], include_in_schema=True)
+async def authenticate_two_factor(login_data: TwoFactorLoginData, request: Request):
+    """
+    Endpoint to authenticate two-factor authentication code and log in user.
+
+    :param login_data: TwoFactorLoginData - data containing user's email and two-factor authentication code
+    :param request: Request - the incoming request
+    :return: JSONResponse - a response containing the login status and user data
+    """
+    user_data: dict[str, str] = login_data.dict()
+    email = user_data.get("email")
+    code = user_data.get("code")
+    auth_logger.info(f"authenticating two-factor code for account: {email}")
+
+    with next(sessions) as session:
+        # Retrieve the two-factor authentication key stored in Redis
+        user_instance = await Account.get_by_email(email, session=session)
+
+    two_factor_key = f"two_factor_key_{user_instance.to_dict().get('uuid')}"
+    stored_key = await redis_cache.get(two_factor_key)
+
+    # Use HMAC to compare the user's input key with the stored key
+    stored_key_bytes = stored_key.encode('utf-8')
+    code_bytes = code.encode('utf-8')
+
+    if not hmac.compare_digest(stored_key_bytes, code_bytes):
+        # Authentication failed
+        payload = dict(status=False, payload={}, message="invalid two-factor authentication key")
+        return JSONResponse(content=payload, status_code=401)
+
+    # Authentication succeeded
+    user_instance = await Account.get_by_email(email)
+    payload = dict(status=True, payload=user_instance.to_dict(), message="successfully authenticated two-factor")
     headers = await get_headers(user_data=user_instance.to_dict())
     return JSONResponse(content=payload, status_code=200, headers=headers)
 
@@ -88,7 +135,11 @@ async def authorization(auth_data: AuthorizationRequest, request: Request):
     **authorization**
         authorizes requests to specific resources within the admin application
 
-    :param auth_data: authorization data
+    :type request: Request
+    :param request:
+    :type auth_data: AuthorizationRequest
+    :param auth_data: authorization data class
+    :type payload: dict
     :return: payload : dict[str, str| bool dict[str|bool]], status_code
     """
     data = auth_data.dict()
@@ -101,3 +152,17 @@ async def authorization(auth_data: AuthorizationRequest, request: Request):
     payload = dict(status=True, payload=dict(is_authorized=is_authorized), message=message)
     headers = await get_headers(user_data=payload)
     return JSONResponse(content=payload, status_code=200, headers=headers)
+
+
+async def generate_and_send_two_factor_code(email: str) -> str:
+    """
+    Generate a two-factor code and schedule an email to be sent later.
+    Returns the generated code.
+    """
+    # Generate a random code
+    code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+    # Add the code and email to the queue
+    await email_process.send_two_factor_code_email(email=email, code=code)
+
+    return code
