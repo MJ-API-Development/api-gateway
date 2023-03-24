@@ -185,11 +185,9 @@ class CloudFlareFirewall:
         :param ip:
         :return:
         """
-        # TODO Debug this contains problems - some of the cloudflare addresses are being blocked
         if ip in self.bad_addresses:
             return False
         for ip_range in self.ip_ranges:
-
             if ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range):
                 return True
 
@@ -208,6 +206,10 @@ class CloudFlareFirewall:
         return len(self.bad_addresses)
 
     async def restore_bad_addresses_from_redis(self):
+        """
+            will retrieve the list of known bad addresses
+        :return:
+        """
         bad_addresses = await redis_cache.get(key="list_of_bad_addresses") or []
         for bad_address in bad_addresses:
             self.bad_addresses.add(bad_address)
