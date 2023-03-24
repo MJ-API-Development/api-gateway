@@ -108,14 +108,32 @@ class Emailer:
                             subject=subject, html=html)
         await self.put_message_on_queue(message=await self.create_message(**message_dict))
 
-    async def send_two_factor_code_email(self, email: str, code: str):
+    async def send_two_factor_code_email(self, email: str, code: str, templates: EmailTemplate = EmailTemplate):
         """
         Send an email with the two-factor code to the specified email address.
         """
         # Use an email library to send the email
         # The email should include the code and a message informing the user that they have requested a login
         # You may need to configure your email service provider credentials and settings
-        pass
+        subject: str = f"EOD Stock API - Two Factor Authentication Code"
+        message: str = f"""
+        
+        Hi
+            you have recently tried to login to https://eod-stock-api.site 
+            here is your two-factor authentication code : {code}
+            if you did not try to login please ignore this message
+            and nothing will happen.
+            
+        Thank you
+        https://eod-stock-api.site
+        Team
+        
+        
+        """
+        message_dict = dict(sender_email="noreply@eod-stock-api.site", recipient_email=email, subject=subject,
+                            html=message)
+
+        await self.put_message_on_queue(message=await self.create_message(**message_dict))
 
 
 email_process = Emailer()

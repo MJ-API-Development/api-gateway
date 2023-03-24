@@ -94,7 +94,8 @@ async def login(login_data: LoginData, request: Request):
 @auth_router.api_route(path="/auth/login/two-factor", methods=["POST"], include_in_schema=True)
 async def authenticate_two_factor(two_factor_data: TwoFactorLoginData, request: Request):
     """
-    Endpoint to authenticate two-factor authentication code and log in user.
+    Endpoint to authenticate two-factor authentication code.
+    if code does not authenticate in five minutes then the client app will not login the user
 
     :param two_factor_data: TwoFactorLoginData - data containing user's email and two-factor authentication code
     :param request: Request - the incoming request
@@ -111,6 +112,9 @@ async def authenticate_two_factor(two_factor_data: TwoFactorLoginData, request: 
 
     two_factor_key = f"two_factor_key_{user_instance.to_dict().get('uuid')}"
     stored_key = await redis_cache.get(two_factor_key)
+    if stored_key is None:
+        payload = dict(status=False, payload={}, message="Authentication key Expired")
+        return JSONResponse(content=payload, status_code=401)
 
     # Use HMAC to compare the user's input key with the stored key
     stored_key_bytes = stored_key.encode('utf-8')
