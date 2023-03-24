@@ -92,15 +92,15 @@ async def login(login_data: LoginData, request: Request):
 
 
 @auth_router.api_route(path="/auth/login/two-factor", methods=["POST"], include_in_schema=True)
-async def authenticate_two_factor(login_data: TwoFactorLoginData, request: Request):
+async def authenticate_two_factor(two_factor_data: TwoFactorLoginData, request: Request):
     """
     Endpoint to authenticate two-factor authentication code and log in user.
 
-    :param login_data: TwoFactorLoginData - data containing user's email and two-factor authentication code
+    :param two_factor_data: TwoFactorLoginData - data containing user's email and two-factor authentication code
     :param request: Request - the incoming request
     :return: JSONResponse - a response containing the login status and user data
     """
-    user_data: dict[str, str] = login_data.dict()
+    user_data: dict[str, str] = two_factor_data.dict()
     email = user_data.get("email")
     code = user_data.get("code")
     auth_logger.info(f"authenticating two-factor code for account: {email}")
