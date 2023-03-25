@@ -19,7 +19,7 @@ from src.management_api.routes import admin_app
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
     load_plans_by_api_keys, RateLimitExceeded
 from src.cache.cache import redis_cache, redis_cached_ttl
-from src.cloudflare_middleware import CloudFlareFirewall
+from src.cloudflare_middleware import EODAPIFirewall
 from src.config import config_instance
 from src.database.apikeys.keys import cache_api_keys
 from src.database.plans.init_plans import RateLimits
@@ -31,7 +31,7 @@ from src.requests import requester
 from src.utils.my_logger import init_logger
 from src.utils.utils import is_development
 
-cf_firewall = CloudFlareFirewall()
+cf_firewall = EODAPIFirewall()
 # API Servers
 # TODO NOTE will add more Server URLS Later
 api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER]
@@ -187,14 +187,15 @@ rate_limit, _, duration = RateLimits().ENTERPRISE
 
 
 @app.middleware(middleware_type="http")
-async def global_request_throttle(request: Request, call_next):
+async def edge_request_throttle(request: Request, call_next):
     """
         Middleware will throttle requests if they are more than 100 requests per second
         per edge, other edge servers may be serviced just as before but the one server
         where higher traffic is coming from will be limited
     """
-    # rate limit by cloudflare edge address - which will
-    ip_address = request.client.host
+    # rate limit by Edge Server IP Address, this will have the effect of throttling entire regions if flooding requests
+    # are mainly coming from such regions
+    ip_address = cf_firewall.get_edge_server_ip(headers=request.headers)
     # TODO from request headers get the original user IP
     if ip_address not in ip_rate_limits:
         # This will throttle the connection if there is too many requests coming from only one edge server
@@ -202,7 +203,7 @@ async def global_request_throttle(request: Request, call_next):
 
     is_throttled = False
     if await ip_rate_limits[ip_address].is_limit_exceeded():
-        await ip_rate_limits[ip_address].ip_throttle(request=request)
+        await ip_rate_limits[ip_address].ip_throttle(edge_ip=ip_address, request=request)
         is_throttled = True
     # continue with the request
     # either the request was throttled and now proceeding or all is well
@@ -224,17 +225,17 @@ async def check_ip(request: Request, call_next):
     :return:
     """
     # THE Cloudflare IP Address is a client in this case as its the one sending the requests
-    cfConnectingIP = socket.gethostbyname(request.client.host)
-    app_logger.info(f"Checking connecting IP: {cfConnectingIP}")
+    edge_ip: str = await cf_firewall.get_edge_server_ip(headers=request.headers)
+    app_logger.info(f"Client IP Address : {edge_ip}")
 
-    if cfConnectingIP and await cf_firewall.check_ip_range(ip=cfConnectingIP):
+    if edge_ip and await cf_firewall.check_ip_range(ip=edge_ip):
         response = await call_next(request)
     elif is_development(config_instance=config_instance):
-        print("its a development server going in ")
         response = await call_next(request)
     else:
         return JSONResponse(
-            content={"message": "Access denied, Suspicious Activity, Use a Proper Gateway to access our resources"},
+            content={"message": "Access denied, Bad Gateway Address we can only process request from our gateway server",
+                     "gateway": "https://gateway.eod-stock-api.site"},
             status_code=403)
 
     return response
@@ -277,14 +278,14 @@ async def validate_request_middleware(request, call_next):
     _url = str(request.url)
     start_time = time.monotonic()
 
-    # if await cf_firewall.is_request_malicious(headers=request.headers, url=request.url, body=str(request.body)):
-    #     """
-    #         If we are here then there is something wrong with the request
-    #     """
-    #     mess: dict[str, str] = {
-    #         "message": "Request Contains Suspicious patterns cannot continue"}
-    #     response = JSONResponse(content=mess, status_code=404)
-    #     return response
+    if await cf_firewall.is_request_malicious(headers=request.headers, url=request.url, body=str(request.body)):
+        """
+            If we are here then there is something wrong with the request
+        """
+        mess: dict[str, str] = {
+            "message": "Request Contains Suspicious patterns cannot continue"}
+        response = JSONResponse(content=mess, status_code=404)
+        return response
 
     if path.startswith("/_admin") or path.startswith("/redoc") or path.startswith("/docs"):
         print("starts with admin going in ")
@@ -355,7 +356,6 @@ async def startup_event():
             total_apikeys: int = await cache_api_keys()
             app_logger.info(f"Cache Prefetched {total_apikeys} apikeys")
             await load_plans_by_api_keys()
-
             # wait for 5 minutes then update API Keys records
             await asyncio.sleep(60 * 15)
 

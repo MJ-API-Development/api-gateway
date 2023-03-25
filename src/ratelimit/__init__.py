@@ -31,10 +31,10 @@ class RateLimit:
         self.requests.append(now)
         return False
 
-    async def ip_throttle(self, request: Request):
+    async def ip_throttle(self, edge_ip: str,  request: Request):
         mess = f"""
             Throttling Requests
-                request from = {request.client.host}
+                request from = {edge_ip}
                 resource_path = {request.url.path}
                 request_headers = {request.headers}
         """

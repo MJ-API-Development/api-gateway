@@ -86,6 +86,12 @@ route_regexes = {
 malicious_patterns = {
     "buffer_overflow": "^\?unix:A{1000,}",  # pattern for buffer overflow attack
     "SQL_injection": "'?([\w\s]+)'?\s*OR\s*'?([\w\s]+)'?\s*=\s*'?([\w\s]+)'?",  # pattern for SQL injection attack
+    "SQL_injection_Commands": "\b(ALTER|CREATE|DELETE|DROP|EXEC(UTE){0,1}|INSERT( +INTO){0,1}|MERGE|REPLACE|SELECT|UPDATE)\b", # Match SQL Commands
+    "SQL_injection_Comments": "(--|#|\/\*)[\w\d\s]*", # Match SQL Comments
+    "SQL_Injection_syntax": "\b(AND|OR)[\s]*[^\s]*=[^\s]*", # Match SQL Injection Syntax
+    "SQL_Union_select_attack": "(?i)\bselect\b.*\bfrom\b.*\bunion\b.*\bselect\b", # UNION Select Attack
+    "SQL_BLIND_SQL_Injection": "(?i)\b(if|case).*\blike\b.*\bthen\b", # blind SQL Injection attack
+    "SQL_TIMEBASED_Injection": "(?i)\b(select|and)\b.*\bsleep\(\d+\)\b", # Time based injection attacks
     "XSS": "<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>",  # pattern for cross-site scripting (XSS) attack
     "path_traversal": "\.\.[\\\/]?|\.[\\\/]{2,}",  # pattern for path traversal attack
     # "LDAP_injection": "[()\\\/*\x00-\x1f\x80-\xff]",  # pattern for LDAP injection attack
@@ -112,7 +118,7 @@ malicious_patterns = {
 }
 
 
-class CloudFlareFirewall:
+class EODAPIFirewall:
     """
         Attributes:
         -----------
@@ -139,6 +145,25 @@ class CloudFlareFirewall:
         self.bad_addresses = set()
         self.compiled_patterns = [re.compile(_regex) for _regex in route_regexes.values()]
         self.compiled_bad_patterns = [re.compile(pattern) for pattern in malicious_patterns.values()]
+
+    @staticmethod
+    async def get_client_ip(headers, request):
+        """obtains the actual IP Address of the client"""
+        if 'x-real-ip' in headers:
+            # IP address passed from Cloudflare
+            return headers['x-real-ip']
+        elif 'x-forwarded-for' in headers:
+            # Get the first IP address from the list
+            return headers['x-forwarded-for'].split(',')[0]
+        else:
+            # Return the remote IP address
+            return request.remote_addr
+
+    @staticmethod
+    def get_edge_server_ip(headers):
+        """obtains cloudflare edge server the request is being routed through"""
+        edge_server_ip = headers.get("CF-Connecting-IP")
+        return edge_server_ip
 
     @staticmethod
     async def get_ip_ranges() -> tuple[list[str], list[str]]:
@@ -179,6 +204,7 @@ class CloudFlareFirewall:
 
         if body:
             # Set default regex pattern for string-like request bodies
+            #  StackOverflow attacks
             payload_regex = "^[A-Za-z0-9+/]{1024,}={0,2}$"
             if re.match(payload_regex, body):
                 self.bad_addresses.add(str(url))
