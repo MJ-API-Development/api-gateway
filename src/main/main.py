@@ -287,7 +287,7 @@ async def validate_request_middleware(request, call_next):
         return response
 
     if path.startswith("/_admin") or path.startswith("/redoc") or path.startswith("/docs"):
-        print("starts with admin going in ")
+        app_logger.info("starts with admin going in ")
         response = await call_next(request)
 
     elif path in ["/open-api", "/"]:
@@ -327,8 +327,7 @@ async def validate_request_middleware(request, call_next):
     # _out_signature = await cf_firewall.create_signature(response=response, secret=_secret)
     # response.headers.update({'X-Signature': _out_signature})
     end_time = time.monotonic()
-    print(f"Elapsed Time Validate Request : {end_time - start_time}")
-
+    app_logger.info(f"Elapsed Time Validate Request : {end_time - start_time}")
     app_logger.info("Cleared Request Validation")
     return response
 
@@ -430,8 +429,8 @@ async def v1_gateway(request: Request, path: str):
 
     api_urls = [f'{api_server_url}/api/v1/{path}' for api_server_url in api_server_urls]
 
-    # Will Take at least one second on the cache if it finds nothing will return None
-    tasks = [redis_cache.get(key=api_url, timeout=5*60) for api_url in api_urls]
+    # Will Take at least six second on the cache if it finds nothing will return None
+    tasks = [redis_cache.get(key=api_url, timeout=6) for api_url in api_urls]
     cached_responses = await asyncio.gather(*tasks)
 
     for i, response in enumerate(cached_responses):
