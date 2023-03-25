@@ -364,11 +364,12 @@ async def startup_event():
         """
         while True:
             if not is_development(config_instance=config_instance):
+                app_logger.info(f"Started Pre Fetching Requests")
                 total_prefetched = await prefetch_endpoints()
                 app_logger.info(f"Cache Pre Fetched {total_prefetched} endpoints")
 
             #  wait for one hour 30 minutes then prefetch urls again
-            await asyncio.sleep(60 * 60 * 1.5)
+            await asyncio.sleep(60 * 60 * 3)
 
     async def backup_cf_firewall_data():
         while True:
@@ -388,7 +389,7 @@ async def startup_event():
     asyncio.create_task(setup_cf_firewall())
     asyncio.create_task(backup_cf_firewall_data())
     asyncio.create_task(update_api_keys_background_task())
-    # asyncio.create_task(prefetch())  Disabled Prefetching will launch when we have more cores
+    asyncio.create_task(prefetch())
     asyncio.create_task(process_credit_queue())
     asyncio.create_task(email_process.process_message_queues())
     asyncio.create_task(clean_up_memcache())

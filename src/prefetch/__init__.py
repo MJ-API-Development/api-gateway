@@ -14,4 +14,7 @@ async def prefetch_endpoints() -> int:
     for response, url in zip(responses, urls):
         if response and response.get("status", False):
             await redis_cache.set(key=url, value=response)
+        #  this enables the gateway to process other requests while still prefetching urls
+        await asyncio.sleep(delay=3)
+
     return len(responses)
