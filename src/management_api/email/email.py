@@ -62,7 +62,6 @@ class Emailer:
                                               plan_name: str, templates: EmailTemplate = EmailTemplate):
         """Send the subscription welcome email."""
         subject = f"Welcome to our {plan_name} subscription!"
-        text = f"Dear {client_name},\n\nThank you for signing up for our {plan_name} subscription!"
         html = await templates.subscription_welcome(client_name=client_name, plan_name=plan_name)
 
         message_dict = dict(sender_email=sender_email, recipient_email=recipient_email,
