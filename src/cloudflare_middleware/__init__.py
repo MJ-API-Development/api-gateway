@@ -162,11 +162,7 @@ class EODAPIFirewall:
     @staticmethod
     def get_edge_server_ip(headers):
         """obtains cloudflare edge server the request is being routed through"""
-        if localhost := headers.get("Host") in ["localhost", "127.0.0.1"]:
-            return localhost
-        else:
-            edge_server_ip = headers.get("CF-Connecting-IP")
-            return edge_server_ip
+        return headers.get("Host") if headers.get("Host") in ["localhost", "127.0.0.1"] else headers.get("CF-Connecting-IP")
 
     @staticmethod
     async def get_ip_ranges() -> tuple[list[str], list[str]]:
