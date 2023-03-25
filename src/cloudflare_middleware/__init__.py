@@ -222,7 +222,8 @@ class EODAPIFirewall:
             return False
 
         is_valid = any(ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range) for ip_range in self.ip_ranges)
-        self.bad_addresses.add(ip) if not is_valid else None
+        if not is_valid:
+            self.bad_addresses.add(ip)
         self._logger.info(f"is valid became : {is_valid}")
         return is_valid
 
