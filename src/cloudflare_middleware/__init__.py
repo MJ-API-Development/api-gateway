@@ -215,14 +215,9 @@ class EODAPIFirewall:
         :param ip:
         :return:
         """
-        if ip in self.bad_addresses:
-            return False
-        for ip_range in self.ip_ranges:
-            if ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range):
-                return True
-
-        self.bad_addresses.add(ip)
-        return False
+        is_valid = any(ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range) for ip_range in self.ip_ranges)
+        self.bad_addresses.add(ip) if not is_valid else None
+        return is_valid
 
     async def save_bad_addresses_to_redis(self) -> int:
         """
