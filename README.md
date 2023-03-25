@@ -49,7 +49,8 @@ To get started with **api-gateway**, follow these steps:
 1. Clone the repository:
 https://github.com/MJ-API-Development/api-gateway
 
-The API gateway should now be accessible at `https://gateway.eod-stock-api.site`.
+The API gateway should now be accessible at 
+https://gateway.eod-stock-api.site 
 
 ## Contributing
 
