@@ -295,6 +295,9 @@ async def validate_request_middleware(request, call_next):
         app_logger.info(f"Routing to Documentations : {path}")
         response = await call_next(request)
 
+    elif is_development(config_instance=config_instance):
+        response = await call_next(request)
+
     elif not await compare_tokens():
         mess: dict[str, str] = {
             "message": "Request Is not valid Bad Token please ensure you are routing this request through our gateway"}
