@@ -30,6 +30,6 @@ class EmailTemplate:
         return EmailTemplate(template).render(client_name=client_name, verification_link=verification_link)
 
     @staticmethod
-    def devs_message(url: str, headers: dict[str, str | int], method: str):
+    async def devs_message(url: str, headers: dict[str, str | int], method: str):
         template = "src/management_api/email/templates/devs_message.html"
         return EmailTemplate(template).render(url=url, headers=headers, method=method)

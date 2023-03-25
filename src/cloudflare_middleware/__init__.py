@@ -146,7 +146,7 @@ class EODAPIFirewall:
         self.bad_addresses = set()
         self.compiled_patterns = [re.compile(_regex) for _regex in route_regexes.values()]
         self.compiled_bad_patterns = [re.compile(pattern) for pattern in malicious_patterns.values()]
-        self._logger  = init_logger(camel_to_snake(self.__class__.__name__))
+        self._logger = init_logger(camel_to_snake(self.__class__.__name__))
 
     @staticmethod
     async def get_client_ip(headers, request):
