@@ -1,16 +1,15 @@
-import collections
+import hashlib
 import hmac
+import ipaddress
+import re
 
+from CloudFlare import CloudFlare
 from CloudFlare.exceptions import CloudFlareAPIError
 from starlette.requests import Request
 
+from src.cache.cache import redis_cache
 from src.config import config_instance
-from CloudFlare import CloudFlare
-import ipaddress
-import hashlib
-import re
 from src.make_request import send_request
-from src.cache.cache import redis_cache, redis_cached_ttl
 
 EMAIL = config_instance().CLOUDFLARE_SETTINGS.EMAIL
 TOKEN = config_instance().CLOUDFLARE_SETTINGS.TOKEN
@@ -215,6 +214,9 @@ class EODAPIFirewall:
         :param ip:
         :return:
         """
+        if ip in self.bad_addresses:
+            return False
+
         is_valid = any(ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range) for ip_range in self.ip_ranges)
         self.bad_addresses.add(ip) if not is_valid else None
         return is_valid
