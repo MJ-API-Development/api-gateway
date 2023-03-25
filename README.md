@@ -1,4 +1,4 @@
-# api-gateway
+# EOD STOCK API - API--GATEWAY-VERSION 0.0.1
 
 **api-gateway** is a Python-based API Gateway built using the FastAPI framework. It provides several key features to 
 secure and manage your API endpoints.
