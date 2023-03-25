@@ -148,19 +148,12 @@ class EODAPIFirewall:
 
     @staticmethod
     async def get_client_ip(headers, request):
-        """obtains the actual IP Address of the client"""
-        if 'x-real-ip' in headers:
-            # IP address passed from Cloudflare
-            return headers['x-real-ip']
-        elif 'x-forwarded-for' in headers:
-            # Get the first IP address from the list
-            return headers['x-forwarded-for'].split(',')[0]
-        else:
-            # Return the remote IP address
-            return request.remote_addr
+        """will return the actual client ip address of the client making the request"""
+        ip = headers.get('x-real-ip') or headers.get('x-forwarded-for')
+        return ip.split(',')[0] if ip else request.remote_addr
 
     @staticmethod
-    def get_edge_server_ip(headers):
+    async def get_edge_server_ip(headers) -> str:
         """obtains cloudflare edge server the request is being routed through"""
         return headers.get("Host") if headers.get("Host") in ["localhost", "127.0.0.1"] else headers.get("CF-Connecting-IP")
 
