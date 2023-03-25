@@ -151,13 +151,13 @@ class EODAPIFirewall:
     @staticmethod
     async def get_client_ip(headers, request):
         """will return the actual client ip address of the client making the request"""
-        ip = headers.get('x-real-ip') or headers.get('x-forwarded-for')
+        ip = headers.get('cf-connecting-ip') or headers.get('x-forwarded-for')
         return ip.split(',')[0] if ip else request.remote_addr
 
     @staticmethod
     async def get_edge_server_ip(headers) -> str:
         """obtains cloudflare edge server the request is being routed through"""
-        return headers.get("Host") if headers.get("Host") in ["localhost", "127.0.0.1"] else headers.get("CF-Connecting-IP")
+        return headers.get("Host") if headers.get("Host") in ["localhost", "127.0.0.1"] else headers.get("x-real-ip")
 
     @staticmethod
     async def get_ip_ranges() -> tuple[list[str], list[str]]:
