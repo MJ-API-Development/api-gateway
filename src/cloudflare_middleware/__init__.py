@@ -10,6 +10,8 @@ from starlette.requests import Request
 from src.cache.cache import redis_cache
 from src.config import config_instance
 from src.make_request import send_request
+from src.utils.my_logger import init_logger
+from src.utils.utils import camel_to_snake
 
 EMAIL = config_instance().CLOUDFLARE_SETTINGS.EMAIL
 TOKEN = config_instance().CLOUDFLARE_SETTINGS.TOKEN
@@ -144,6 +146,7 @@ class EODAPIFirewall:
         self.bad_addresses = set()
         self.compiled_patterns = [re.compile(_regex) for _regex in route_regexes.values()]
         self.compiled_bad_patterns = [re.compile(pattern) for pattern in malicious_patterns.values()]
+        self._logger  = init_logger(camel_to_snake(self.__class__.__name__))
 
     @staticmethod
     async def get_client_ip(headers, request):
@@ -205,7 +208,7 @@ class EODAPIFirewall:
         return any((pattern.match(path) for pattern in self.compiled_bad_patterns))
 
     # @redis_cached_ttl(ttl=60 * 30)
-    async def check_ip_range(self, ip):
+    async def check_ip_range(self, ip: str) -> bool:
         """
             This IP Range check only prevents direct server access from an Actual IP Address thereby
             bypassing some of the security measures.
@@ -215,10 +218,12 @@ class EODAPIFirewall:
         :return:
         """
         if ip in self.bad_addresses:
+            self._logger.info(f"Found in bad addresses range : {ip}")
             return False
 
         is_valid = any(ipaddress.ip_address(ip) in ipaddress.ip_network(ip_range) for ip_range in self.ip_ranges)
         self.bad_addresses.add(ip) if not is_valid else None
+        self._logger.info(f"is valid became : {is_valid}")
         return is_valid
 
     async def save_bad_addresses_to_redis(self) -> int:
