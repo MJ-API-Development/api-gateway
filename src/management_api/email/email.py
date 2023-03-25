@@ -5,6 +5,9 @@ from src.config.config import config_instance
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
+from src.utils.my_logger import init_logger
+from src.utils.utils import camel_to_snake
+
 
 class Emailer:
     """
@@ -17,6 +20,7 @@ class Emailer:
         self._dev_messages_queue = Queue(maxsize=100)
         self.server = SendGridAPIClient(config_instance().EMAIL_SETTINGS.SENDGRID_API_KEY)
         self._queue_interval_seconds: int = 60*5
+        self._logger = init_logger(camel_to_snake(self.__class__.__name__))
 
     @staticmethod
     async def create_message(sender_email: str, recipient_email: str,
@@ -32,6 +36,7 @@ class Emailer:
         """Send the email via the SMTP server."""
         response = self.server.send(message)
         if response.status_code in [200, 201]:
+            self._logger.info(f"Email sent successfully : {message.subject}")
             return True
         return False
 
@@ -45,9 +50,10 @@ class Emailer:
     async def process_message_queues(self):
         while True:
             if not self.email_queues.empty():
-                print("sending email....")
                 message = await self.email_queues.get()
                 await email_process.send_email(message)
+            else:
+                self._logger.info(f"Email Queue is empty")
             await asyncio.sleep(self._queue_interval_seconds)
 
     async def send_subscription_welcome_email(self, sender_email: str,
@@ -127,8 +133,7 @@ class Emailer:
         Thank you
         https://eod-stock-api.site
         Team
-        
-        
+    
         """
         message_dict = dict(sender_email="noreply@eod-stock-api.site", recipient_email=email, subject=subject,
                             html=message)

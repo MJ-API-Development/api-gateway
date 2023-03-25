@@ -38,7 +38,7 @@ class Cache:
         self.expiration_time = expiration_time
         self._cache_name = cache_name
         self._cache = {}
-        self._lock = threading.Lock()
+        self._cache_lock = threading.Lock()
         self._use_redis = use_redis
         self._logger = init_logger(camel_to_snake(self.__class__.__name__))
 
@@ -112,7 +112,7 @@ class Cache:
         :param ttl:
         :return:
         """
-        with self._lock:
+        with self._cache_lock:
             # If the cache is full, remove the oldest entry
             if len(self._cache) >= self.max_size:
                 await self._remove_oldest_entry()
@@ -210,7 +210,7 @@ class Cache:
              Remove the oldest entry in the in-memory cache.
         :return:
         """
-        with self._lock:
+        with self._cache_lock:
             # Find the oldest entry
             oldest_entry = None
             for key, value in self._cache.items():
@@ -226,12 +226,12 @@ class Cache:
 
     async def delete_redis_key(self, key):
         """removes a single redis key"""
-        with self._lock:
+        with self._cache_lock:
             self._redis_client.delete(key)
 
     async def delete_memcache_key(self, key):
         """ Note: do not use pop"""
-        with self._lock:
+        with self._cache_lock:
             del self._cache[key]
 
     async def delete_key(self, key):
@@ -240,11 +240,11 @@ class Cache:
 
     async def clear_mem_cache(self):
         """will completely empty mem cache"""
-        with self._lock:
+        with self._cache_lock:
             self._cache = {}
 
     async def clear_redis_cache(self):
-        with self._lock:
+        with self._cache_lock:
             self._redis_client.flushall(asynchronous=True)
 
     async def memcache_ttl_cleaner(self) -> int:
