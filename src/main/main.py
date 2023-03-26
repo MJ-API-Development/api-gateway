@@ -7,6 +7,7 @@ import socket
 import time
 from json.decoder import JSONDecodeError
 
+import httpx
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -441,10 +442,18 @@ async def v1_gateway(request: Request, path: str):
 
     app_logger.info(msg="All cached responses not found- Must Be a Slow Day")
 
-    # 5 minute timeout on resource fetching from backend - some resources may take very long
-    tasks = [requester(api_url=api_url, timeout=5 * 60) for api_url in api_urls]
-    responses = await asyncio.gather(*tasks)
+    try:
 
+        # 5 minutes timeout on resource fetching from backend - some resources may take very long
+        tasks = [requester(api_url=api_url, timeout=300) for api_url in api_urls]
+        responses = await asyncio.gather(*tasks)
+
+    except asyncio.CancelledError:
+        responses = []
+    except httpx.HTTPError as http_err:
+        responses = []
+
+    app_logger.info(msg=f"Request Responses returned : {len(responses)}")
     for i, response in enumerate(responses):
         if response and response.get("status", False):
             api_url = api_urls[i]
