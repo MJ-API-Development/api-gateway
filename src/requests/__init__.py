@@ -35,7 +35,7 @@ async def requester(api_url: str, timeout: int = 30):
     
             response_text: {response.text}
         """
-        request_logger.debug(_response)
+        request_logger.info(_response)
     except httpx.HTTPError as http_err:
         raise http_err
     except Exception as err:
