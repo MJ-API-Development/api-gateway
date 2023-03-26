@@ -207,3 +207,25 @@ async def get_subscription(subscription_id: str, request: Request):
             _headers = await get_headers(user_data=payload)
 
     return JSONResponse(content=payload, status_code=200, headers=_headers)
+
+
+@subscriptions_router.api_route(path="/plans/{plan_id}", methods=["GET"], include_in_schema=True)
+@authenticate_app
+async def get_plan(plan_id: str, request: Request):
+    """
+
+    :param plan_id:
+    :param request:
+    :return:
+    """
+    with next(sessions) as session:
+        plan_instance = await Plans.get_plan_by_plan_id(plan_id=plan_id, session=session)
+        if plan_instance:
+            payload = dict(status=True, payload=plan_instance.to_dict(), message='Successfully retrieved plan')
+            _headers = await get_headers(user_data=payload)
+        else:
+            payload = dict(status=True, payload={},
+                           message='Successfully retrieved subscription')
+            _headers = await get_headers(user_data=payload)
+
+        return JSONResponse(content=payload, status_code=200, headers=_headers)
