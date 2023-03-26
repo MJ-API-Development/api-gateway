@@ -35,7 +35,9 @@ async def requester(api_url: str, timeout: int = 30):
     
             response_text: {response.text}
         """
-        request_logger.info(_response)
+        if response.status_code not in [200, 201]:
+            # only print log messages if request is not successfully
+            request_logger.info(_response)
     except httpx.HTTPError as http_err:
         raise http_err
     except Exception as err:
