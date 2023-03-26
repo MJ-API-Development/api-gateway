@@ -3,6 +3,7 @@ from fastapi.params import Form
 from starlette.responses import JSONResponse
 
 from src import paypal_utils
+from src.config import config_instance
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions
 from src.management_api.admin.authentication import authenticate_app
@@ -72,3 +73,15 @@ async def paypal_subscription_activated_ipn(request: Request):
     :return:
     """
     return JSONResponse(content={'status': 'success'}, status_code=201)
+
+
+@paypal_router.api_route(path="/paypal/settings/{uuid}", methods=["GET"])
+def paypal_settings(request: Request, uuid: str):
+    """
+
+    :param request:
+    :param uuid:
+    :return:
+    """
+    paypal_settings_dict: dict[str, str] = config_instance().PAYPAL_SETTINGS.dict()
+    return JSONResponse(content=paypal_settings_dict, status_code=200)

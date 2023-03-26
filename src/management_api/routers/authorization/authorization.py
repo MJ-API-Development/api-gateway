@@ -81,7 +81,7 @@ async def login(login_data: LoginData, request: Request):
             code = await generate_and_send_two_factor_code(email=email)
             two_factor_key = f"two_factor_code_{user_instance.to_dict().get('uuid')}"
             # Two factor authentication will expire after 5 minutes
-            redis_cache.set(key=two_factor_key, code=code, ttl=60*5)
+            redis_cache.set(key=two_factor_key, value=code, ttl=60*5)
 
             payload = dict(status=True, payload=user_instance.to_dict(), message="successfully logged in")
         else:
@@ -110,23 +110,24 @@ async def authenticate_two_factor(two_factor_data: TwoFactorLoginData, request: 
         # Retrieve the two-factor authentication key stored in Redis
         user_instance = await Account.get_by_email(email, session=session)
 
-    two_factor_key = f"two_factor_key_{user_instance.to_dict().get('uuid')}"
-    stored_key = await redis_cache.get(two_factor_key)
-    if stored_key is None:
-        payload = dict(status=False, payload={}, message="Authentication key Expired")
-        return JSONResponse(content=payload, status_code=401)
+        two_factor_key = f"two_factor_key_{user_instance.to_dict().get('uuid')}"
+        stored_key = await redis_cache.get(two_factor_key)
+        if stored_key is None:
+            payload = dict(status=False, payload={}, message="Authentication key Expired")
+            return JSONResponse(content=payload, status_code=401)
 
-    # Use HMAC to compare the user's input key with the stored key
-    stored_key_bytes = stored_key.encode('utf-8')
-    code_bytes = code.encode('utf-8')
+        # Use HMAC to compare the user's input key with the stored key
+        stored_key_bytes = stored_key.encode('utf-8')
+        code_bytes = code.encode('utf-8')
 
-    if not hmac.compare_digest(stored_key_bytes, code_bytes):
-        # Authentication failed
-        payload = dict(status=False, payload={}, message="invalid two-factor authentication key")
-        return JSONResponse(content=payload, status_code=401)
+        if not hmac.compare_digest(stored_key_bytes, code_bytes):
+            # Authentication failed
+            payload = dict(status=False, payload={}, message="invalid two-factor authentication key")
+            return JSONResponse(content=payload, status_code=401)
 
-    # Authentication succeeded
-    user_instance = await Account.get_by_email(email)
+        # Authentication succeeded
+        user_instance = await Account.get_by_email(email)
+
     payload = dict(status=True, payload=user_instance.to_dict(), message="successfully authenticated two-factor")
     headers = await get_headers(user_data=user_instance.to_dict())
     return JSONResponse(content=payload, status_code=200, headers=headers)
