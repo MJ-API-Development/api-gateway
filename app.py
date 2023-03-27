@@ -4,7 +4,7 @@ from src.config import config_instance
 import uvicorn
 
 # this will create database tables if they do not already exist
-# create_tables()
+
 
 if __name__ == '__main__':
     # Start the FastAPI app

@@ -15,6 +15,8 @@ from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import JSONResponse
 from sqlalchemy import true
 from starlette.responses import HTMLResponse
+
+from src.bootstrap import create_tables
 from src.management_api.routes import admin_app
 
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
@@ -22,8 +24,8 @@ from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args
 from src.cache.cache import redis_cache, redis_cached_ttl
 from src.cloudflare_middleware import EODAPIFirewall
 from src.config import config_instance
-from src.database.apikeys.keys import cache_api_keys
-from src.database.plans.init_plans import RateLimits
+from src.database.apikeys.keys import cache_api_keys, create_admin_key
+from src.database.plans.init_plans import RateLimits, create_plans
 from src.management_api.email.email import email_process
 from src.make_request import async_client
 from src.prefetch import prefetch_endpoints
