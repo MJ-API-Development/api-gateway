@@ -101,6 +101,7 @@ async def get_user(uuid: str, request: Request) -> UserResponseSchema:
 
         # TODO Send a Login Email
         user_dict = user_instance.to_dict()
+        users_logger.info(f"user found : {user_dict}")
 
     payload = dict(status=True, payload=user_dict, message="user found")
     headers = await get_headers(user_data=payload)
