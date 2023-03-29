@@ -47,7 +47,6 @@ class ApiKeyModel(Base):
         return {
             "uuid": self.uuid,
             "api_key": self.api_key,
-            "subscription_id": self.subscription_id,
             "duration": self.duration,
             "rate_limit": self.rate_limit,
             "is_active": self.is_active,
