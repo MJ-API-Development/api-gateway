@@ -51,7 +51,7 @@ class ApiKeyModel(Base):
             "duration": self.duration,
             "rate_limit": self.rate_limit,
             "is_active": self.is_active,
-            "subscription": self.subscription
+            "subscription": self.subscription.to_dict()
         }
 
     @classmethod
