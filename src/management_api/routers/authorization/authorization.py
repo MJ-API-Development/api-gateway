@@ -81,7 +81,7 @@ async def login(login_data: LoginData, request: Request):
             code = await generate_and_send_two_factor_code(email=email)
             two_factor_key = f"two_factor_code_{user_instance.to_dict().get('uuid')}"
             # Two factor authentication will expire after 5 minutes
-            redis_cache.set(key=two_factor_key, value=code, ttl=60*5)
+            await redis_cache.set(key=two_factor_key, value=code, ttl=60*5)
 
             payload = dict(status=True, payload=user_instance.to_dict(), message="successfully logged in")
         else:
