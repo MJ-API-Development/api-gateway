@@ -229,3 +229,22 @@ async def get_plan(plan_id: str, request: Request):
             _headers = await get_headers(user_data=payload)
 
         return JSONResponse(content=payload, status_code=200, headers=_headers)
+
+
+@subscriptions_router.api_route(path="/plans", methods=["GET"], include_in_schema=True)
+@authenticate_app
+async def get_all_plans(request: Request):
+    """
+        returns all plans
+    :param plan_id:
+    :param request:
+    :return:
+    """
+    with next(sessions) as session:
+        plan_instance_list = await Plans.get_all_plans(session=session)
+        _payload = [plan.to_dict() for plan in plan_instance_list] if plan_instance_list else []
+
+    payload = dict(status=True, payload=_payload, message='Successfully retrieved plan')
+    _headers = await get_headers(user_data=payload)
+
+    return JSONResponse(content=payload, status_code=200, headers=_headers)
