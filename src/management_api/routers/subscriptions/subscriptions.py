@@ -242,9 +242,10 @@ async def get_all_plans(request: Request):
     """
     with next(sessions) as session:
         plan_instance_list = await Plans.get_all_plans(session=session)
+        sub_logger.info(f"GET ALL PLANS : {plan_instance_list}")
         _payload = [plan.to_dict() for plan in plan_instance_list] if plan_instance_list else []
 
-    payload = dict(status=True, payload=_payload, message='Successfully retrieved plan')
-    _headers = await get_headers(user_data=payload)
+        payload = dict(status=True, payload=_payload, message='Successfully retrieved plan')
+        _headers = await get_headers(user_data=payload)
 
     return JSONResponse(content=payload, status_code=200, headers=_headers)
