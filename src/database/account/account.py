@@ -70,7 +70,7 @@ class Account(Base):
             "email": self.email,
             "cell": self.cell,
             "is_admin": self.is_admin,
-            "apikey": self.apikey,
+            "apikey": self.apikey.to_dict(),
         }
 
     @classmethod
