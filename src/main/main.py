@@ -198,7 +198,7 @@ async def edge_request_throttle(request: Request, call_next):
     """
     # rate limit by Edge Server IP Address, this will have the effect of throttling entire regions if flooding requests
     # are mainly coming from such regions
-    ip_address = cf_firewall.get_edge_server_ip(headers=request.headers)
+    ip_address = await cf_firewall.get_edge_server_ip(headers=request.headers)
     if ip_address not in ip_rate_limits:
         # This will throttle the connection if there is too many requests coming from only one edge server
         ip_rate_limits[ip_address] = RateLimit()
