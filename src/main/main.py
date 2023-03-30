@@ -514,7 +514,7 @@ async def open_api(request: Request):
 @app.get("/", include_in_schema=True)
 async def home_route(request: Request):
     """
-        will return a json open api specification for the main API
+        redirects to documentations
     :return:
     """
     return RedirectResponse(url="/redoc", status_code=301)
