@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from sqlalchemy import true
-from starlette.responses import HTMLResponse
+from starlette.responses import HTMLResponse, RedirectResponse
 
 from src.bootstrap import create_tables
 from src.management_api.routes import admin_app
@@ -177,12 +177,12 @@ async def add_security_headers(request: Request, call_next):
     """adding security headers"""
 
     response = await call_next(request)
-    # response.headers["X-Content-Type-Options"] = "nosniff"
-    # response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
     # # TODO find a normal way to resolve this
-    # if request.url.path != "/redoc":
-    #     response.headers["Content-Security-Policy"] = "default-src 'none'; script-src 'self' https://cdn.redoc.ly; connect-src 'self'; img-src 'self'; style-src 'self'"
-    # response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    if not request.url.path.startswith("/redoc") and not request.url.path.startswith("/_admin/redoc"):
+        response.headers["Content-Security-Policy"] = "default-src 'none'; script-src 'self' https://cdn.redoc.ly; connect-src 'self'; img-src 'self'; style-src 'self'"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 if is_development(config_instance=config_instance):
@@ -517,15 +517,7 @@ async def home_route(request: Request):
         will return a json open api specification for the main API
     :return:
     """
-    spec_url = "https://raw.githubusercontent.com/MJ-API-Development/open-api-spec/main/open-api.json"
-    response = await redis_cache.get(key=spec_url, timeout=1)
-    if response is None:
-        data = await async_client.get(url=spec_url, timeout=60 * 5)
-        if data:
-            response = data.json()
-            await redis_cache.set(key=spec_url, value=response, ttl=60 * 60)
-
-    return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
+    return RedirectResponse(url="/redoc", status_code=301)
 
 
 @app.get("/redoc", include_in_schema=False)
