@@ -177,12 +177,12 @@ async def add_security_headers(request: Request, call_next):
     """adding security headers"""
 
     response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
+    # response.headers["X-Content-Type-Options"] = "nosniff"
+    # response.headers["X-Frame-Options"] = "DENY"
     # # TODO find a normal way to resolve this
     # if request.url.path != "/redoc":
     #     response.headers["Content-Security-Policy"] = "default-src 'none'; script-src 'self' https://cdn.redoc.ly; connect-src 'self'; img-src 'self'; style-src 'self'"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 if is_development(config_instance=config_instance):
