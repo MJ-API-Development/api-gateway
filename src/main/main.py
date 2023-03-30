@@ -171,12 +171,15 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def add_security_headers(request, call_next):
+async def add_security_headers(request: Request, call_next):
     """adding security headers"""
+
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Content-Security-Policy"] = "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self'; style-src 'self'"
+    # TODO find a normal way to resolve this
+    if request.url.path != "/redoc":
+        response.headers["Content-Security-Policy"] = "default-src 'none'; script-src 'self' https://cdn.redoc.ly; connect-src 'self'; img-src 'self'; style-src 'self'"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
@@ -522,17 +525,14 @@ async def home_route(request: Request):
     return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
 
-redoc_html = get_redoc_html(
-    openapi_url='/open-api',
+@app.get("/redoc", include_in_schema=False)
+async def redoc_html(request: Request):
+    return get_redoc_html(
+    openapi_url='https://gateway.eod-stock-api.site/open-api',
     title=app.title + " - ReDoc",
     redoc_js_url="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js",
     with_google_fonts=true
 )
-
-
-@app.get("/redoc", include_in_schema=False, response_class=HTMLResponse)
-async def redoc_html(request: Request):
-    return redoc_html
 
 
 @app.get("/_ah/warmup", include_in_schema=False)
