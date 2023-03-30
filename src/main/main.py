@@ -13,6 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+
 from sqlalchemy import true
 from starlette.responses import HTMLResponse
 
@@ -71,7 +73,7 @@ app = FastAPI(
     redoc_url=None
 )
 
-
+app.mount("/static", StaticFiles(directory="src/main/static"), name="static")
 # app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -530,7 +532,7 @@ async def redoc_html(request: Request):
     return get_redoc_html(
     openapi_url='https://gateway.eod-stock-api.site/open-api',
     title=app.title + " - ReDoc",
-    redoc_js_url="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js",
+    redoc_js_url="https://gateway.eod-stock-api.site/static/redoc.standalone.js",
     with_google_fonts=true
 )
 
