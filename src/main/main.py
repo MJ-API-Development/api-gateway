@@ -294,7 +294,7 @@ async def validate_request_middleware(request, call_next):
         response = JSONResponse(content=mess, status_code=404)
         return response
 
-    if path.startswith("/_admin") or path.startswith("/redoc") or path.startswith("/docs"):
+    if path.startswith("/_admin") or path.startswith("/redoc") or path.startswith("/docs") or path.startswith("/static"):
         app_logger.info("starts with admin going in ")
         response = await call_next(request)
 
