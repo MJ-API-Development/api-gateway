@@ -520,13 +520,13 @@ async def home_route(request: Request):
     return RedirectResponse(url="/redoc", status_code=301)
 
 
-@app.get("/redoc", include_in_schema=False)
+@app.get("/redoc", include_in_schema=False, response_class=HTMLResponse)
 async def redoc_html(request: Request):
     return get_redoc_html(
     openapi_url='https://gateway.eod-stock-api.site/open-api',
     title=app.title + " - ReDoc",
     redoc_js_url="https://gateway.eod-stock-api.site/static/redoc.standalone.js",
-    with_google_fonts=true
+    with_google_fonts=true,
 )
 
 
