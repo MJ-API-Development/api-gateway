@@ -18,9 +18,9 @@ def output(*args, **kwargs):
 
 key = b'tZThIdlfwhN_hzrPKE11d4wFwHfAPSYhjG3tVl2oV_E='
 if __name__ == '__main__':
-    # print(Fernet.generate_key())
-    # b'gAAAAABkDWaK_aUP9HwAEoxC6J0dd2hYH9cjaowSHKrPWs9pZWlFikAVkMNqi8XwzEzLbRIBkPm7IqvP9XxdG5N2TfHwTPU5NA=='
-
+    """
+            
+    """
     _plain = "text to encrypt"
     encrypted_text = Fernet(key).encrypt(data=_plain.encode('utf-8'))
     print(encrypted_text)
