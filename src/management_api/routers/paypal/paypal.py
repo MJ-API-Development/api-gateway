@@ -8,7 +8,7 @@ from src.authorize.authorize import NotAuthorized
 from src.config import config_instance
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions
-from src.management_api.admin.authentication import authenticate_app
+from src.management_api.admin.authentication import authenticate_app, get_headers
 from src.management_api.models.paypal import PayPalIPN
 from src.paypal_utils.paypal_plans import paypal_service
 from src.utils.my_logger import init_logger
@@ -18,7 +18,7 @@ paypal_logger = init_logger("paypal_router")
 
 
 async def verify_paypal_ipn(ipn: PayPalIPN):
-    """will check if paypal ipn is verified if not throws an error"""
+    """will check if PayPal ipn is verified if not throws an error"""
     verify_data = ipn.dict()
     response_text = await paypal_utils.verify_ipn(ipn_data=verify_data)
     # NOTE Verify if the request comes from PayPal if not Raise Error and exit
@@ -81,13 +81,14 @@ async def paypal_ipn(request: Request, path: str, ipn: PayPalIPN):
                            'suspended': functools.partial(change_subscription_state, state=False),
                            'payment-failed': functools.partial(change_subscription_state, state=False),
                            'reactivated': functools.partial(change_subscription_state, state=False)}
+
     # TODO consider sending notification Emails triggered by events here
     return await _ipn_state_selector.get(path.casefold())(_subscription_id=ipn.custom)
 
 
 @paypal_router.api_route(path="/paypal/settings/{uuid}", methods=["GET"])
 @authenticate_app
-def paypal_settings(request: Request, uuid: str):
+async def paypal_settings(request: Request, uuid: str):
     """
     **paypal_settings**
         This will return the settings for PayPal
@@ -96,6 +97,5 @@ def paypal_settings(request: Request, uuid: str):
     :return:
     """
     paypal_settings_dict: dict[str, str] = config_instance().PAYPAL_SETTINGS.dict()
-    return JSONResponse(content=paypal_settings_dict, status_code=200, headers={'Content-type': 'application/json'})
-
-    # return JSONResponse(content=paypal_settings_dict, status_code=200)
+    _headers = await get_headers(user_data=paypal_settings_dict)
+    return JSONResponse(content=paypal_settings_dict, status_code=200, headers=_headers)
