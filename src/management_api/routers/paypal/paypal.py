@@ -1,12 +1,12 @@
+import functools
+
 from fastapi import APIRouter, Request
-from fastapi.params import Form
 from starlette.responses import JSONResponse
 
 from src import paypal_utils
 from src.config import config_instance
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions
-from src.management_api.admin.authentication import authenticate_app, get_headers
 from src.management_api.models.paypal import PayPalIPN
 from src.paypal_utils.paypal_plans import paypal_service
 from src.utils.my_logger import init_logger
@@ -29,8 +29,7 @@ async def create_paypal_subscriptions(request: Request):
 
 
 @paypal_router.api_route(path="/_ipn/paypal/{path}", methods=["GET", "POST"], include_in_schema=True)
-@authenticate_app
-async def paypal_ipn(request: Request, ipn: PayPalIPN):
+async def paypal_ipn(request: Request, path: str, ipn: PayPalIPN):
     """
         this IPN will handle the following events
          https://gateway.eod-stock-api.site/_admin/_ipn/paypal/activated
@@ -40,6 +39,7 @@ async def paypal_ipn(request: Request, ipn: PayPalIPN):
          https://gateway.eod-stock-api.site/_admin/_ipn/paypal/payment-failed
          https://gateway.eod-stock-api.site/_admin/_ipn/paypal/reactivated
 
+    :param path:
     :param request:
     :param ipn:
     :return:
@@ -48,44 +48,31 @@ async def paypal_ipn(request: Request, ipn: PayPalIPN):
     paypal_token = 'your_paypal_token_here'
 
     verify_data = ipn.dict()
-
-    # Add the token to the data
-    verify_data['cmd'] = '_notify-validate'
-
     response_text = await paypal_utils.verify_ipn(ipn_data=verify_data)
-
-    if response_text != 'VERIFIED':
-        # Update your database with the relevant information
-        # e.g., subscription start date, end date, and payment status
-        # Send notifications to the client and relevant parties
-        # e.g., email notifications, webhook notifications
+    # NOTE Verify if the request comes from paypal if not exit
+    if response_text.casefold() != 'VERIFIED'.casefold():
         return {'status': 'ERROR', 'message': 'Invalid IPN message'}
-    elif ipn.payment_status == 'Completed':
-        # Return a response to PayPal indicating that the IPN was handled successfully
-        with next(sessions) as session:
-            # TODO have to fix this somehow
-            subscription_id: str = ipn.custom
-            subscription_instance = await Subscriptions.get_by_subscription_id(subscription_id=subscription_id, session=session)
-            # TODO Complete the process of subscribing here
 
-        return JSONResponse(content={'status': 'success'}, status_code=200)
-    elif ipn.payment_status == 'Cancelled':
-        """cancel subscription"""
-        with next(sessions) as session:
-            subscription_id: str = ipn.custom
+    async def change_subscription_state(_subscription_id: str, state: bool):
+        """change subscription state depending on the request state"""
+        with next(sessions) as _session:
+            # TODO verify that the subscription ID here is the same as the one we had when subscribing
+            _subscription_instance: Subscriptions = await Subscriptions.get_by_subscription_id(
+                subscription_id=_subscription_id, session=_session)
+            _subscription_instance._is_active = state
+            _session.merge(_subscription_instance)
+            _session.commit()
+        return JSONResponse(content={'status': 'OK'}, status_code=200)
 
-    return JSONResponse(content={'status': 'OK'}, status_code=200)
+    # NOTE: select appropriate state depending on the ipn
+    _ipn_state_selector = {'cancelled': functools.partial(change_subscription_state, state=False),
+                           'activated': functools.partial(change_subscription_state, state=True),
+                           'expired': functools.partial(change_subscription_state, state=False),
+                           'suspended': functools.partial(change_subscription_state, state=False),
+                           'payment-failed': functools.partial(change_subscription_state, state=False),
+                           'reactivated': functools.partial(change_subscription_state, state=False)}
 
-
-@paypal_router.api_route(path="/_ipn/paypal/billing/subscription-created-activated",
-                         methods=["GET", "POST"], include_in_schema=False)
-async def paypal_subscription_activated_ipn(request: Request):
-    """
-        when subscription is created and activated call this endpoint
-    :param request:
-    :return:
-    """
-    return JSONResponse(content={'status': 'success'}, status_code=201)
+    return await _ipn_state_selector.get(path.casefold())(_subscription_id=ipn.custom)
 
 
 @paypal_router.api_route(path="/paypal/settings/{uuid}", methods=["GET"])
