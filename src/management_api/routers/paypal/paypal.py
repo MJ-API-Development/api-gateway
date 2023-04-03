@@ -97,7 +97,7 @@ def paypal_settings(request: Request, uuid: str):
     :return:
     """
     paypal_settings_dict: dict[str, str] = config_instance().PAYPAL_SETTINGS.dict()
-    headers = await get_headers(user_data=paypal_settings_dict)
-    return JSONResponse(content=paypal_settings_dict, status_code=200, headers=headers)
+
+    return JSONResponse(content=paypal_settings_dict, status_code=200, headers={'Content-type': 'application/json'})
 
     # return JSONResponse(content=paypal_settings_dict, status_code=200)
