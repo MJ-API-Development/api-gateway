@@ -20,16 +20,17 @@ subscriptions_router = APIRouter()
 sub_logger = init_logger("subscriptions_router")
 
 
-@subscriptions_router.api_route(path="/subscriptions", methods=["POST", "PUT"], include_in_schema=True)
+@subscriptions_router.api_route(path="/subscriptions", methods=["POST"], include_in_schema=True)
 @authenticate_app
 async def create_subscription(subscription_data: SubscriptionCreate, request: Request):
     """
         create and update subscriptions
+    :param request:
     :param subscription_data:
     :return:
     """
     sub_logger.info("Subscriptions")
-    headers = {'Content-Type': 'application:json'}
+
     # TODO Refactor this method to include request authorization headers
     with next(sessions) as session:
         plan_id = subscription_data.plan_id
@@ -53,7 +54,8 @@ async def create_subscription(subscription_data: SubscriptionCreate, request: Re
             'invoice_to_date': to_date,
             'time_issued': today
         }
-
+        # TODO invoices must indicate that they are paid invoices
+        # TODO in future i must create invoices for clients which did not yet pay and send them to their inbox
         invoice: Invoices = await Invoices.create_invoice(_data=invoice_data, session=session)
 
         session.add(subscription_instance)
@@ -66,8 +68,8 @@ async def create_subscription(subscription_data: SubscriptionCreate, request: Re
         session.flush()
         # this last step creates a billing in paypal the client app must redirect the user to the url for verifying
         # the billing
-        subscription_instance = await paypal_service.create_paypal_billing(plan=plan,
-                                                                           subscription=subscription_instance)
+        # subscription_instance = await paypal_service.create_paypal_billing(plan=plan,
+        #                                                                    subscription=subscription_instance)
         ADMIN = config_instance().EMAIL_SETTINGS.ADMIN
         sub_dict = dict(sender_email=ADMIN, recipient_email=account.email, client_name=account.name,
                         plan_name=plan.name)

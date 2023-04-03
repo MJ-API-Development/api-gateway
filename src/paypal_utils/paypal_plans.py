@@ -10,6 +10,9 @@ paypal_config = dict(client_id=config_instance().PAYPAL_SETTINGS.CLIENT_ID,
 
 
 class PayPalService:
+    """
+        PayPal Service
+    """
     def __init__(self):
         self.paypal_api = paypalrestsdk.configure(paypal_config)
         self.client_plans = self.load_plans()

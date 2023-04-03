@@ -7,6 +7,11 @@ class SubscriptionCreate(BaseModel):
     """
     plan_id: str
     uuid: str
+    paypal_id: str
+    billing_token: str
+    payer_id: str
+    subscription_id: str
+    facilitatorAccessToken: str
     payment_method: str
 
 
