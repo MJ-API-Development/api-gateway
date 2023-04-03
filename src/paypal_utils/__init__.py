@@ -12,6 +12,7 @@ async def verify_ipn(ipn_data):
     """
     PAYPAL_VERIFY_URL = "https://ipnpb.paypal.com/cgi-bin/webscr"
     PAYPAL_TOKEN = f"Bearer {config_instance().PAYPAL_SETTINGS.BEARER_TOKEN}"
+    # TODO verify if token does not need refreshing after sometime
     # Add 'cmd=_notify-validate' parameter for verification
     ipn_data["cmd"] = "_notify-validate"
     header = {'Authentication': PAYPAL_TOKEN}

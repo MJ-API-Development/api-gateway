@@ -21,7 +21,7 @@ async def verify_paypal_ipn(ipn: PayPalIPN):
     """will check if paypal ipn is verified if not throws an error"""
     verify_data = ipn.dict()
     response_text = await paypal_utils.verify_ipn(ipn_data=verify_data)
-    # NOTE Verify if the request comes from PayPal if not exit
+    # NOTE Verify if the request comes from PayPal if not Raise Error and exit
     if response_text.casefold() != 'VERIFIED'.casefold():
         raise NotAuthorized(message="Invalid IPN Request")
     return True
@@ -59,8 +59,10 @@ async def paypal_ipn(request: Request, path: str, ipn: PayPalIPN):
     :param ipn:
     :return:
     """
+    # NOTE Authenticates the IPN Message
     await verify_paypal_ipn(ipn=ipn)
 
+    # Changes Subscription State depending on IPN Message
     async def change_subscription_state(_subscription_id: str, state: bool):
         """change subscription state depending on the request state"""
         with next(sessions) as _session:
