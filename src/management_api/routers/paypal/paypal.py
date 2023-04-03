@@ -4,15 +4,27 @@ from fastapi import APIRouter, Request
 from starlette.responses import JSONResponse
 
 from src import paypal_utils
+from src.authorize.authorize import NotAuthorized
 from src.config import config_instance
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Subscriptions
+from src.management_api.admin.authentication import authenticate_app
 from src.management_api.models.paypal import PayPalIPN
 from src.paypal_utils.paypal_plans import paypal_service
 from src.utils.my_logger import init_logger
 
 paypal_router = APIRouter()
 paypal_logger = init_logger("paypal_router")
+
+
+async def verify_paypal_ipn(ipn: PayPalIPN):
+    """will check if paypal ipn is verified if not throws an error"""
+    verify_data = ipn.dict()
+    response_text = await paypal_utils.verify_ipn(ipn_data=verify_data)
+    # NOTE Verify if the request comes from PayPal if not exit
+    if response_text.casefold() != 'VERIFIED'.casefold():
+        raise NotAuthorized(message="Invalid IPN Request")
+    return True
 
 
 @paypal_router.api_route(path="/paypal/subscriptions", methods=["GET"], include_in_schema=True)
@@ -31,7 +43,10 @@ async def create_paypal_subscriptions(request: Request):
 @paypal_router.api_route(path="/_ipn/paypal/{path}", methods=["GET", "POST"], include_in_schema=True)
 async def paypal_ipn(request: Request, path: str, ipn: PayPalIPN):
     """
-        this IPN will handle the following events
+    **paypal_ipn**
+
+        this IPN will handle the following events from paypal and then take the
+        required actions on the user account related to the PayPal Action / Event
          https://gateway.eod-stock-api.site/_admin/_ipn/paypal/activated
          https://gateway.eod-stock-api.site/_admin/_ipn/paypal/cancelled
          https://gateway.eod-stock-api.site/_admin/_ipn/paypal/created
@@ -44,14 +59,7 @@ async def paypal_ipn(request: Request, path: str, ipn: PayPalIPN):
     :param ipn:
     :return:
     """
-    paypal_url = 'https://ipnpb.paypal.com/cgi-bin/webscr'
-    paypal_token = 'your_paypal_token_here'
-
-    verify_data = ipn.dict()
-    response_text = await paypal_utils.verify_ipn(ipn_data=verify_data)
-    # NOTE Verify if the request comes from paypal if not exit
-    if response_text.casefold() != 'VERIFIED'.casefold():
-        return {'status': 'ERROR', 'message': 'Invalid IPN message'}
+    await verify_paypal_ipn(ipn=ipn)
 
     async def change_subscription_state(_subscription_id: str, state: bool):
         """change subscription state depending on the request state"""
@@ -71,20 +79,21 @@ async def paypal_ipn(request: Request, path: str, ipn: PayPalIPN):
                            'suspended': functools.partial(change_subscription_state, state=False),
                            'payment-failed': functools.partial(change_subscription_state, state=False),
                            'reactivated': functools.partial(change_subscription_state, state=False)}
-
+    # TODO consider sending notification Emails triggered by events here
     return await _ipn_state_selector.get(path.casefold())(_subscription_id=ipn.custom)
 
 
 @paypal_router.api_route(path="/paypal/settings/{uuid}", methods=["GET"])
+@authenticate_app
 def paypal_settings(request: Request, uuid: str):
     """
-
+    **paypal_settings**
+        This will return the settings for PayPal
     :param request:
     :param uuid:
     :return:
     """
     paypal_settings_dict: dict[str, str] = config_instance().PAYPAL_SETTINGS.dict()
-
     return JSONResponse(content=paypal_settings_dict, status_code=200, headers={'Content-type': 'application/json'})
 
     # return JSONResponse(content=paypal_settings_dict, status_code=200)

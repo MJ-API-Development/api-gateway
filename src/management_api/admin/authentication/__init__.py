@@ -40,9 +40,7 @@ def authenticate_app(func):
     async def wrapper(*args, **kwargs):
         # TODO find a way of authenticating APPS, not BASED on API, Suggestion SECRET_KEY
         request: Request = kwargs.get('request')
-        authenticate_logger.info(f"Authenticating : {request.headers.get('X-SIGNATURE')}")
         if await verify_signature(request=request):
-            print("Signature Verified")
             return await func(*args, **kwargs)
 
         raise NotAuthorized(message="This Resource is only Accessible to Admins")
