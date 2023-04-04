@@ -14,7 +14,7 @@ from src.management_api.routers.subscriptions.subscriptions import subscriptions
 from src.management_api.routers.users.users import users_router
 from src.utils.my_logger import init_logger
 
-management_logger = init_logger("management_aoi")
+management_logger = init_logger("management_api")
 admin_app = FastAPI(
     title="EOD-STOCK-API - ADMINISTRATOR",
     description="Administration Application for EOD Stock API",
@@ -42,9 +42,8 @@ async def check_if_valid_request(request, call_next):
     :param call_next:
     :return:
     """
-    # print(f"inside admin : {await request.body()}")
+    # TODO Include here admin specific verifications
     response = await call_next(request)
-    print(f"response from admin : {response}")
     return response
 
 
