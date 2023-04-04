@@ -8,11 +8,10 @@ from src.const import UUID_LEN
 from src.database.account.account import Account
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Plans, Subscriptions, Invoices
-from src.management_api.email.email import email_process
 from src.event_queues.invoice_queue import add_invoice_to_send
 from src.management_api.admin.authentication import authenticate_app, get_headers
+from src.management_api.email.email import email_process
 from src.management_api.models.subscriptions import SubscriptionCreate, SubscriptionUpdate
-from src.paypal_utils.paypal_plans import paypal_service
 from src.utils.my_logger import init_logger
 from src.utils.utils import create_id, calculate_invoice_date_range
 
@@ -88,8 +87,8 @@ async def update_subscription(subscription_data: SubscriptionUpdate, request: Re
             Upgrade or Downgrade Plan, thi only affect the net invoice
         """
     with next(sessions) as session:
-        plan_id = subscription_data.plan_id
-        plan = await Plans.get_plan_by_plan_id(plan_id=plan_id, session=session)
+        plan_id: str = subscription_data.plan_id
+        plan: Plans = await Plans.get_plan_by_plan_id(plan_id=plan_id, session=session)
 
         subscription_id = subscription_data.subscription_id
         subscription_instance: Subscriptions = await Subscriptions.get_by_subscription_id(
@@ -238,7 +237,6 @@ async def get_plan(plan_id: str, request: Request):
 async def get_all_plans(request: Request):
     """
         returns all plans
-    :param plan_id:
     :param request:
     :return:
     """
