@@ -1,17 +1,9 @@
 from fastapi import APIRouter, Request
-import asyncio
-import hmac
-import random
-import string
 from starlette.responses import JSONResponse
 
-from src.cache.cache import redis_cache
-from src.database.account.account import Account, TwoFactorLoginData
 from src.database.contact import Contacts
 from src.database.database_sessions import sessions
-from src.management_api.admin.authentication import authenticate_app, get_headers
-from src.management_api.email.email import email_process
-from src.management_api.models.authentication import LoginData, AuthorizationRequest
+from src.management_api.admin.authentication import get_headers
 from src.management_api.models.contact import ContactModel
 from src.utils.my_logger import init_logger
 
