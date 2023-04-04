@@ -41,7 +41,7 @@ class PayPalService:
                             "frequency_interval": "1",
                             "amount": {
                                 "currency": "USD",
-                                "value": f"{plan.charge_amount / 100}"
+                                "value": f"{plan.charge_amount}"
                             },
                             "cycles": "0",
                             "charge_models": [

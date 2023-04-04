@@ -77,7 +77,7 @@ class EmailSettings(BaseSettings):
 
 
 class PayPalSettings(BaseSettings):
-    MODE: str = Field(default="sandbox")
+    MODE: str = Field(default="live")
     CLIENT_ID: str = Field(..., env="PAYPAL_CLIENT_ID")
     CLIENT_SECRET: str = Field(..., env="PAYPAL_CLIENT_SECRET")
     BEARER_TOKEN: str = Field(..., env="PAYPAL_BEARER_TOKEN")
