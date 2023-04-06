@@ -47,7 +47,7 @@ async def paypal_ipn(request: Request, path: str, ipn: PayPalIPN):
     """
     **paypal_ipn**
 
-        this IPN will handle the following events from paypal and then take the
+        this IPN will handle the following events from PayPal and then take the
         required actions on the user account related to the PayPal Action / Event
          https://gateway.eod-stock-api.site/_admin/_ipn/paypal/activated
          https://gateway.eod-stock-api.site/_admin/_ipn/paypal/cancelled

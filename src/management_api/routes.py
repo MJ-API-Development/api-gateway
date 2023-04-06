@@ -35,7 +35,7 @@ admin_app = FastAPI(
 
 
 @admin_app.middleware(middleware_type="http")
-async def check_if_valid_request(request, call_next):
+async def check_if_valid_request(request: Request, call_next):
     """
 
     :param request:
@@ -43,6 +43,9 @@ async def check_if_valid_request(request, call_next):
     :return:
     """
     # TODO Include here admin specific verifications
+    path = request.url
+
+    management_logger.info(f"on entry into management api: {path}")
     response = await call_next(request)
     return response
 
