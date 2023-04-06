@@ -3,7 +3,6 @@ import datetime
 import hashlib
 import hmac
 import itertools
-import socket
 import time
 from json.decoder import JSONDecodeError
 
@@ -14,22 +13,19 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-
 from sqlalchemy import true
 from starlette.responses import HTMLResponse, RedirectResponse
 
-from src.bootstrap import create_tables
-from src.management_api.routes import admin_app
-
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
     load_plans_by_api_keys, RateLimitExceeded
-from src.cache.cache import redis_cache, redis_cached_ttl
+from src.cache.cache import redis_cache
 from src.cloudflare_middleware import EODAPIFirewall
 from src.config import config_instance
-from src.database.apikeys.keys import cache_api_keys, create_admin_key
-from src.database.plans.init_plans import RateLimits, create_plans
-from src.management_api.email.email import email_process
+from src.database.apikeys.keys import cache_api_keys
+from src.database.plans.init_plans import RateLimits
 from src.make_request import async_client
+from src.management_api.email.email import email_process
+from src.management_api.routes import admin_app
 from src.prefetch import prefetch_endpoints
 from src.ratelimit import ip_rate_limits, RateLimit
 from src.requests import requester

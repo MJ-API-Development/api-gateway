@@ -19,6 +19,10 @@ class LoginData(BaseModel):
             raise ValueError('Not a Valid Email Address')
         return v
 
+    class Config:
+        title = "Login Model"
+        extra = "forbid"
+
 
 class AuthorizationRequest(BaseModel):
     """
@@ -39,3 +43,7 @@ class AuthorizationRequest(BaseModel):
             if not value:
                 raise ValueError(f"{key} must not be empty")
         return values
+
+    class Config:
+        title = "User Authorization Model"
+        extra = "allow"

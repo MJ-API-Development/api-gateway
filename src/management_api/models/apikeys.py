@@ -9,3 +9,7 @@ class ApiKeysModel(BaseModel):
     rate_limit: int
     is_active: bool
     subscription: SubscriptionUpdate
+
+    class Config:
+        title = "API Keys Model"
+        extra = "allow"

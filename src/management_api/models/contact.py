@@ -8,3 +8,7 @@ class ContactModel(BaseModel):
     email: str
     message: str
     timestamp: float
+
+    class Config:
+        title = "Contact Model"
+        extra = "forbid"

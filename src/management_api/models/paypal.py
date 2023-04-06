@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 
 
-
 class PayPalIPN(BaseModel):
     """
     Model to handle data from PayPal IPN
@@ -12,3 +11,7 @@ class PayPalIPN(BaseModel):
     mc_gross: float | None
     mc_currency: str | None
     custom: str | None
+
+    class Config:
+        title = "PayPalIPN Model"
+        extra = "ignore"
