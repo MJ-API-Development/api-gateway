@@ -19,7 +19,9 @@ paypal_logger = init_logger("paypal_router")
 
 async def verify_paypal_ipn(ipn: PayPalIPN):
     """will check if PayPal ipn is verified if not throws an error"""
+    paypal_logger.info(f"ipn initial data : {ipn}")
     verify_data = ipn.dict()
+    paypal_logger.info(f"verifying ipn : {verify_data}")
     response_text = await paypal_utils.verify_ipn(ipn_data=verify_data)
     # NOTE Verify if the request comes from PayPal if not Raise Error and exit
     if response_text.casefold() != 'VERIFIED'.casefold():
@@ -59,6 +61,8 @@ async def paypal_ipn(request: Request, path: str, ipn: PayPalIPN):
     :param ipn:
     :return:
     """
+    paypal_logger.info(f"entry to paypal ipn : {path} with ipn: {ipn}")
+    paypal_logger.info(F'request data : {await request.body()}')
     # NOTE Authenticates the IPN Message
     await verify_paypal_ipn(ipn=ipn)
 
