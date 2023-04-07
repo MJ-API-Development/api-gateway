@@ -98,7 +98,7 @@ async def is_resource_authorized(path_param: str, api_key: str) -> bool:
     with next(sessions) as session:
         client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
         subscription: Subscriptions = client_api_model.subscription
-        auth_logger.info(f"user subscription is : {subscription.is_active(session=session)}")
+
         if not subscription:
             # TODO very important to trigger an email here indicating the user has not yet paid for services
             return False
