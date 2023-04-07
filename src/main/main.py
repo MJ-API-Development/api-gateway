@@ -7,6 +7,7 @@ import time
 from json.decoder import JSONDecodeError
 
 import httpx
+import requests
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -528,7 +529,8 @@ async def redoc_html(request: Request):
 
 @app.get("/_ah/warmup", include_in_schema=False)
 async def status_check(request: Request):
-    response = await check_all_services()
+    _payload = await check_all_services()
+    response = dict(payload=_payload)
     return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
 
@@ -564,4 +566,14 @@ async def check_all_services():
         compile a full list of services and show if they are available
     :return:
     """
-    return {}
+    ping_master = requests.get('https://stock-eod-api.site/_ah/warmup')
+    master = "Offline"
+
+    if ping_master.status_code == 200:
+        master = "online"
+
+    return {
+        'Gateway': 'Online',
+        'API_Master': master,
+        'API_Slave': 'Online'
+    }
