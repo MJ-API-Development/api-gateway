@@ -71,6 +71,8 @@ app = FastAPI(
 )
 
 app.mount("/static", StaticFiles(directory="src/main/static"), name="static")
+
+
 # app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -178,9 +180,11 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     # # TODO find a normal way to resolve this
     if not request.url.path.startswith("/redoc") and not request.url.path.startswith("/_admin/redoc"):
-        response.headers["Content-Security-Policy"] = "default-src 'none'; script-src 'self' https://cdn.redoc.ly; connect-src 'self'; img-src 'self'; style-src 'self'"
+        response.headers[
+            "Content-Security-Policy"] = "default-src 'none'; script-src 'self' https://cdn.redoc.ly; connect-src 'self'; img-src 'self'; style-src 'self'"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
+
 
 if is_development(config_instance=config_instance):
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["gateway.eod-stock-api.site", "localhost", "127.0.0.1"])
@@ -239,8 +243,9 @@ async def check_ip(request: Request, call_next):
         response = await call_next(request)
     else:
         return JSONResponse(
-            content={"message": "Access denied, Bad Gateway Address we can only process request from our gateway server",
-                     "gateway": "https://gateway.eod-stock-api.site"},
+            content={
+                "message": "Access denied, Bad Gateway Address we can only process request from our gateway server",
+                "gateway": "https://gateway.eod-stock-api.site"},
             status_code=403)
 
     return response
@@ -292,7 +297,8 @@ async def validate_request_middleware(request, call_next):
         response = JSONResponse(content=mess, status_code=404)
         return response
 
-    if path.startswith("/_admin") or path.startswith("/redoc") or path.startswith("/docs") or path.startswith("/static"):
+    if path.startswith("/_admin") or path.startswith("/redoc") or path.startswith("/docs") or path.startswith(
+            "/static"):
         app_logger.info("starts with admin going in ")
         response = await call_next(request)
 
@@ -437,7 +443,8 @@ async def v1_gateway(request: Request, path: str):
     api_urls = [f'{api_server_url}/api/v1/{path}' for api_server_url in api_server_urls]
 
     # Will Take at least six second on the cache if it finds nothing will return None
-    tasks = [redis_cache.get(key=api_url, timeout=6) for api_url in api_urls]
+    # need an improved get timeout for the articles
+    tasks = [redis_cache.get(key=api_url, timeout=60*5) for api_url in api_urls]
     cached_responses = await asyncio.gather(*tasks)
 
     for i, response in enumerate(cached_responses):
@@ -520,11 +527,11 @@ async def home_route(request: Request):
 @app.get("/redoc", include_in_schema=False, response_class=HTMLResponse)
 async def redoc_html(request: Request):
     return get_redoc_html(
-    openapi_url='https://gateway.eod-stock-api.site/open-api',
-    title=app.title + " - ReDoc",
-    redoc_js_url="https://gateway.eod-stock-api.site/static/redoc.standalone.js",
-    with_google_fonts=true,
-)
+        openapi_url='https://gateway.eod-stock-api.site/open-api',
+        title=app.title + " - ReDoc",
+        redoc_js_url="https://gateway.eod-stock-api.site/static/redoc.standalone.js",
+        with_google_fonts=true
+    )
 
 
 @app.get("/_ah/warmup", include_in_schema=False)
