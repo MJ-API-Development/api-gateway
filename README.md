@@ -56,16 +56,19 @@ https://gateway.eod-stock-api.site
 
 If you want to contribute to **api-gateway**, please follow these steps:
 
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix:
+- Fork the repository.
+- Create a new branch for your feature or bug fix:
+- Make your changes and commit them:
+- Push your changes to your fork:
+- Create a pull request to the main repository.
 
 
-3. Make your changes and commit them:
-
-4. Push your changes to your fork:
-
-5. Create a pull request to the main repository.
+## Links
+- [EOD Stock API - Intelligent Stock Market API](https://eod-stock-api.site)
+- [PythonSDK - Intelligent Stock Market API](https://pypi.org/project/Intelligent-Stock-Market-API/)
+- [Developers Blog - EOD Stock API](https://eod-stock-api.site/blog)
+- [EOD STOCK API - Gateway Server](https://gateway.eod-stock-api.site)
+- [EOD Stock API - Redoc Documentations](https://eod-stock-api.site/redoc)
 
 ## License
-
 **api-gateway** is licensed under the MIT License. See the `LICENSE` file for details. 
