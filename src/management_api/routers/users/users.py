@@ -18,25 +18,25 @@ users_logger = init_logger("users_router")
 
 @users_router.api_route(path="/user", methods=["POST"], include_in_schema=True)
 @authenticate_app
-async def create_user(user_data: AccountCreate, request: Request) -> UserResponseSchema:
+async def create_user(new_user: AccountCreate, request: Request) -> UserResponseSchema:
     """
     **create user**
         used to create new user record
 
     :param request:
-    :param user_data: data containing user information
+    :param new_user: data containing user information
 
     :return: status payload, message -> see Responses
     """
-    users_logger.info(f"creating user : {user_data}")
+    users_logger.info(f"creating user : {new_user}")
     with next(sessions) as session:
-        users_logger.info(f"creating user with the following user data : {user_data}")
-        email = user_data.email
+        users_logger.info(f"creating user with the following user data : {new_user}")
+        email = new_user.email
 
         user_instance = await Account.get_by_email(email=email, session=session)
         users_logger.info(f"checking user instance : {user_instance}")
         if not bool(user_instance):
-            user_instance = Account(**user_data.dict())
+            user_instance = Account(**new_user.dict())
             users_logger.info(f"created user with the following user data: {user_instance.to_dict()}")
             session.add(user_instance)
             session.commit()
@@ -57,7 +57,7 @@ async def create_user(user_data: AccountCreate, request: Request) -> UserRespons
             return JSONResponse(content=payload, status_code=201, headers=_headers)
 
         else:
-            users_logger.info(f'User Found: {user_instance.to_dict()} ')
+            users_logger.info(f'User Found: {user_instance} ')
             # TODO create custom Exceptions
             raise HTTPException(detail="User already exist", status_code=401)
 
