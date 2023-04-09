@@ -68,7 +68,7 @@ async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
             auth_logger.info("path matched")
         if method in methods:
             auth_logger.info("method matched")
-        if re.match(route, path) and method.capitalize() in methods:
+        if re.match(route, path) and method in methods:
             auth_logger.info(f"User is Authorized")
             return True
 
