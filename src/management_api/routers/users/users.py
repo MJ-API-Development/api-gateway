@@ -33,7 +33,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
 
         if isinstance(user_instance, Account) and bool(user_instance):
             users_logger.info(f'User Found: ')
-            payload = dict(status=False, payload={}, message="Error User Already Exists")
+            payload = dict(status=False, payload={}, message="Error User Already Exists - Please login to proceed")
             _headers = await get_headers(user_data=payload)
             return JSONResponse(content=payload, status_code=401, headers=_headers)
 
@@ -62,7 +62,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
                             recipient_email=recipient_email, client_name=client_name)
 
         await email_process.send_account_confirmation_email(**message_dict)
-        payload = dict(status=True, payload=_payload, message="Successfully Created Account")
+        payload = dict(status=True, payload=_payload, message="Successfully Created Account - Please Login to Proceed")
         _headers = await get_headers(user_data=payload)
         return JSONResponse(content=payload, status_code=201, headers=_headers)
 
