@@ -29,11 +29,11 @@ class AuthorizationRequest(BaseModel):
     Model for authorization request
 
     Attributes:
-        uid (str): Client's UUID
+        uuid (str): Client's UUID
         path (str): Path login or authorization Request
         method (str): Method of request which will be used to access the path (default: 'GET')
     """
-    uid: str
+    uuid: str
     path: str
     method: str
 

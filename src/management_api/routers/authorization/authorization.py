@@ -163,13 +163,9 @@ async def authorization(auth_data: AuthorizationRequest, request: Request):
     :type payload: dict
     :return: payload : dict[str, str| bool dict[str|bool]], status_code
     """
-    data = auth_data.dict()
-    uuid = data.get("uuid")
-    path = data.get("path")
-    method = data.get("method")
 
-    is_authorized = await check_authorization(uuid=uuid, path=path, method=method)
-    message = "user is authorized" if is_authorized else "user not authorized"
+    is_authorized = await check_authorization(uuid=auth_data.uuid, path=auth_data.path, method=auth_data.method)
+    message = "User is Authorized" if is_authorized else "User not Authorized"
     payload = dict(status=True, payload=dict(is_authorized=is_authorized), message=message)
     headers = await get_headers(user_data=payload)
     return JSONResponse(content=payload, status_code=200, headers=headers)
