@@ -44,7 +44,7 @@ class ApiKeyModel(Base):
             Base.metadata.create_all(bind=engine)
 
     def to_dict(self) -> dict[str, str]:
-        return {
+        init_dict = {
             "uuid": self.uuid,
             "api_key": self.api_key,
             "duration": self.duration,
@@ -52,6 +52,9 @@ class ApiKeyModel(Base):
             "is_active": self.is_active,
             "subscription": self.subscription.to_dict()
         }
+        if self.subscription:
+            init_dict['subscription'] = self.subscription.to_dict()
+        return init_dict
 
     @classmethod
     async def get_by_apikey(cls, api_key: str, session: sessionType) -> ApiKeyModel:

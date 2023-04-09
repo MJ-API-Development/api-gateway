@@ -74,16 +74,18 @@ class Account(Base):
         self.password_hash = hashlib.sha256(plaintext_password.encode()).hexdigest()
 
     def to_dict(self) -> dict[str, str]:
-        return {
+        init_dict = {
             "uuid": self.uuid,
             "first_name": self.first_name,
             "second_name": self.second_name,
             "surname": self.surname,
             "email": self.email,
             "cell": self.cell,
-            "is_admin": self.is_admin,
-            "apikey": self.apikey.to_dict(),
+            "is_admin": self.is_admin
         }
+        if self.apikey:
+            init_dict["apikey"] = self.apikey.to_dict()
+        return init_dict
 
     @classmethod
     async def get_by_uuid(cls, uuid: str, session: sessionType) -> Self | None:
