@@ -4,7 +4,7 @@ import secrets
 from pydantic import BaseModel
 from sqlalchemy import Column, String, inspect, Boolean
 from sqlalchemy.orm import relationship
-from typing_extensions import Self
+from typing import Self
 
 from src.authorize.authorize import NotAuthorized
 from src.const import UUID_LEN, NAME_LEN, EMAIL_LEN, STR_LEN, CELL_LEN

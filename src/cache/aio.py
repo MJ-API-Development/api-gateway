@@ -1,11 +1,9 @@
 import ast
-import functools
-
-import aiocache
 import threading
 from typing import Optional
-from aiocache.backends.redis import RedisBackend
+
 from aiocache.backends.memory import SimpleMemoryBackend as MemoryBackend
+from aiocache.backends.redis import RedisBackend
 
 from src.config import config_instance
 from src.utils.my_logger import init_logger

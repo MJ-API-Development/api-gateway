@@ -1,8 +1,8 @@
 
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
-from src.const import UUID_LEN
 from src.management_api.models.apikeys import ApiKeysModel
 from src.utils.utils import create_id
 

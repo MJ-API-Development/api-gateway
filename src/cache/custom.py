@@ -1,17 +1,18 @@
 import asyncio
 import functools
+import pickle
 import threading
 import time
 from json import JSONDecodeError
 from typing import Any, Callable
-import redis
+
 import asyncio_redis
-import ujson
-from redis import ConnectionError, RedisError, AuthenticationError
+import redis
+from redis import ConnectionError, AuthenticationError
+
 from src.config import config_instance
 from src.utils.my_logger import init_logger
 from src.utils.utils import camel_to_snake
-import pickle
 
 MEM_CACHE_SIZE = config_instance().CACHE_SETTINGS.MAX_CACHE_SIZE
 EXPIRATION_TIME = config_instance().CACHE_SETTINGS.CACHE_DEFAULT_TIMEOUT

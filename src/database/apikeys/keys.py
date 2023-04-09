@@ -6,7 +6,7 @@ import datetime
 import pymysql
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, inspect
 from sqlalchemy.orm import relationship
-from typing_extensions import Self
+from typing import Self
 
 from src.database.database_sessions import sessions, Base, sessionType, engine
 from src.database.plans.plans import Subscriptions, Plans

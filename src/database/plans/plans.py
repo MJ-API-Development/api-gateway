@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from numba import jit
+from typing import Self
+
 from sqlalchemy import Column, String, Text, Integer, Float, Boolean, ForeignKey, inspect
 from sqlalchemy.orm import relationship
-from typing_extensions import Self
 
 from src.const import UUID_LEN, NAME_LEN
 from src.database.database_sessions import sessionType, Base, engine
