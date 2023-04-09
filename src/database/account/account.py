@@ -10,7 +10,6 @@ from src.authorize.authorize import NotAuthorized
 from src.const import UUID_LEN, NAME_LEN, EMAIL_LEN, STR_LEN, CELL_LEN
 from src.database.apikeys.keys import ApiKeyModel
 from src.database.database_sessions import Base, sessionType, engine
-from src.database.plans.plans import Subscriptions
 
 
 class TwoFactorLoginData(BaseModel):

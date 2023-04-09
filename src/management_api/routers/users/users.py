@@ -33,31 +33,33 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
         email = new_user.email
         user_instance = await Account.get_by_email(email=email, session=session)
 
-        if not isinstance(user_instance, Account):
-            new_user = Account(**new_user.dict())
-            users_logger.info(f"created user with the following user data: {new_user.to_dict()}")
-            session.add(new_user)
-            session.commit()
-            users_logger.info(f"created user with the following user data: {new_user.to_dict()}")
-            # this will schedule an account confirmation email to be sent
-            # TODO look at this - Make this an ephemeral link, it other words it should expire after sometime
-            verification_link = f"https://gateway.eod-stock-api.site/_admin/account/confirm/{new_user.uuid}"
-
-            sender_email = config_instance().EMAIL_SETTINGS.ADMIN
-            recipient_email = new_user.email
-            client_name = new_user.names
-            message_dict = dict(verification_link=verification_link, sender_email=sender_email,
-                                recipient_email=recipient_email, client_name=client_name)
-
-            await email_process.send_account_confirmation_email(**message_dict)
-            payload = dict(status=True, payload=user_instance.to_dict(), message="successfully created account")
-            _headers = await get_headers(user_data=payload)
-            return JSONResponse(content=payload, status_code=201, headers=_headers)
-
-        else:
+        if isinstance(user_instance, Account) and bool(user_instance):
             users_logger.info(f'User Found: {user_instance} ')
             # TODO create custom Exceptions
             raise HTTPException(detail="User already exist", status_code=401)
+
+        new_user_instance = Account(**new_user.dict())
+        if not bool(new_user_instance):
+            raise HTTPException(detail="Error creating User", status_code=404)
+
+        users_logger.info(f"created user with the following user data: {str(new_user_instance)}")
+        session.add(new_user_instance)
+        session.commit()
+        users_logger.info(f"created user with the following user data: {new_user_instance}")
+        # this will schedule an account confirmation email to be sent
+        # TODO look at this - Make this an ephemeral link, it other words it should expire after sometime
+        verification_link = f"https://gateway.eod-stock-api.site/_admin/account/confirm/{new_user_instance.uuid}"
+
+        sender_email = config_instance().EMAIL_SETTINGS.ADMIN
+        recipient_email = new_user_instance.email
+        client_name = new_user_instance.names
+        message_dict = dict(verification_link=verification_link, sender_email=sender_email,
+                            recipient_email=recipient_email, client_name=client_name)
+
+        await email_process.send_account_confirmation_email(**message_dict)
+        payload = dict(status=True, payload=user_instance.to_dict(), message="successfully created account")
+        _headers = await get_headers(user_data=payload)
+        return JSONResponse(content=payload, status_code=201, headers=_headers)
 
 
 @users_router.api_route(path="/user", methods=["PUT"], include_in_schema=True)
