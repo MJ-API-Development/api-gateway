@@ -2,7 +2,9 @@
 from typing import Optional
 from pydantic import BaseModel
 
+from src.const import UUID_LEN
 from src.management_api.models.apikeys import ApiKeysModel
+from src.utils.utils import create_id
 
 
 class AccountUpdate(BaseModel):
@@ -17,6 +19,7 @@ class AccountUpdate(BaseModel):
 
 
 class AccountCreate(BaseModel):
+    uuid: str | None = create_id(UUID_LEN)
     first_name: str
     second_name: str | None = None
     surname: str

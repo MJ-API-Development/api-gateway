@@ -34,10 +34,11 @@ async def create_user(user_data: AccountCreate, request: Request) -> UserRespons
         email = user_data.email
         user_instance = await Account.get_by_email(email=email, session=session)
 
-        if not user_instance:
+        if user_instance is None:
             user_dict = user_data.dict()
             user_dict.update(uuid=create_id(UUID_LEN))
             user_instance = Account(**user_dict)
+            users_logger.info(f"created user with the following user data: {user_instance.to_dict()}")
             session.add(user_instance)
             session.commit()
             users_logger.info(f"created user with the following user data: {user_instance.to_dict()}")
