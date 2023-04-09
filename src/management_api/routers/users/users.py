@@ -32,19 +32,22 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
         user_instance: Account | None = await Account.get_by_email(email=email, session=session)
 
         if isinstance(user_instance, Account) and bool(user_instance):
-            users_logger.info(f'User Found: {user_instance.to_dict()} ')
+            users_logger.info(f'User Found: ')
             payload = dict(status=False, payload={}, message="Error User Already Exists")
             _headers = await get_headers(user_data=payload)
             return JSONResponse(content=payload, status_code=401, headers=_headers)
 
         new_user_instance: Account = Account(**new_user.dict())
         if not bool(new_user_instance):
+            users_logger.info(f'User Not Created: ')
             payload = dict(status=False, payload={}, message="Error Unable to create User")
             _headers = await get_headers(user_data=payload)
             return JSONResponse(content=payload, status_code=401, headers=_headers)
 
+        users_logger.info(f'Saving User To DATABASE: ')
         session.add(new_user_instance)
         session.commit()
+        users_logger.info(f'Converting to dict: ')
         _payload: dict[str, str | dict[str, str]] = new_user_instance.to_dict()
         users_logger.info(f"Created NEW USER : {_payload}")
 
