@@ -35,13 +35,15 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
 
         if isinstance(user_instance, Account) and bool(user_instance):
             users_logger.info(f'User Found: {user_instance} ')
-            # TODO create custom Exceptions
-            raise HTTPException(detail="User already exist", status_code=401)
+            payload = dict(status=False, payload={}, message="Error User Already Exists")
+            _headers = await get_headers(user_data=payload)
+            return JSONResponse(content=payload, status_code=401, headers=_headers)
 
         new_user_instance = Account(**new_user.dict())
         if not bool(new_user_instance):
-            users_logger.info(f'Failed to Create : {str(new_user_instance)} ')
-            raise HTTPException(detail="Error creating User", status_code=404)
+            payload = dict(status=False, payload={}, message="Error Unable to create User")
+            _headers = await get_headers(user_data=payload)
+            return JSONResponse(content=payload, status_code=401, headers=_headers)
 
         users_logger.info(f"created user with the following user data: {str(new_user_instance)}")
         session.add(new_user_instance)
