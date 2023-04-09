@@ -26,8 +26,6 @@ class AccountCreate(BaseModel):
     email: str
     cell: str
     password: str
-    is_admin: bool | None = False
-    is_deleted: bool | None = False
 
 
 class UserResponseSchema(BaseModel):
