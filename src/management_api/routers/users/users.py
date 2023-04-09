@@ -33,6 +33,7 @@ async def create_user(user_data: AccountCreate, request: Request) -> UserRespons
         users_logger.info(f"creating user with the following user data : {user_data}")
         email = user_data.email
         user_instance = await Account.get_by_email(email=email, session=session)
+
         if not user_instance:
             user_dict = user_data.dict()
             user_dict.update(uuid=create_id(UUID_LEN))
@@ -56,6 +57,7 @@ async def create_user(user_data: AccountCreate, request: Request) -> UserRespons
             return JSONResponse(content=payload, status_code=201, headers=_headers)
 
         else:
+            users_logger.info(f'User FOund : {user_instance.to_dict()}')
             # TODO create custom Exceptions
             raise HTTPException(detail="User already exist", status_code=401)
 
