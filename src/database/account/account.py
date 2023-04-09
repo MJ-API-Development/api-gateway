@@ -34,6 +34,9 @@ class Account(Base):
     is_deleted: bool = Column(Boolean, default=False)
     apikey = relationship('ApiKeyModel', uselist=False, foreign_keys=[ApiKeyModel.uuid])
 
+    def __bool__(self) -> bool:
+        return bool(self.uuid)
+
     @classmethod
     def create_if_not_exists(cls):
         if not inspect(engine).has_table(cls.__tablename__):
@@ -74,15 +77,15 @@ class Account(Base):
         }
 
     @classmethod
-    async def get_by_uuid(cls, uuid: str, session: sessionType) -> Self:
+    async def get_by_uuid(cls, uuid: str, session: sessionType) -> Self | None:
         return session.query(cls).filter(cls.uuid == uuid).first()
 
     @classmethod
-    async def get_by_email(cls, email: str, session: sessionType) -> Self:
+    async def get_by_email(cls, email: str, session: sessionType) -> Self | None:
         return session.query(cls).filter(cls.email == email).first()
 
     @classmethod
-    async def login(cls, username: str, password: str, session: sessionType) -> Self:
+    async def login(cls, username: str, password: str, session: sessionType) -> Self | None:
         # Get the user with the specified email address
         user: Account = session.query(cls).filter(cls.email == username).first()
 
