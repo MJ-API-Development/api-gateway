@@ -10,6 +10,7 @@ from src.authorize.authorize import NotAuthorized
 from src.const import UUID_LEN, NAME_LEN, EMAIL_LEN, STR_LEN, CELL_LEN
 from src.database.apikeys.keys import ApiKeyModel
 from src.database.database_sessions import Base, sessionType, engine
+from src.utils.utils import create_id
 
 
 class TwoFactorLoginData(BaseModel):
@@ -32,6 +33,15 @@ class Account(Base):
     is_admin: bool = Column(Boolean, default=False)
     is_deleted: bool = Column(Boolean, default=False)
     apikey = relationship('ApiKeyModel', uselist=False, foreign_keys=[ApiKeyModel.uuid])
+
+    def __init__(self, first_name: str, second_name: str, surname: str, email: str, cell: str, password: str):
+        self.uuid = create_id()
+        self.first_name = first_name
+        self.second_name = second_name
+        self.surname = surname
+        self.email = email
+        self.cell = cell
+        self.password = password
 
     def __bool__(self) -> bool:
         return bool(self.uuid)
