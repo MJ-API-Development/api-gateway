@@ -56,7 +56,7 @@ async def create_user(user_data: AccountCreate, request: Request) -> UserRespons
             return JSONResponse(content=payload, status_code=201, headers=_headers)
 
         else:
-            users_logger.info(f'User FOund : {user_instance.to_dict()}')
+            users_logger.info(f'User Found: ')
             # TODO create custom Exceptions
             raise HTTPException(detail="User already exist", status_code=401)
 
