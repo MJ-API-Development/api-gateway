@@ -1,16 +1,14 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from starlette.responses import JSONResponse
 
 from src.config import config_instance
-from src.const import UUID_LEN
 from src.database.account.account import Account
 from src.database.database_sessions import sessions
-from src.management_api.email.email import email_process
 from src.management_api.admin.authentication import authenticate_app, get_headers
+from src.management_api.email.email import email_process
 from src.management_api.models.users import AccountUpdate, AccountCreate, UserResponseSchema, DeleteResponseSchema, \
     UsersResponseSchema
 from src.utils.my_logger import init_logger
-from src.utils.utils import create_id
 
 users_router = APIRouter()
 users_logger = init_logger("users_router")
@@ -28,7 +26,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
 
     :return: status payload, message -> see Responses
     """
-    users_logger.info(f"creating user : {new_user}")
+    users_logger.info(f"creating user : {new_user.dict()}")
     with next(sessions) as session:
         email = new_user.email
         user_instance = await Account.get_by_email(email=email, session=session)
@@ -45,9 +43,9 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
             _headers = await get_headers(user_data=payload)
             return JSONResponse(content=payload, status_code=401, headers=_headers)
 
-        users_logger.info(f"created user with the following user data: {str(new_user_instance)}")
         session.add(new_user_instance)
         session.commit()
+        users_logger.info(f"Created NEW USER : {new_user_instance.to_dict()}")
 
         # this will schedule an account confirmation email to be sent
         # TODO look at this - Make this an ephemeral link, it other words it should expire after sometime
@@ -60,7 +58,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
                             recipient_email=recipient_email, client_name=client_name)
 
         await email_process.send_account_confirmation_email(**message_dict)
-        payload = dict(status=True, payload=new_user_instance.to_dict(), message="successfully created account")
+        payload = dict(status=True, payload=new_user_instance.to_dict(), message="Successfully Created Account")
         _headers = await get_headers(user_data=payload)
         return JSONResponse(content=payload, status_code=201, headers=_headers)
 
@@ -79,6 +77,11 @@ async def update_user(user_data: AccountUpdate, request: Request) -> UserRespons
     with next(sessions) as session:
         uuid = user_data.uuid
         user_instance: Account = await Account.get_by_uuid(uuid=uuid, session=session)
+        if not bool(user_instance):
+            payload = dict(status=True, payload={}, message="Unable to update account")
+            headers = await get_headers(user_data=payload)
+            return JSONResponse(content=payload, status_code=401, headers=headers)
+
         updated_dict = user_data.dict(exclude_unset=True)
         for field, value in updated_dict.items():
             setattr(user_instance, field, value)
@@ -105,7 +108,11 @@ async def get_user(uuid: str, request: Request) -> UserResponseSchema:
     with next(sessions) as session:
         user_instance: Account = await Account.get_by_uuid(uuid=uuid, session=session)
 
-        # TODO Send a Login Email
+        if not bool(user_instance):
+            payload = dict(status=True, payload={}, message="Unable to get account")
+            headers = await get_headers(user_data=payload)
+            return JSONResponse(content=payload, status_code=401, headers=headers)
+
         user_dict = user_instance.to_dict()
         users_logger.info(f"user found : {user_dict}")
 
@@ -124,6 +131,11 @@ async def delete_user(uuid: str, request: Request) -> DeleteResponseSchema:
     """
     with next(sessions) as session:
         user_instance: Account = await Account.get_by_uuid(uuid=uuid, session=session)
+        if not bool(user_instance):
+            payload = dict(status=True, payload={}, message="Unable to find account")
+            headers = await get_headers(user_data=payload)
+            return JSONResponse(content=payload, status_code=401, headers=headers)
+
         user_instance.is_deleted = True
         session.merge(user_instance)
         session.commit()
