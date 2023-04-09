@@ -35,19 +35,31 @@ async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
         "/account/two-factor": ["GET", "PUT", "POST"],
         "/profile": ["GET", "PUT"],
         "/user": ["GET", "PUT", "POST"],
+        "/auth/authorize": ["POST"],
+        "/auth/login": ["GET"],
         "/logout": ["GET"],
-        "login": ["GET", "POST"]
+        "/login": ["GET", "POST"]
     }
 
     admin_routes = {
         "/dashboard/users": ["GET", "POST", "PUT", "DELETE"],
         "/dashboard/subscriptions": ["GET", "POST", "PUT", "DELETE"],
-        "/dashboard/plans": ["GET", "POST", "PUT", "DELETE"]
+        "/dashboard/plans": ["GET", "POST", "PUT", "DELETE"],
+        "/home": ["GET"],
+        "/account": ["GET", "PUT", "POST", "DELETE"],
+        "/account/two-factor": ["GET", "PUT", "POST"],
+        "/profile": ["GET", "PUT"],
+        "/user": ["GET", "PUT", "POST"],
+        "/auth/authorize": ["POST"],
+        "/auth/login": ["GET"],
+        "/logout": ["GET"],
+        "/login": ["GET", "POST"]
     }
 
     if uuid is None or path is None or method is None:
         return False
 
+    auth_logger.info(f"Authorizing Path : {path} for uuid : {uuid}")
     # Retrieve the user data based on the UUID
     with next(sessions) as session:
         user = await Account.get_by_uuid(uuid=uuid, session=session)
@@ -56,10 +68,10 @@ async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
     if user is None:
         return False
 
-    if path in user_routes and method in user_routes[path]:
+    if path in user_routes and method.capitalize() in user_routes[path]:
         return True
 
-    if user.is_admin and path in admin_routes and method in admin_routes[path]:
+    if user.is_admin and path in admin_routes and method.capitalize() in admin_routes[path]:
         # Check if the path is accessible only to admin users
         return True
 
