@@ -1,3 +1,9 @@
+"""
+    This Module is responsible with route authorization
+"""
+
+import re
+
 from src.database.account.account import Account
 from src.database.database_sessions import sessions
 from src.utils.my_logger import init_logger
@@ -33,8 +39,6 @@ ALLOWED_ROUTES = {
         r"/account/\w+": ["GET", "PUT", "POST", "DELETE"]
     }
 }
-
-import re
 
 
 async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
