@@ -39,8 +39,8 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
 
         new_user_instance: Account = Account(**new_user.dict())
         if not bool(new_user_instance):
-            users_logger.info(f'User Not Created: ')
-            payload = dict(status=False, payload={}, message="Error Unable to create User")
+            users_logger.error(f'User Not Created: ')
+            payload = dict(status=False, payload={}, message="Error Unable to create User - Please try again later")
             _headers = await get_headers(user_data=payload)
             return JSONResponse(content=payload, status_code=401, headers=_headers)
 
