@@ -59,14 +59,17 @@ async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
     if uuid is None or path is None or method is None:
         return False
 
-    auth_logger.info(f"Authorizing Path : {path} for uuid : {uuid}")
+    auth_logger.info(f"Authorizing Path : {path} and Method: {method}, for UUID : {uuid}")
     # Retrieve the user data based on the UUID
     with next(sessions) as session:
         user = await Account.get_by_uuid(uuid=uuid, session=session)
 
     # Check if the user is authorized to access the path
+
     if user is None:
         return False
+
+    auth_logger.info(f"User is found for authorization: user: {user.uuid}")
 
     if path in user_routes and method.capitalize() in user_routes[path]:
         return True
