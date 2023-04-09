@@ -34,8 +34,8 @@ class Account(Base):
     is_deleted: bool = Column(Boolean, default=False)
     apikey = relationship('ApiKeyModel', uselist=False, foreign_keys=[ApiKeyModel.uuid])
 
-    def __init__(self, first_name: str, second_name: str, surname: str, email: str, cell: str, password: str):
-        self.uuid = create_id()
+    def __init__(self, uuid: str,  first_name: str, second_name: str, surname: str, email: str, cell: str, password: str):
+        self.uuid = uuid or create_id()
         self.first_name = first_name
         self.second_name = second_name
         self.surname = surname
