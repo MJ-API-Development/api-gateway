@@ -47,6 +47,8 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
         users_logger.info(f'Saving User To DATABASE: ')
         session.add(new_user_instance)
         session.commit()
+        session.flush()
+
         users_logger.info(f'Converting to dict: ')
         _payload: dict[str, str | dict[str, str]] = new_user_instance.to_dict()
         users_logger.info(f"Created NEW USER : {_payload}")
@@ -92,6 +94,7 @@ async def update_user(user_data: AccountUpdate, request: Request) -> UserRespons
 
         session.merge(user_instance)
         session.commit()
+        session.flush()
 
         payload = dict(status=True, payload=user_instance.to_dict(), message="account updated successfully")
 
@@ -143,6 +146,7 @@ async def delete_user(uuid: str, request: Request) -> DeleteResponseSchema:
         user_instance.is_deleted = True
         session.merge(user_instance)
         session.commit()
+        session.flush()
         # TODO send a Goodbye Email
         message = {'message': 'successfully deleted user'}
         headers = await get_headers(user_data=message)

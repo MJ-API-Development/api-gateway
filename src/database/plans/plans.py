@@ -22,6 +22,28 @@ class Subscriptions(Base):
     approval_url: str = Column(String(255))
     paypal_id: str = Column(String(255))
 
+    def __init__(self, subscription_id: str, uuid: str, plan_id: str, time_subscribed: float, payment_day: str,
+                 api_requests_balance: int, approval_url: str, paypal_id: str):
+        """
+
+        :param subscription_id:
+        :param uuid:
+        :param plan_id:
+        :param time_subscribed:
+        :param payment_day:
+        :param api_requests_balance:
+        :param approval_url:
+        :param paypal_id:
+        """
+        self.subscription_id = subscription_id
+        self.uuid = uuid
+        self.plan_id = plan_id
+        self.time_subscribed = time_subscribed
+        self.payment_day = payment_day
+        self.api_requests_balance = api_requests_balance
+        self.approval_url = approval_url
+        self.paypal_id = paypal_id
+
     def set_is_active(self, is_active: bool):
         """
             **set_is_active**

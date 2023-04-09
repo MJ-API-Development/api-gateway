@@ -38,6 +38,12 @@ class ApiKeyModel(Base):
     is_active: bool = Column(Boolean, default=True)
     subscription = relationship("Subscriptions", uselist=False, foreign_keys=[Subscriptions.uuid])
 
+    def __init__(self, uuid: str, api_key: str, duration: int, rate_limit: int):
+        self.uuid = uuid
+        self.api_key = api_key
+        self.duration = duration
+        self.rate_limit = rate_limit
+
     @classmethod
     def create_if_not_exists(cls):
         if not inspect(engine).has_table(cls.__tablename__):
@@ -90,6 +96,7 @@ async def cache_api_keys() -> int:
                                               'duration': db_key.duration,
                                               'rate_limit': db_key.rate_limit} for db_key in db_keys})
     return len(db_keys)
+
 
 async def create_admin_key():
     """
