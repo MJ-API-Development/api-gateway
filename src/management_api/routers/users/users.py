@@ -30,24 +30,22 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
     """
     users_logger.info(f"creating user : {new_user}")
     with next(sessions) as session:
-        users_logger.info(f"creating user with the following user data : {new_user}")
         email = new_user.email
-
         user_instance = await Account.get_by_email(email=email, session=session)
 
         if user_instance is None:
-            user_instance = Account(**new_user.dict())
-            users_logger.info(f"created user with the following user data: {user_instance.to_dict()}")
-            session.add(user_instance)
+            new_user = Account(**new_user.dict())
+            users_logger.info(f"created user with the following user data: {new_user.to_dict()}")
+            session.add(new_user)
             session.commit()
-            users_logger.info(f"created user with the following user data: {user_instance.to_dict()}")
+            users_logger.info(f"created user with the following user data: {new_user.to_dict()}")
             # this will schedule an account confirmation email to be sent
             # TODO look at this - Make this an ephemeral link, it other words it should expire after sometime
-            verification_link = f"https://gateway.eod-stock-api.site/_admin/account/confirm/{user_instance.uuid}"
+            verification_link = f"https://gateway.eod-stock-api.site/_admin/account/confirm/{new_user.uuid}"
 
             sender_email = config_instance().EMAIL_SETTINGS.ADMIN
-            recipient_email = user_instance.email
-            client_name = user_instance.names
+            recipient_email = new_user.email
+            client_name = new_user.names
             message_dict = dict(verification_link=verification_link, sender_email=sender_email,
                                 recipient_email=recipient_email, client_name=client_name)
 
