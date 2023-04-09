@@ -32,7 +32,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
         user_instance: Account | None = await Account.get_by_email(email=email, session=session)
 
         if isinstance(user_instance, Account) and bool(user_instance):
-            users_logger.info(f'User Found: {user_instance} ')
+            users_logger.info(f'User Found: {user_instance.to_dict()} ')
             payload = dict(status=False, payload={}, message="Error User Already Exists")
             _headers = await get_headers(user_data=payload)
             return JSONResponse(content=payload, status_code=401, headers=_headers)
@@ -45,7 +45,8 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
 
         session.add(new_user_instance)
         session.commit()
-        users_logger.info(f"Created NEW USER : {new_user_instance.to_dict()}")
+        _payload: dict[str, str | dict[str, str]] = new_user_instance.to_dict()
+        users_logger.info(f"Created NEW USER : {_payload}")
 
         # this will schedule an account confirmation email to be sent
         # TODO look at this - Make this an ephemeral link, it other words it should expire after sometime
@@ -58,7 +59,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
                             recipient_email=recipient_email, client_name=client_name)
 
         await email_process.send_account_confirmation_email(**message_dict)
-        payload = dict(status=True, payload=new_user_instance.to_dict(), message="Successfully Created Account")
+        payload = dict(status=True, payload=_payload, message="Successfully Created Account")
         _headers = await get_headers(user_data=payload)
         return JSONResponse(content=payload, status_code=201, headers=_headers)
 
