@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Request
-import asyncio
 import hmac
 import random
 import string
+
+from fastapi import APIRouter, Request
 from starlette.responses import JSONResponse
 
 from src.cache.cache import redis_cache
@@ -11,72 +11,12 @@ from src.database.database_sessions import sessions
 from src.management_api.admin.authentication import authenticate_app, get_headers
 from src.management_api.email.email import email_process
 from src.management_api.models.authentication import LoginData, AuthorizationRequest
+from src.management_api.routers.authorization.route_authorization import check_authorization
 from src.utils.my_logger import init_logger
 
 auth_router = APIRouter()
 
 auth_logger = init_logger("auth_logger")
-
-
-async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
-    """
-    Function to check if user is authorized to access a specific route.
-    Assume there is a map containing routes which normal users can access
-    and routes that only admin users can access.
-    :param uuid: The user's UUID.
-    :param path: The path being accessed.
-    :param method: The HTTP method being used.
-    :return: True if the user is authorized, False otherwise.
-    """
-    # Map containing routes accessible by normal users and admin users
-    user_routes = {
-        "/home": ["GET"],
-        "/account": ["GET", "PUT", "POST", "DELETE"],
-        "/account/two-factor": ["GET", "PUT", "POST"],
-        "/profile": ["GET", "PUT"],
-        "/user": ["GET", "PUT", "POST"],
-        "/auth/authorize": ["POST"],
-        "/auth/login": ["GET"],
-        "/logout": ["GET"],
-        "/login": ["GET", "POST"]
-    }
-
-    admin_routes = {
-        "/dashboard/users": ["GET", "POST", "PUT", "DELETE"],
-        "/dashboard/subscriptions": ["GET", "POST", "PUT", "DELETE"],
-        "/dashboard/plans": ["GET", "POST", "PUT", "DELETE"],
-        "/home": ["GET"],
-        "/account": ["GET", "PUT", "POST", "DELETE"],
-        "/account/two-factor": ["GET", "PUT", "POST"],
-        "/profile": ["GET", "PUT"],
-        "/user": ["GET", "PUT", "POST"],
-        "/auth/authorize": ["POST"],
-        "/auth/login": ["GET"],
-        "/logout": ["GET"],
-        "/login": ["GET", "POST"]
-    }
-
-    if uuid is None or path is None or method is None:
-        return False
-
-    auth_logger.info(f"Authorizing Path : {path} and Method: {method}, for UUID : {uuid}")
-    # Retrieve the user data based on the UUID
-    with next(sessions) as session:
-        user = await Account.get_by_uuid(uuid=uuid, session=session)
-
-    # Check if the user is authorized to access the path
-
-    if user is None:
-        return False
-
-    auth_logger.info(f"User is found for authorization: user: {user.uuid}")
-
-    if path in user_routes and method.capitalize() in user_routes[path]:
-        return True
-
-    if user.is_admin and path in admin_routes and method.capitalize() in admin_routes[path]:
-        # Check if the path is accessible only to admin users
-        return True
 
 
 @auth_router.api_route(path="/auth/login", methods=["POST"], include_in_schema=True)
