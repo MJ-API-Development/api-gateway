@@ -31,14 +31,18 @@ async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
     # Map containing routes accessible by normal users and admin users
     user_routes = {
         "/home": ["GET"],
-        "/dashboard": ["GET", "PUT"],
+        "/account": ["GET", "PUT", "POST", "DELETE"],
+        "/account/two-factor": ["GET", "PUT", "POST"],
         "/profile": ["GET", "PUT"],
-        "/user": ["GET", "PUT"]
+        "/user": ["GET", "PUT", "POST"],
+        "/logout": ["GET"],
+        "login": ["GET", "POST"]
     }
+
     admin_routes = {
-        "/admin/users": ["GET", "POST", "PUT", "DELETE"],
-        "/admin/subscriptions": ["GET", "POST", "PUT", "DELETE"],
-        "/admin/plans": ["GET", "POST", "PUT", "DELETE"]
+        "/dashboard/users": ["GET", "POST", "PUT", "DELETE"],
+        "/dashboard/subscriptions": ["GET", "POST", "PUT", "DELETE"],
+        "/dashboard/plans": ["GET", "POST", "PUT", "DELETE"]
     }
 
     if uuid is None or path is None or method is None:
