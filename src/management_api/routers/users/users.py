@@ -58,7 +58,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
                             recipient_email=recipient_email, client_name=client_name)
 
         await email_process.send_account_confirmation_email(**message_dict)
-        payload = dict(status=True, payload=user_instance.to_dict(), message="successfully created account")
+        payload = dict(status=True, payload=new_user_instance.to_dict(), message="successfully created account")
         _headers = await get_headers(user_data=payload)
         return JSONResponse(content=payload, status_code=201, headers=_headers)
 
