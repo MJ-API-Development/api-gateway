@@ -28,8 +28,8 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
     """
     users_logger.info(f"creating user : {new_user.dict()}")
     with next(sessions) as session:
-        email = new_user.email
-        user_instance = await Account.get_by_email(email=email, session=session)
+        email: str = new_user.email
+        user_instance: Account | None = await Account.get_by_email(email=email, session=session)
 
         if isinstance(user_instance, Account) and bool(user_instance):
             users_logger.info(f'User Found: {user_instance} ')
@@ -37,7 +37,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
             _headers = await get_headers(user_data=payload)
             return JSONResponse(content=payload, status_code=401, headers=_headers)
 
-        new_user_instance = Account(**new_user.dict())
+        new_user_instance: Account = Account(**new_user.dict())
         if not bool(new_user_instance):
             payload = dict(status=False, payload={}, message="Error Unable to create User")
             _headers = await get_headers(user_data=payload)
