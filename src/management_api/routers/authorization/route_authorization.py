@@ -21,7 +21,8 @@ ALLOWED_ROUTES = {
         "/auth/login": ["GET"],
         "/logout": ["GET"],
         "/login": ["GET", "POST"],
-        r"/account/\w+": ["GET", "PUT", "DELETE"]
+        r"/account/\w+": ["GET", "PUT", "DELETE"],
+        "/update-api-key": ["POST"]
     },
     "admin": {
         "/dashboard/users": ["GET", "POST", "PUT", "DELETE"],
@@ -36,7 +37,8 @@ ALLOWED_ROUTES = {
         "/auth/login": ["GET"],
         "/logout": ["GET"],
         "/login": ["GET", "POST"],
-        r"/account/\w+": ["GET", "PUT", "POST", "DELETE"]
+        r"/account/\w+": ["GET", "PUT", "POST", "DELETE"],
+        "/update-api-key": ["POST"]
     }
 }
 

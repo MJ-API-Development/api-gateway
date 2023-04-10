@@ -6,6 +6,7 @@ from starlette.responses import JSONResponse
 from src.config import config_instance
 from src.const import UUID_LEN
 from src.database.account.account import Account
+from src.database.apikeys.keys import ApiKeyModel
 from src.database.database_sessions import sessions
 from src.database.plans.plans import Plans, Subscriptions, Invoices
 from src.event_queues.invoice_queue import add_invoice_to_send
@@ -13,12 +14,13 @@ from src.management_api.admin.authentication import authenticate_app, get_header
 from src.management_api.email.email import email_process
 from src.management_api.models.subscriptions import SubscriptionCreate, SubscriptionUpdate
 from src.utils.my_logger import init_logger
-from src.utils.utils import create_id, calculate_invoice_date_range
+from src.utils.utils import create_id, calculate_invoice_date_range, create_api_key
 
 subscriptions_router = APIRouter()
 sub_logger = init_logger("subscriptions_router")
 
 
+# noinspection PyUnusedLocal
 @subscriptions_router.api_route(path="/subscriptions", methods=["POST"], include_in_schema=True)
 @authenticate_app
 async def create_subscription(subscription_data: SubscriptionCreate, request: Request):
@@ -80,6 +82,7 @@ async def create_subscription(subscription_data: SubscriptionCreate, request: Re
         return JSONResponse(content=payload, status_code=201, headers=_headers)
 
 
+# noinspection PyUnusedLocal
 @subscriptions_router.api_route(path="/subscriptions", methods=["PUT"], include_in_schema=True)
 @authenticate_app
 async def update_subscription(subscription_data: SubscriptionUpdate, request: Request):
@@ -114,6 +117,7 @@ async def update_subscription(subscription_data: SubscriptionUpdate, request: Re
     return JSONResponse(content=payload, status_code=201, headers=_headers)
 
 
+# noinspection PyUnusedLocal
 @subscriptions_router.api_route(path="/subscription/{subscription_id}", methods=["DELETE"], include_in_schema=True)
 @authenticate_app
 async def de_activate_subscriptions(subscription_id: str, request: Request):
@@ -147,6 +151,7 @@ async def de_activate_subscriptions(subscription_id: str, request: Request):
     return JSONResponse(content=payload, status_code=200, headers=_headers)
 
 
+# noinspection PyUnusedLocal
 @subscriptions_router.api_route(path="/subscription/{subscription_id}", methods=["DELETE"], include_in_schema=True)
 @authenticate_app
 async def re_activate_subscriptions(subscription_id: str, request: Request):
@@ -181,6 +186,7 @@ async def re_activate_subscriptions(subscription_id: str, request: Request):
     return JSONResponse(content=payload, status_code=200, headers=_headers)
 
 
+# noinspection PyUnusedLocal
 @subscriptions_router.api_route(path="/subscription/{subscription_id}", methods=["DELETE"], include_in_schema=True)
 @authenticate_app
 async def get_subscription(subscription_id: str, request: Request):
@@ -210,6 +216,7 @@ async def get_subscription(subscription_id: str, request: Request):
     return JSONResponse(content=payload, status_code=200, headers=_headers)
 
 
+# noinspection PyUnusedLocal
 @subscriptions_router.api_route(path="/plans/{plan_id}", methods=["GET"], include_in_schema=True)
 @authenticate_app
 async def get_plan(plan_id: str, request: Request):
@@ -232,6 +239,7 @@ async def get_plan(plan_id: str, request: Request):
         return JSONResponse(content=payload, status_code=200, headers=_headers)
 
 
+# noinspection PyUnusedLocal
 @subscriptions_router.api_route(path="/plans", methods=["GET"], include_in_schema=True)
 @authenticate_app
 async def get_all_plans(request: Request):
@@ -245,8 +253,40 @@ async def get_all_plans(request: Request):
         _payload = [plan.to_dict() for plan in plan_instance_list] if plan_instance_list else []
         sub_logger.info(f"GET ALL PLANS : {_payload}")
 
-        payload = dict(status=True,  message='Successfully retrieved plan')
+        payload = dict(status=True, message='Successfully retrieved plan')
         _headers = await get_headers(user_data=payload)
         payload.update(payload=_payload)
 
     return JSONResponse(content=payload, status_code=200, headers=_headers)
+
+
+# noinspection PyUnusedLocal
+@subscriptions_router.api_route(path="/apikey/{apikey}", methods=["POST"], include_in_schema=True)
+@authenticate_app
+async def update_apikey(request: Request, apikey: str):
+    """
+
+    :param apikey:
+    :param request:
+    :return:
+    """
+    with next(sessions) as session:
+        apikey_instance: ApiKeyModel = ApiKeyModel.get_by_apikey(api_key=apikey, session=session)
+        if apikey_instance is None:
+            message: str = f"Could not find ApiKey : {apikey}"
+            sub_logger.info(message)
+            payload = dict(status=False, message=message)
+            _headers = await get_headers(user_data=payload)
+            return JSONResponse(content=payload, status_code=401, headers=_headers)
+        apikey_instance.api_key = create_api_key()
+
+        session.merge(apikey_instance)
+        session.commit()
+        session.flush()
+
+        message: str = f"Updated ApiKey : {apikey} to : {apikey_instance.api_key}"
+        sub_logger.info(message)
+        payload = dict(status=True, payload=apikey_instance.to_dict(), message=message)
+
+    _headers = await get_headers(user_data=payload)
+    return JSONResponse(content=payload, status_code=201, headers=_headers)
