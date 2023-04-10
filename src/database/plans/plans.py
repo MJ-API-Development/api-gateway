@@ -1,9 +1,7 @@
-from __future__ import annotations
-
-from typing import Self
 
 from sqlalchemy import Column, String, Text, Integer, Float, Boolean, ForeignKey, inspect
 from sqlalchemy.orm import relationship
+from typing_extensions import Self
 
 from src.const import UUID_LEN, NAME_LEN
 from src.database.database_sessions import sessionType, Base, engine
@@ -184,7 +182,7 @@ class Plans(Base):
         return resource_name in self.resource_set
 
     @classmethod
-    async def get_plan_by_plan_id(cls, plan_id: str, session: sessionType) -> Plans:
+    async def get_plan_by_plan_id(cls, plan_id: str, session: sessionType) -> Self:
         """
             given plan_id will return subscribed Plan
         :param session:
