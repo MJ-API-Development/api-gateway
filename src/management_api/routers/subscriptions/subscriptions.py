@@ -271,7 +271,7 @@ async def update_apikey(request: Request, apikey: str):
     :return:
     """
     with next(sessions) as session:
-        apikey_instance: ApiKeyModel = ApiKeyModel.get_by_apikey(api_key=apikey, session=session)
+        apikey_instance: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=apikey, session=session)
         if apikey_instance is None:
             message: str = f"Could not find ApiKey : {apikey}"
             sub_logger.info(message)
