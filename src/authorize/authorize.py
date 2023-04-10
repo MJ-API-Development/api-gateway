@@ -97,6 +97,10 @@ async def is_resource_authorized(path_param: str, api_key: str) -> bool:
     """
     with next(sessions) as session:
         client_api_model: ApiKeyModel = await ApiKeyModel.get_by_apikey(api_key=api_key, session=session)
+        if client_api_model is None:
+            # Note: it can happen that apikey has changed since the last update
+            return False
+
         subscription: Subscriptions = client_api_model.subscription
 
         if not subscription:
