@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from sqlalchemy import Column, String, inspect, Float, ForeignKey
+from sqlalchemy import Column, String, inspect, Float, ForeignKey, Integer
 
 from src.const import UUID_LEN, NAME_LEN, EMAIL_LEN, STR_LEN
 from src.database.database_sessions import Base, engine
@@ -57,3 +57,12 @@ class Contacts(Base):
             'message': self.message,
             'datetime': self.datetime.strftime('%Y-%m-%dT%H:%M:%'),
             'timestamp': self.timestamp}
+
+
+class ContactControl(Base):
+    """
+        once a contact message has been responded to the responses and a way to control that conversation
+        will be tracked in this class
+    """
+    __tablename__ = 'contact_control'
+    id: str = Column(Integer, primary_key=True)

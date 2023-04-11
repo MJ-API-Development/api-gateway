@@ -1,5 +1,6 @@
 
 from sqlalchemy import Column, String, Text, Integer, Float, Boolean, ForeignKey, inspect
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import relationship
 from typing_extensions import Self
 
@@ -21,7 +22,7 @@ class Subscriptions(Base):
     paypal_id: str = Column(String(255))
 
     def __init__(self, subscription_id: str, uuid: str, plan_id: str, time_subscribed: float, payment_day: str,
-                 api_requests_balance: int, approval_url: str, paypal_id: str):
+                 api_requests_balance: int, approval_url: str, paypal_id: str, is_active: bool = False):
         """
 
         :param subscription_id:
@@ -32,6 +33,7 @@ class Subscriptions(Base):
         :param api_requests_balance:
         :param approval_url:
         :param paypal_id:
+        :param is_active:
         """
         self.subscription_id = subscription_id
         self.uuid = uuid
@@ -41,6 +43,7 @@ class Subscriptions(Base):
         self.api_requests_balance = api_requests_balance
         self.approval_url = approval_url
         self.paypal_id = paypal_id
+        self._is_active = is_active
 
     def set_is_active(self, is_active: bool):
         """
@@ -121,6 +124,25 @@ class Subscriptions(Base):
             :return: Self
         """
         return session.query(cls).filter(cls.subscription_id == subscription_id).first()
+
+    @classmethod
+    async def update_subscription(cls, subscription_data: dict[str, str | bool | int], session: sessionType) -> bool:
+        api_key = subscription_data.pop('api_key', None)
+        if not api_key:
+            return False  # no api_key provided, can't update
+
+        try:
+            subscription = session.query(cls).filter_by(uuid=api_key).one()
+        except NoResultFound:
+            return False  # subscription not found for this api_key
+
+        # update only the fields that exist on the subscription_data dictionary
+        for field, value in subscription_data.items():
+            if hasattr(subscription, field):
+                setattr(subscription, field, value)
+
+        session.commit()
+        return True  # update successful
 
 
 class PlanType:

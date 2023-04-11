@@ -36,7 +36,8 @@ from src.utils.utils import is_development
 cf_firewall = EODAPIFirewall()
 # API Servers
 # TODO NOTE will add more Server URLS Later
-api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER]
+#  TODO just use a server list straight from config
+api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_instance().API_SERVERS.SLAVE_API_SERVER]
 api_server_counter = 0
 
 # used to logging debug information for the application
@@ -453,16 +454,23 @@ async def v1_gateway(request: Request, path: str):
             return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
     app_logger.info(msg="All cached responses not found- Must Be a Slow Day")
-
     try:
-
         # 5 minutes timeout on resource fetching from backend - some resources may take very long
         tasks = [requester(api_url=api_url, timeout=300) for api_url in api_urls]
-        responses = await asyncio.gather(*tasks)
-
-    except asyncio.CancelledError:
-        responses = []
+        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        # Get the result from the first completed task that didn't raise an exception
+        for task in done:
+            if task.exception() is None:
+                responses = [await task]
+                break
+        else:
+            # None of the completed tasks succeeded
+            responses = []
+        # Cancel all remaining tasks
+        for task in pending:
+            task.cancel()
     except httpx.HTTPError as http_err:
+        app_logger.info(msg=f"Errors when making requests : {str(http_err)}")
         responses = []
 
     app_logger.info(msg=f"Request Responses returned : {len(responses)}")

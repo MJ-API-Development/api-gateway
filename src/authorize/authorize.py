@@ -159,8 +159,9 @@ async def take_credit_method(api_key: str, path: str):
     await add_to_api_keys_to_subscriptions_cache(api_key=api_key, subscriptions_dict=subscription_dict)
 
     with next(sessions) as session:
-        session.merge(Subscriptions(**subscription_dict))
-        session.commit()
+        # TO Update subscription Model
+        # TODO create a queue and put this in
+        await Subscriptions.update_subscription(subscription_data=subscription_dict, session=session)
 
 
 async def process_credit_queue():
