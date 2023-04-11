@@ -30,6 +30,7 @@ class Contacts(Base):
         :param timestamp:
         :return:
         """
+        self.create_if_not_exists()
         self.uuid = uuid if uuid else create_id(UUID_LEN)
         self.contact_id = contact_id if contact_id else create_id(UUID_LEN)
         if (name is None) or (email is None) or (message is None):
