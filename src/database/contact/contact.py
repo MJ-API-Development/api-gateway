@@ -15,7 +15,7 @@ class Contacts(Base):
     uuid: str = Column(String(UUID_LEN), index=True, nullable=True)
     contact_id: str = Column(String(UUID_LEN), primary_key=True, index=True)
     name: str = Column(String(NAME_LEN), index=True)
-    email: str = Column(String(EMAIL_LEN), ForeignKey("accounts.email"), index=True)
+    email: str = Column(String(EMAIL_LEN), index=True)
     message: str = Column(String(STR_LEN))
     timestamp = Column(Float, index=True)
 
