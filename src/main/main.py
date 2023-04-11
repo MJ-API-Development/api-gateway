@@ -370,6 +370,7 @@ async def startup_event():
             # wait for 5 minutes then update API Keys records
             await asyncio.sleep(60 * 15)
 
+    # noinspection PyUnusedLocal
     async def prefetch():
         """
             Method to Prefetch Common Routes for faster Execution
@@ -445,7 +446,7 @@ async def v1_gateway(request: Request, path: str):
 
     # Will Take at least six second on the cache if it finds nothing will return None
     # need an improved get timeout for the articles
-    tasks = [redis_cache.get(key=api_url, timeout=60*5) for api_url in api_urls]
+    tasks = [redis_cache.get(key=api_url, timeout=60 * 5) for api_url in api_urls]
     cached_responses = await asyncio.gather(*tasks)
 
     for i, response in enumerate(cached_responses):
@@ -523,6 +524,7 @@ async def open_api(request: Request):
     return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
 
+# noinspection PyUnusedLocal
 @app.get("/", include_in_schema=True)
 async def home_route(request: Request):
     """
@@ -532,6 +534,7 @@ async def home_route(request: Request):
     return RedirectResponse(url="/redoc", status_code=301)
 
 
+# noinspection PyUnusedLocal
 @app.get("/redoc", include_in_schema=False, response_class=HTMLResponse)
 async def redoc_html(request: Request):
     return get_redoc_html(
@@ -542,6 +545,7 @@ async def redoc_html(request: Request):
     )
 
 
+# noinspection PyUnusedLocal
 @app.get("/_ah/warmup", include_in_schema=False)
 async def status_check(request: Request):
     _payload = await check_all_services()
