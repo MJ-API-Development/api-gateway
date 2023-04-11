@@ -8,6 +8,7 @@ from src.database.database_sessions import sessions
 from src.database.plans.plans import Plans
 from src.management_api.admin.authentication import get_headers
 from src.management_api.routers.authorization.authorization import auth_router
+from src.management_api.routers.contact.contact_route import contact_router
 from src.management_api.routers.logs.logs import log_router
 from src.management_api.routers.paypal.paypal import paypal_router
 from src.management_api.routers.subscriptions.subscriptions import subscriptions_router
@@ -55,6 +56,7 @@ admin_app.include_router(auth_router)
 admin_app.include_router(log_router)
 admin_app.include_router(paypal_router)
 admin_app.include_router(subscriptions_router)
+admin_app.include_router(contact_router)
 
 
 @admin_app.api_route(path="/plans", methods=["GET"], include_in_schema=True)

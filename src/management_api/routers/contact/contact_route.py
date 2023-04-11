@@ -3,7 +3,7 @@ from starlette.responses import JSONResponse
 
 from src.database.contact import Contacts
 from src.database.database_sessions import sessions
-from src.management_api.admin.authentication import get_headers
+from src.management_api.admin.authentication import get_headers, authenticate_app
 from src.management_api.models.contact import ContactModel
 from src.utils.my_logger import init_logger
 
@@ -13,7 +13,8 @@ contact_logger = init_logger('contact-logger')
 
 
 @contact_router.api_route('/contacts', methods=['POST'])
-def create_contact(request: Request, contact_data: ContactModel):
+@authenticate_app
+async def create_contact(request: Request, contact_data: ContactModel):
     """
         will create a new contact record on
     :param request:
