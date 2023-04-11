@@ -19,7 +19,7 @@ class Contacts(Base):
     message: str = Column(String(STR_LEN))
     timestamp = Column(Float, index=True)
 
-    def init(self, uuid: str, contact_id: str, name: str, email: str, message: str, timestamp: float):
+    def init(self, contact_id: str, name: str, email: str, message: str, timestamp: float, uuid: str | None = None):
         """
 
         :param uuid:
@@ -30,9 +30,8 @@ class Contacts(Base):
         :param timestamp:
         :return:
         """
-
-        self.uuid = uuid if uuid else create_id(UUID_LEN)
-        self.contact_id = contact_id if contact_id else create_id(UUID_LEN)
+        self.uuid = uuid
+        self.contact_id = contact_id or create_id(UUID_LEN)
         if (name is None) or (email is None) or (message is None):
             raise ValueError("Name, Email, and Message are required")
         self.name, self.email, self.message = name, email, message
@@ -56,5 +55,5 @@ class Contacts(Base):
             'name': self.name,
             'email': self.email,
             'message': self.message,
-            'datetime': self.datetime,
+            'datetime': self.datetime.strftime('%Y-%m-%dT%H:%M:%'),
             'timestamp': self.timestamp}
