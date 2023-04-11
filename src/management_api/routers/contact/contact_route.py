@@ -30,7 +30,7 @@ async def create_contact(request: Request, contact_data: ContactModel):
     _payload = dict(status=True, message="message sent successfully")
     # creating the header without payload to avoid a problem when a message is too big
     headers = await get_headers(user_data=_payload)
-    _payload.update(payload=contact_instance)
+    _payload.update(payload=contact_instance.to_dict())
 
     return JSONResponse(content=_payload, status_code=200, headers=headers)
 
