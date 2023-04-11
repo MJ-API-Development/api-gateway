@@ -457,7 +457,7 @@ async def v1_gateway(request: Request, path: str):
     app_logger.info(msg="All cached responses not found- Must Be a Slow Day")
     try:
         # 5 minutes timeout on resource fetching from backend - some resources may take very long
-        tasks = [requester(api_url=api_url, timeout=3000) for api_url in api_urls]
+        tasks = [requester(api_url=api_url, timeout=3600) for api_url in api_urls]
         done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         # Get the result from the first completed task that didn't raise an exception
         for task in done:
