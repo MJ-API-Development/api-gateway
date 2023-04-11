@@ -22,6 +22,7 @@ async def create_contact(request: Request, contact_data: ContactModel):
     :return:
     """
     with next(sessions) as session:
+        Contacts.create_if_not_exists()
         contact_instance: Contacts = Contacts(**contact_data.dict())
         session.add(contact_instance)
         session.commit()
