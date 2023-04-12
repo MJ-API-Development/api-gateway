@@ -56,10 +56,10 @@ app = FastAPI(
     title="EOD-STOCK-API - API GATEWAY",
     description=description,
     version="1.0.0",
-    terms_of_service="https://www.eod-stock-api.site/terms",
+    terms_of_service="https://eod-stock-api.site/terms",
     contact={
         "name": "EOD-STOCK-API",
-        "url": "https://www.eod-stock-api.site/contact",
+        "url": "https://eod-stock-api.site/contact",
         "email": "info@eod-stock-api.site"
     },
     license_info={
