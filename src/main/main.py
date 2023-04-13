@@ -455,6 +455,7 @@ async def v1_gateway(request: Request, path: str):
             return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
     app_logger.info(msg="All cached responses not found- Must Be a Slow Day")
+
     try:
         # 5 minutes timeout on resource fetching from backend - some resources may take very long
         tasks = [requester(api_url=api_url, timeout=3600) for api_url in api_urls]
@@ -470,11 +471,13 @@ async def v1_gateway(request: Request, path: str):
         # Cancel all remaining tasks
         for task in pending:
             task.cancel()
+
     except httpx.HTTPError as http_err:
         app_logger.info(msg=f"Errors when making requests : {str(http_err)}")
         responses = []
 
     app_logger.info(msg=f"Request Responses returned : {len(responses)}")
+
     for i, response in enumerate(responses):
         if response and response.get("status", False):
             api_url = api_urls[i]

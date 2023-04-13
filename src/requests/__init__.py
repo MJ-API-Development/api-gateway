@@ -26,6 +26,7 @@ async def requester(api_url: str, timeout: int = 30):
     """
     try:
         response = await async_client.get(url=api_url, timeout=timeout)
+
         _response = f"""
             BACKEND SERVERS ACTUAL RESPONSES
     
@@ -38,8 +39,12 @@ async def requester(api_url: str, timeout: int = 30):
         if response.status_code not in [200, 201]:
             # only print log messages if request is not successfully
             request_logger.info(_response)
+
+        response.raise_for_status()
+
     except httpx.HTTPError as http_err:
         raise http_err
     except Exception as err:
         raise err
+
     return response.json() if response.headers.get('Content-Type') == "application/json" else None
