@@ -1,3 +1,4 @@
+import datetime
 
 from sqlalchemy import Column, String, Text, Integer, Float, Boolean, ForeignKey, inspect
 from sqlalchemy.exc import NoResultFound
@@ -6,6 +7,7 @@ from typing_extensions import Self
 
 from src.const import UUID_LEN, NAME_LEN
 from src.database.database_sessions import sessionType, Base, engine
+from src.utils.utils import create_id
 
 
 class Subscriptions(Base):
@@ -92,9 +94,9 @@ class Subscriptions(Base):
             Plans.plan_id == self.plan_id).first().resource_exist(resource_name=resource_name)
 
     @classmethod
-    async def subscribe(cls, _data: dict[str, str | bool | int], session: sessionType) -> Self:
+    async def create_subscription(cls, _data: dict[str, str | bool | int], session: sessionType) -> Self:
         """
-            will subscribe a client to a specific plan and then
+            Will create a subscription instance and then return
             return True
         :param session:
         :param _data:
@@ -168,6 +170,7 @@ class Plans(Base):
     rate_per_request: int = Column(Integer, default=0)  # in Cents
     is_visible: bool = Column(Boolean, default=True)  # Only visible plans are shown in the interface
     subscriptions = relationship("Subscriptions", uselist=True, foreign_keys=[Subscriptions.plan_id])
+
 
     @classmethod
     def create_if_not_exists(cls):
@@ -247,6 +250,17 @@ class Payments(Base):
     payment_amount: int = Column(Integer)  # amount in cents
     is_success: bool = Column(Boolean)
     time_paid: float = Column(Float)
+
+    def __init__(self, subscription_id: str, payment_method: str, payment_amount: int, is_success: bool = True,
+                 invoice_id: str = None, payment_id: str = None):
+
+        self.subscription_id = subscription_id
+        self.payment_method = payment_method
+        self.payment_amount = payment_amount
+        self.is_success = is_success
+        self.time_paid = datetime.datetime.now().timestamp()
+        self.invoice_id = invoice_id or create_id()
+        self.payment_id = payment_id or create_id()
 
     @classmethod
     def create_if_not_exists(cls):

@@ -43,7 +43,7 @@ async def create_subscription(subscription_data: SubscriptionCreate, request: Re
             'time_subscribed': datetime.now().timestamp()}
         )
 
-        subscription_instance = await Subscriptions.subscribe(_data=subscribe_dict, session=session)
+        subscription_instance: Subscriptions = await Subscriptions.create_subscription(_data=subscribe_dict, session=session)
         from_date, to_date = calculate_invoice_date_range(today=datetime.now().timestamp())
         today = datetime.now().timestamp()
 
