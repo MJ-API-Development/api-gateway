@@ -113,7 +113,7 @@ class Subscriptions(Base):
         """
         subscription = session.query(cls).filter(cls.subscription_id == subscription_id).first()
         subscription._is_active = True
-        session.add(subscription)
+        session.merge(subscription)
         session.commit()
 
     @classmethod
@@ -141,6 +141,7 @@ class Subscriptions(Base):
             if hasattr(subscription, field):
                 setattr(subscription, field, value)
 
+        session.merge(subscription)
         session.commit()
         return True  # update successful
 
