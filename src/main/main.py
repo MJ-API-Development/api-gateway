@@ -458,19 +458,8 @@ async def v1_gateway(request: Request, path: str):
 
     try:
         # 5 minutes timeout on resource fetching from backend - some resources may take very long
-        tasks = [requester(api_url=api_url, timeout=3600) for api_url in api_urls]
-        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-        # Get the result from the first completed task that didn't raise an exception
-        for task in done:
-            if task.exception() is None:
-                responses = [await task]
-                break
-        else:
-            # None of the completed tasks succeeded
-            responses = []
-        # Cancel all remaining tasks
-        for task in pending:
-            task.cancel()
+        tasks = [requester(api_url=api_url, timeout=9600) for api_url in api_urls]
+        responses = await asyncio.gather(*tasks)
 
     except httpx.HTTPError as http_err:
         app_logger.info(msg=f"Errors when making requests : {str(http_err)}")
