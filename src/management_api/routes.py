@@ -118,3 +118,9 @@ async def handle_all_exceptions(request: Request, exc: Exception):
     return JSONResponse(content=error_data,
                         status_code=500,
                         headers=await get_headers(error_data))
+
+
+@admin_app.get("/_ah/warmup", include_in_schema=False)
+async def status_check(request: Request):
+    return JSONResponse(content={'status': 'OK'}, status_code=200, headers={"Content-Type": "application/json"})
+
