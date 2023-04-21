@@ -14,8 +14,15 @@ class SubscriptionCreate(BaseModel):
     facilitatorAccessToken: str
     payment_method: str
 
+    class Config:
+        title = "Subscription Created Schema"
+        description = "Used to create new Subscription Models"
+
 
 class SubscriptionUpdate(BaseModel):
+    """
+        PayPal Subscriptions Update Model
+    """
     subscription_id: str
     plan_id: str
     uuid: str | None = None
@@ -26,4 +33,6 @@ class SubscriptionUpdate(BaseModel):
     approval_url: str | None = None
     paypal_id: str | None = None
 
-
+    class Config:
+        title = "PayPal Subscription Schema"
+        description = "Used to create a subscription model for paypal subscriptions"

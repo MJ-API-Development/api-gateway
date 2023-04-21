@@ -171,7 +171,6 @@ class Plans(Base):
     is_visible: bool = Column(Boolean, default=True)  # Only visible plans are shown in the interface
     subscriptions = relationship("Subscriptions", uselist=True, foreign_keys=[Subscriptions.plan_id])
 
-
     @classmethod
     def create_if_not_exists(cls):
         if not inspect(engine).has_table(cls.__tablename__):

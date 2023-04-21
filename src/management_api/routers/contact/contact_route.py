@@ -12,6 +12,7 @@ contact_router = APIRouter()
 contact_logger = init_logger('contact-logger')
 
 
+# noinspection PyUnusedLocal
 @contact_router.api_route('/contacts', methods=['POST'])
 @authenticate_app
 async def create_contact(request: Request, contact_data: ContactModel):
@@ -33,4 +34,3 @@ async def create_contact(request: Request, contact_data: ContactModel):
         _payload.update(payload=contact_instance.to_dict())
 
     return JSONResponse(content=_payload, status_code=200, headers=headers)
-

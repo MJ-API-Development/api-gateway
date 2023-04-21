@@ -19,6 +19,7 @@ auth_router = APIRouter()
 auth_logger = init_logger("auth_logger")
 
 
+# noinspection PyUnusedLocal
 @auth_router.api_route(path="/auth/login", methods=["POST"], include_in_schema=True)
 @authenticate_app
 async def login(login_data: LoginData, request: Request):
@@ -50,6 +51,7 @@ async def login(login_data: LoginData, request: Request):
     return JSONResponse(content=payload, status_code=200, headers=headers)
 
 
+# noinspection PyUnusedLocal
 @auth_router.api_route(path="/auth/login/two-factor", methods=["POST"], include_in_schema=True)
 async def authenticate_two_factor(two_factor_data: TwoFactorLoginData, request: Request):
     """
@@ -85,13 +87,14 @@ async def authenticate_two_factor(two_factor_data: TwoFactorLoginData, request: 
             return JSONResponse(content=payload, status_code=401)
 
         # Authentication succeeded
-        user_instance = await Account.get_by_email(email)
+        user_instance = await Account.get_by_email(email=email, session=session)
 
     payload = dict(status=True, payload=user_instance.to_dict(), message="successfully authenticated two-factor")
     headers = await get_headers(user_data=user_instance.to_dict())
     return JSONResponse(content=payload, status_code=200, headers=headers)
 
 
+# noinspection PyUnusedLocal
 @auth_router.api_route(path="/auth/authorize", methods=["POST"], include_in_schema=True)
 @authenticate_app
 async def authorization(auth_data: AuthorizationRequest, request: Request):
@@ -103,7 +106,6 @@ async def authorization(auth_data: AuthorizationRequest, request: Request):
     :param request:
     :type auth_data: AuthorizationRequest
     :param auth_data: authorization data class
-    :type payload: dict
     :return: payload : dict[str, str| bool dict[str|bool]], status_code
     """
 

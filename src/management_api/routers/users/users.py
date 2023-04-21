@@ -14,6 +14,7 @@ users_router = APIRouter()
 users_logger = init_logger("users_router")
 
 
+# noinspection PyUnusedLocal
 @users_router.api_route(path="/user", methods=["POST"], include_in_schema=True)
 @authenticate_app
 async def create_user(new_user: AccountCreate, request: Request) -> UserResponseSchema:
@@ -69,6 +70,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
         return JSONResponse(content=payload, status_code=201, headers=_headers)
 
 
+# noinspection PyUnusedLocal
 @users_router.api_route(path="/user", methods=["PUT"], include_in_schema=True)
 @authenticate_app
 async def update_user(user_data: AccountUpdate, request: Request) -> UserResponseSchema:
@@ -102,6 +104,7 @@ async def update_user(user_data: AccountUpdate, request: Request) -> UserRespons
         return JSONResponse(content=payload, status_code=201, headers=headers)
 
 
+# noinspection PyUnusedLocal
 @users_router.api_route(path="/user/{uuid}", methods=["GET"], include_in_schema=True)
 @authenticate_app
 async def get_user(uuid: str, request: Request) -> UserResponseSchema:
@@ -128,6 +131,7 @@ async def get_user(uuid: str, request: Request) -> UserResponseSchema:
     return JSONResponse(content=payload, status_code=200, headers=headers)
 
 
+# noinspection PyUnusedLocal
 @users_router.api_route(path="/user/{uuid}", methods=["DELETE"], include_in_schema=True)
 @authenticate_app
 async def delete_user(uuid: str, request: Request) -> DeleteResponseSchema:
@@ -155,6 +159,7 @@ async def delete_user(uuid: str, request: Request) -> DeleteResponseSchema:
                             headers=headers)
 
 
+# noinspection PyUnusedLocal
 @users_router.api_route(path="/users", methods=["GET"], include_in_schema=True)
 @authenticate_app
 async def get_all_users(request: Request) -> UsersResponseSchema:
@@ -175,6 +180,7 @@ async def get_all_users(request: Request) -> UsersResponseSchema:
                             headers=headers)
 
 
+# noinspection PyUnusedLocal
 @users_router.api_route(path="/users/subscription/{is_active}", methods=["GET"], include_in_schema=True)
 @authenticate_app
 async def get_users_by_subscription_status(is_active: bool, request: Request) -> UsersResponseSchema:
@@ -195,4 +201,3 @@ async def get_users_by_subscription_status(is_active: bool, request: Request) ->
         return JSONResponse(content=payload,
                             status_code=201,
                             headers=headers)
-

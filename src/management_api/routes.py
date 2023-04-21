@@ -17,12 +17,12 @@ from src.utils.my_logger import init_logger
 
 management_logger = init_logger("management_api")
 admin_app = FastAPI(
-    title="EOD-STOCK-API - ADMINISTRATOR",
-    description="Administration Application for EOD Stock API",
-    version="1.0.0",
+    title="EOD-STOCK-API - CLIENT ADMINISTRATOR API",
+    description="Client Administration API for EOD Stock API",
+    version="0.0.12",
     terms_of_service="https://www.eod-stock-api.site/terms",
     contact={
-        "name": "EOD-STOCK-API",
+        "name": "MJ API Development",
         "url": "https://www.eod-stock-api.site/contact",
         "email": "info@eod-stock-api.site"
     },
@@ -31,19 +31,20 @@ admin_app = FastAPI(
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    openapi_url="/open-api"
 )
 
 
 @admin_app.middleware(middleware_type="http")
 async def check_if_valid_request(request: Request, call_next):
     """
-
+    **check_if_valid_request**
+        Admin API Validations
     :param request:
     :param call_next:
     :return:
     """
-    # TODO Include here admin specific verifications
     path = request.url
 
     management_logger.info(f"on entry into management api: {path}")
@@ -76,6 +77,7 @@ async def get_client_plans():
 async def admin_startup():
     """
     **admin_startup**
+    ADMIN API startup procedures
         :return:
     """
     # Needs more processes here
@@ -87,25 +89,29 @@ async def admin_startup():
 @authenticate_cloudflare_workers
 async def init_cloudflare_gateway():
     """
-        # TODO - if possible the gateway worker could use this endpoint to update the apikeys held
+    **init_cloudflare_gateway**
         at the gateway -
-
         **init_cloudflare_gateway**
                 initialize cloudflare
-    :param request:
     :return:
     """
     with next(sessions) as session:
         api_keys = await ApiKeyModel.get_all_active(session=session)
         payload = [api_key.to_dict()['api_key'] for api_key in api_keys]
-    #     TODO maybe important to hash the keys here so that comparison is made with hashes rather than actual keys
+
     return JSONResponse(content=dict(status=True, api_keys=payload), status_code=200)
 
 
 @admin_app.exception_handler(NotAuthorized)
 async def admin_not_authorized(request: Request, exc: NotAuthorized):
+    """
+    **admin_not_authorized**
+        This exception will be thrown whenever Authorization has not passed.
+    :param request:
+    :param exc:
+    :return:
+    """
     user_data = {"message": exc.message}
-    print(user_data)
     return JSONResponse(
         status_code=exc.status_code,
         content=user_data, headers=await get_headers(user_data))
@@ -123,4 +129,5 @@ async def handle_all_exceptions(request: Request, exc: Exception):
 @admin_app.get("/_ah/warmup", include_in_schema=False)
 async def status_check(request: Request):
     return JSONResponse(content={'status': 'OK'}, status_code=200, headers={"Content-Type": "application/json"})
+
 

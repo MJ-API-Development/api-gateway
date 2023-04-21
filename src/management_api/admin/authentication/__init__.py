@@ -8,7 +8,6 @@ from src.database.apikeys.keys import ApiKeyModel, sessions
 from src.authorize.authorize import NotAuthorized
 from src.utils.my_logger import init_logger
 
-# TODO find a way to cache the results of this methods
 authenticate_logger = init_logger("authenticate_logger")
 
 
@@ -29,13 +28,11 @@ def authenticate_admin(func):
 
 def authenticate_app(func):
     """
-
-
+        **authenticate_app**
         this will only authenticate application example client and admin app
     :param func:
     :return:
     """
-
     @wraps(func)
     async def wrapper(*args, **kwargs):
         # TODO find a way of authenticating APPS, not BASED on API, Suggestion SECRET_KEY
@@ -49,6 +46,12 @@ def authenticate_app(func):
 
 
 def authenticate_cloudflare_workers(func):
+    """
+        **authenticate_cloudflare_workers**
+
+    :param func:
+    :return:
+    """
     @wraps(func)
     async def _cloudflare_auth(*args, **kwargs):
         request: Request = kwargs.get('request')
@@ -62,16 +65,6 @@ def authenticate_cloudflare_workers(func):
 
     return _cloudflare_auth
 
-
-#
-# async def verify_signature(request):
-#     secret_key = config_instance().SECRET_KEY
-#     request_header = request.headers.get('X-SIGNATURE', '')
-#     data_str, signature_header = request_header.split('|')
-#     _signature = hmac.new(secret_key.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
-#     result = hmac.compare_digest(_signature, signature_header)
-#     print(f"comparison result is {result}")
-#     return result
 
 async def create_header(secret_key: str, user_data: dict) -> str:
     data_str = ','.join([str(user_data[k]) for k in sorted(user_data.keys())])

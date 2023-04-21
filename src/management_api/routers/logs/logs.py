@@ -10,6 +10,7 @@ from src.utils.my_logger import EncryptedFormatter
 log_router = APIRouter()
 
 
+# noinspection PyUnusedLocal
 @log_router.get("/_admin/logs/{num_logs}")
 @authenticate_app
 async def get_logs(request: Request, num_logs: int = 50):
@@ -36,4 +37,3 @@ async def get_logs(request: Request, num_logs: int = 50):
     payload = dict(status=True, logs=decrypted_logs, message="logs found")
     _headers = await get_headers(user_data=payload)
     return JSONResponse(content=payload, status_code=200, headers=_headers)
-

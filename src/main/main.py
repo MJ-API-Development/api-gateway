@@ -498,9 +498,11 @@ async def v1_gateway(request: Request, path: str):
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # Documentations Routes
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# noinspection PyUnusedLocal
 @app.get("/open-api", include_in_schema=False)
 async def open_api(request: Request):
     """
+    079 709 0247
         will return a json open api specification for the main API
     :param request:
     :return:
@@ -537,20 +539,13 @@ async def redoc_html(request: Request):
     )
 
 
-# noinspection PyUnusedLocal
-@app.get("/_ah/warmup", include_in_schema=False)
-async def status_check(request: Request):
-    _payload = await check_all_services()
-    response = dict(payload=_payload)
-    return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
-
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # CACHE MANAGEMENT UTILS
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 async def create_resource_keys(request: Request) -> list[str]:
     """
+    **create_resource_keys**
         create resource keys for urls
     :param request:
     :return:
@@ -560,6 +555,7 @@ async def create_resource_keys(request: Request) -> list[str]:
 
 async def delete_resource_from_cache(request: Request):
     """
+    **delete_resource_from_cache**
         This will delete any resource associated with a request from cache if such a
         resource is causing errors such as JSON Decode Errors
     :return:
@@ -574,6 +570,7 @@ async def delete_resource_from_cache(request: Request):
 
 async def check_all_services():
     """
+    **heck_all_services**
         compile a full list of services and show if they are available
     :return:
     """
@@ -588,3 +585,11 @@ async def check_all_services():
         'API_Master': master,
         'API_Slave': 'Online'
     }
+
+
+# noinspection PyUnusedLocal
+@app.get("/_ah/warmup", include_in_schema=False)
+async def status_check(request: Request):
+    _payload = await check_all_services()
+    response = dict(payload=_payload)
+    return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
