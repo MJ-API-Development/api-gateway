@@ -58,7 +58,7 @@ async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
     auth_logger.info(f"Authorizing Path : {path} and Method: {method}, for UUID : {uuid}")
     # Retrieve the user data based on the UUID
     with next(sessions) as session:
-        user = await Account.get_by_uuid(uuid=uuid, session=session)
+        user: Account | None = await Account.get_by_uuid(uuid=uuid, session=session)
 
     if user is None:
         return False
@@ -66,7 +66,7 @@ async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
     auth_logger.info(f"User is found for authorization: user: {user.uuid}")
 
     routes = ALLOWED_ROUTES["admin"] if user.is_admin else ALLOWED_ROUTES["regular"]
-    method = method.upper()
+    method: str = method.upper()
     # Check if the requested path matches any of the regular expressions in the dictionary
     for route, methods in routes.items():
         if re.match(route, path) and method in methods:

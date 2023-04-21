@@ -63,31 +63,31 @@ async def authenticate_two_factor(two_factor_data: TwoFactorLoginData, request: 
     :return: JSONResponse - a response containing the login status and user data
     """
     user_data: dict[str, str] = two_factor_data.dict()
-    email = user_data.get("email")
-    code = user_data.get("code")
+    email: str = user_data.get("email")
+    code: str = user_data.get("code")
     auth_logger.info(f"authenticating two-factor code for account: {email}")
 
     with next(sessions) as session:
         # Retrieve the two-factor authentication key stored in Redis
-        user_instance = await Account.get_by_email(email, session=session)
+        user_instance: Account = await Account.get_by_email(email, session=session)
 
         two_factor_key = f"two_factor_key_{user_instance.to_dict().get('uuid')}"
         stored_key = await redis_cache.get(two_factor_key)
         if stored_key is None:
-            payload = dict(status=False, payload={}, message="Authentication key Expired")
+            payload: dict[str, str| bool] = dict(status=False, payload={}, message="Authentication key Expired")
             return JSONResponse(content=payload, status_code=401)
 
         # Use HMAC to compare the user's input key with the stored key
-        stored_key_bytes = stored_key.encode('utf-8')
-        code_bytes = code.encode('utf-8')
+        stored_key_bytes: bytes = stored_key.encode('utf-8')
+        code_bytes: bytes = code.encode('utf-8')
 
         if not hmac.compare_digest(stored_key_bytes, code_bytes):
             # Authentication failed
-            payload = dict(status=False, payload={}, message="invalid two-factor authentication key")
+            payload: dict[str, str | bool, dict[str, str]] = dict(status=False, payload={}, message="invalid two-factor authentication key")
             return JSONResponse(content=payload, status_code=401)
 
         # Authentication succeeded
-        user_instance = await Account.get_by_email(email=email, session=session)
+        user_instance: Account = await Account.get_by_email(email=email, session=session)
 
     payload = dict(status=True, payload=user_instance.to_dict(), message="successfully authenticated two-factor")
     headers = await get_headers(user_data=user_instance.to_dict())
@@ -109,10 +109,10 @@ async def authorization(auth_data: AuthorizationRequest, request: Request):
     :return: payload : dict[str, str| bool dict[str|bool]], status_code
     """
 
-    is_authorized = await check_authorization(uuid=auth_data.uuid, path=auth_data.path, method=auth_data.method)
-    message = "User is Authorized" if is_authorized else "User not Authorized"
-    payload = dict(status=True, payload=dict(is_authorized=is_authorized), message=message)
-    headers = await get_headers(user_data=payload)
+    is_authorized: bool = await check_authorization(uuid=auth_data.uuid, path=auth_data.path, method=auth_data.method)
+    message: str = "User is Authorized" if is_authorized else "User not Authorized"
+    payload: dict[str, bool | str] = dict(status=True, payload=dict(is_authorized=is_authorized), message=message)
+    headers: dict[str, dict[str, bool | str]] = await get_headers(user_data=payload)
     return JSONResponse(content=payload, status_code=200, headers=headers)
 
 
@@ -123,8 +123,6 @@ async def generate_and_send_two_factor_code(email: str) -> str:
     """
     # Generate a random code
     code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-
     # Add the code and email to the queue
     await email_process.send_two_factor_code_email(email=email, code=code)
-
     return code
