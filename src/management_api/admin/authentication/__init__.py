@@ -55,8 +55,8 @@ def authenticate_cloudflare_workers(func):
     @wraps(func)
     async def _cloudflare_auth(*args, **kwargs):
         request: Request = kwargs.get('request')
-        secret_token = request.headers.get('X-SECRET-KEY')
-        this_secret_token = config_instance().CLOUDFLARE_SETTINGS.CLOUDFLARE_SECRET_KEY
+        secret_token: str = request.headers.get('X-SECRET-KEY')
+        this_secret_token: str = config_instance().CLOUDFLARE_SETTINGS.CLOUDFLARE_SECRET_KEY
 
         if hmac.compare_digest(this_secret_token, secret_token):
             return await func(*args, **kwargs)
@@ -67,14 +67,14 @@ def authenticate_cloudflare_workers(func):
 
 
 async def create_header(secret_key: str, user_data: dict) -> str:
-    data_str = ','.join([str(user_data[k]) for k in sorted(user_data.keys())])
-    signature = hmac.new(secret_key.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
+    data_str: str = ','.join([str(user_data[k]) for k in sorted(user_data.keys())])
+    signature: str = hmac.new(secret_key.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
     return f"{data_str}|{signature}"
 
 
 async def get_headers(user_data: dict) -> dict[str, str]:
-    secret_key = config_instance().SECRET_KEY
-    signature = await create_header(secret_key, user_data)
+    secret_key: str = config_instance().SECRET_KEY
+    signature: str = await create_header(secret_key, user_data)
     return {'X-SIGNATURE': signature, 'Content-Type': 'application/json'}
 
 

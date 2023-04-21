@@ -561,7 +561,7 @@ async def delete_resource_from_cache(request: Request):
     :return:
     """
     try:
-        resource_keys = await create_resource_keys(request)
+        resource_keys: list[str] = await create_resource_keys(request)
         for resource_key in resource_keys:
             await redis_cache.delete_key(key=resource_key)
     except Exception as e:

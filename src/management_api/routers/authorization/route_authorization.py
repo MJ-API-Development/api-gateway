@@ -65,7 +65,7 @@ async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
 
     auth_logger.info(f"User is found for authorization: user: {user.uuid}")
 
-    routes = ALLOWED_ROUTES["admin"] if user.is_admin else ALLOWED_ROUTES["regular"]
+    routes: dict[str, list[str]] = ALLOWED_ROUTES["admin"] if user.is_admin else ALLOWED_ROUTES["regular"]
     method: str = method.upper()
     # Check if the requested path matches any of the regular expressions in the dictionary
     for route, methods in routes.items():
