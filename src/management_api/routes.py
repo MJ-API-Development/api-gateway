@@ -102,6 +102,7 @@ async def init_cloudflare_gateway():
     return JSONResponse(content=dict(status=True, api_keys=payload), status_code=200)
 
 
+# noinspection PyUnusedLocal
 @admin_app.exception_handler(NotAuthorized)
 async def admin_not_authorized(request: Request, exc: NotAuthorized):
     """
@@ -117,6 +118,7 @@ async def admin_not_authorized(request: Request, exc: NotAuthorized):
         content=user_data, headers=await get_headers(user_data))
 
 
+# noinspection PyUnusedLocal
 @admin_app.exception_handler(Exception)
 async def handle_all_exceptions(request: Request, exc: Exception):
     management_logger.error(f"Error processing request : {str(exc)}")
@@ -126,8 +128,7 @@ async def handle_all_exceptions(request: Request, exc: Exception):
                         headers=await get_headers(error_data))
 
 
+# noinspection PyUnusedLocal
 @admin_app.get("/_ah/warmup", include_in_schema=False)
 async def status_check(request: Request):
     return JSONResponse(content={'status': 'OK'}, status_code=200, headers={"Content-Type": "application/json"})
-
-

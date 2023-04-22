@@ -40,7 +40,7 @@ async def login(login_data: LoginData, request: Request):
             # Once the user is logged in generate and send two factor auth
             code = await generate_and_send_two_factor_code(email=email)
             two_factor_key = f"two_factor_code_{user_instance.to_dict().get('uuid')}"
-            # Two factor authentication will expire after 5 minutes
+            # Two-factor authentication will expire after 5 minutes
             await redis_cache.set(key=two_factor_key, value=code, ttl=60*5)
 
             payload = dict(status=True, payload=user_instance.to_dict(), message="successfully logged in")
@@ -65,7 +65,7 @@ async def authenticate_two_factor(two_factor_data: TwoFactorLoginData, request: 
     user_data: dict[str, str] = two_factor_data.dict()
     email: str = user_data.get("email")
     code: str = user_data.get("code")
-    auth_logger.info(f"authenticating two-factor code for account: {email}")
+    auth_logger.info(f"Authenticating two-factor code for account: {email}")
 
     with next(sessions) as session:
         # Retrieve the two-factor authentication key stored in Redis
@@ -74,7 +74,7 @@ async def authenticate_two_factor(two_factor_data: TwoFactorLoginData, request: 
         two_factor_key = f"two_factor_key_{user_instance.to_dict().get('uuid')}"
         stored_key = await redis_cache.get(two_factor_key)
         if stored_key is None:
-            payload: dict[str, str| bool] = dict(status=False, payload={}, message="Authentication key Expired")
+            payload: dict[str, str | bool] = dict(status=False, payload={}, message="Authentication key Expired")
             return JSONResponse(content=payload, status_code=401)
 
         # Use HMAC to compare the user's input key with the stored key
