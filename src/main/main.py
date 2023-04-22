@@ -190,8 +190,7 @@ async def add_security_headers(request: Request, call_next):
 if is_development(config_instance=config_instance):
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["gateway.eod-stock-api.site", "localhost", "127.0.0.1"])
 else:
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["gateway.eod-stock-api.site", "eod-stock-api.site",
-                                                             "client.eod-stock-api.site", "www.eod-stock-api.site"])
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["gateway.eod-stock-api.site"])
 
 # Rate Limit per IP Must Always Match The Rate Limit of the Highest Plan Allowed
 rate_limit, _, duration = RateLimits().ENTERPRISE
