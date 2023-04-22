@@ -46,8 +46,7 @@ async def check_if_valid_request(request: Request, call_next):
     :return:
     """
     path = request.url
-
-    management_logger.info(f"on entry into management api: {path}")
+    management_logger.info(f"on entry into Management API : {path}")
     response = await call_next(request)
     return response
 

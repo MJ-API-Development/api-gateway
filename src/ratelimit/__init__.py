@@ -1,18 +1,17 @@
 import asyncio
-import datetime
 import time
 
 from fastapi.requests import Request
-
 from src.utils.my_logger import init_logger
 
 
 class RateLimit:
     """
-     Used to Throttle My API into just over 100 requests per second
-     This works because the API is being used over cloudflare so throttling
-     requests to less than 100 per second for each edge server in cloudflare
-     makes sense. should leave room enough to service other regions
+    **RateLimit**
+         Used to Throttle My API into just over 100 requests per second
+         This works because the API is being used over cloudflare so throttling
+         requests to less than 100 per second for each edge server in cloudflare
+         makes sense. should leave room enough to service other regions
     """
     def __init__(self, max_requests: int = 100, duration: int = 1):
         self.max_requests = max_requests

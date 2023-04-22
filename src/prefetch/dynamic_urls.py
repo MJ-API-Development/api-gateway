@@ -31,7 +31,7 @@ async def get_exchange_lists():
             if status and payload:
                 return payload
         return cached_exchange_lists
-    except HTTPError as e:
+    except HTTPError:
         return cached_exchange_lists
 
 
