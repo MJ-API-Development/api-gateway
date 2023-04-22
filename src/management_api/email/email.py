@@ -50,7 +50,8 @@ class Emailer:
     async def process_message_queues(self):
         while True:
             if not self.email_queues.empty():
-                message = await self.email_queues.get()
+                message: Mail = await self.email_queues.get()
+                self._logger.info(f"Sending Message: Subject {message.subject} , TO : {message.to}")
                 await email_process.send_email(message)
             else:
                 self._logger.info(f"Email Queue is empty")
@@ -95,6 +96,7 @@ class Emailer:
         message_dict = dict(sender_email=sender_email, recipient_email=recipient_email, subject=subject, html=html)
         await self.put_message_on_queue(message=await self.create_message(**message_dict))
 
+    # noinspection PyUnusedLocal
     async def send_message_to_devs(self, message_type: str, request, api_key: str, priority: int = 1,
                                    templates: EmailTemplate = EmailTemplate):
         """
@@ -109,22 +111,25 @@ class Emailer:
         subject = f"Logs from EOD-STOCK-API.SITE : {message_type}"
         _request = dict(url=request.url, headers=request.headers, method=request.method)
         html = await templates.devs_message(**_request)
+
         message_dict = dict(sender_email="noreply@eod-stock-api.site", recipient_email="support@eod-stock-api.site",
                             subject=subject, html=html)
+
         await self.put_message_on_queue(message=await self.create_message(**message_dict))
 
+    # noinspection PyUnusedLocal
     async def send_two_factor_code_email(self, email: str, code: str, templates: EmailTemplate = EmailTemplate):
         """
         Send an email with the two-factor code to the specified email address.
         """
-        # Use an email library to send the email
+        # Use an email library to send email
         # The email should include the code and a message informing the user that they have requested a login
         # You may need to configure your email service provider credentials and settings
         subject: str = f"EOD Stock API - Two Factor Authentication Code"
         message: str = f"""
         
         Hi
-            you have recently tried to login to https://eod-stock-api.site 
+            You have recently tried to login to https://eod-stock-api.site 
             here is your two-factor authentication code : {code}
             if you did not try to login please ignore this message
             and nothing will happen.
@@ -132,7 +137,6 @@ class Emailer:
         Thank you
         https://eod-stock-api.site
         Team
-    
         """
         message_dict = dict(sender_email="noreply@eod-stock-api.site", recipient_email=email, subject=subject,
                             html=message)

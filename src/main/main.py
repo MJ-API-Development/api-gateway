@@ -270,7 +270,6 @@ async def validate_request_middleware(request, call_next):
     # pre-processing that you need.
     # allowedPaths = ["/", "/api/", "/redoc", "/docs", "/_admin/"]
 
-    # TODO - consider reintegrating signature verification
     async def compare_tokens():
         """will check headers to see if the request comes from cloudflare"""
         _cf_secret_token = request.headers.get('X-SECRET-TOKEN')
@@ -485,12 +484,12 @@ async def v1_gateway(request: Request, path: str):
 
     mess = "All API Servers failed to respond - Or there is no Data for the requested resource and parameters"
     app_logger.warning(msg=mess)
-    # TODO - send Notifications to developers that the API Servers are down - or something requests coming up empty handed
     _time = datetime.datetime.now().isoformat(sep="-")
 
-    # TODO - create Dev Message Types - Like Fatal Errors, and etc also create Priority Levels
+    # Note: Sending Message to developers containing the details of the request of which there was no data at all
     _args = dict(message_type="resource_not_found", request=request, api_key=api_key)
     await email_process.send_message_to_devs(**_args)
+
     return JSONResponse(content={"status": False, "message": mess}, status_code=404,
                         headers={"Content-Type": "application/json"})
 
