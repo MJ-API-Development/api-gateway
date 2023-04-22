@@ -1,4 +1,5 @@
 import socket
+# noinspection PyUnresolvedReferences
 from src.main.main import app
 from src.config import config_instance
 import uvicorn
