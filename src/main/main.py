@@ -74,9 +74,6 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="src/main/static"), name="static")
 
 
-# app.mount("/static", StaticFiles(directory="static"), name="static")
-
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # ERROR HANDLERS
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -500,7 +497,7 @@ async def v1_gateway(request: Request, path: str):
 @app.get("/open-api", include_in_schema=False)
 async def open_api(request: Request):
     """
-    079 709 0247
+    **open_api**
         will return a json open api specification for the main API
     :param request:
     :return:
@@ -520,6 +517,7 @@ async def open_api(request: Request):
 @app.get("/", include_in_schema=True)
 async def home_route(request: Request):
     """
+    **home_route**
         redirects to documentations
     :return:
     """
