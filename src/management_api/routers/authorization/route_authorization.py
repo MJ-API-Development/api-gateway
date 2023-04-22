@@ -72,5 +72,5 @@ async def check_authorization(uuid: str | None, path: str, method: str) -> bool:
         if re.match(route, path) and method in methods:
             return True
 
-    auth_logger.info(f"User is Not Authorized")
+    auth_logger.info(f"User : {uuid} is Not Authorized to access path : {path}")
     return False
