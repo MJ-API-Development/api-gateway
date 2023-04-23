@@ -445,7 +445,7 @@ async def v1_gateway(request: Request, path: str):
     cached_responses = await asyncio.gather(*tasks)
 
     for i, response in enumerate(cached_responses):
-        if response is not None:
+        if response and response.get('payload'):
             app_logger.info(msg=f"Found cached response from {api_urls[i]}")
             return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
@@ -463,7 +463,7 @@ async def v1_gateway(request: Request, path: str):
     app_logger.info(msg=f"Request Responses returned : {len(responses)}")
 
     for i, response in enumerate(responses):
-        if response and response.get("status", False):
+        if response and response.get("status", False) and response.get('payload'):
             api_url = api_urls[i]
             # NOTE, Cache is being set to a ttl of one hour here
             await redis_cache.set(key=api_url, value=response, ttl=60 * 60)
