@@ -4,7 +4,6 @@ import secrets
 from pydantic import BaseModel
 from sqlalchemy import Column, String, inspect, Boolean
 from sqlalchemy.orm import relationship
-from typing_extensions import Self
 
 from src.authorize.authorize import NotAuthorized
 from src.const import UUID_LEN, NAME_LEN, EMAIL_LEN, STR_LEN, CELL_LEN
@@ -34,7 +33,8 @@ class Account(Base):
     is_deleted: bool = Column(Boolean, default=False)
     apikey = relationship('ApiKeyModel', uselist=False, foreign_keys=[ApiKeyModel.uuid])
 
-    def __init__(self, uuid: str,  first_name: str, second_name: str, surname: str, email: str, cell: str, password: str):
+    def __init__(self, uuid: str, first_name: str, second_name: str, surname: str, email: str, cell: str,
+                 password: str):
         self.uuid = uuid or create_id()
         self.first_name = first_name
         self.second_name = second_name
@@ -42,7 +42,6 @@ class Account(Base):
         self.email = email
         self.cell = cell
         self.password = password
-
 
     def __bool__(self) -> bool:
         return bool(self.uuid)
@@ -89,15 +88,15 @@ class Account(Base):
         return init_dict
 
     @classmethod
-    async def get_by_uuid(cls, uuid: str, session: sessionType) -> Self | None:
+    async def get_by_uuid(cls, uuid: str, session: sessionType):
         return session.query(cls).filter(cls.uuid == uuid).first()
 
     @classmethod
-    async def get_by_email(cls, email: str, session: sessionType) -> Self | None:
+    async def get_by_email(cls, email: str, session: sessionType):
         return session.query(cls).filter(cls.email == email).first()
 
     @classmethod
-    async def login(cls, username: str, password: str, session: sessionType) -> Self | None:
+    async def login(cls, username: str, password: str, session: sessionType):
         # Get the user with the specified email address
         user: Account = session.query(cls).filter(cls.email == username).first()
 
@@ -111,7 +110,7 @@ class Account(Base):
         return user if user and secrets.compare_digest(password_hash, user.password) else None
 
     @classmethod
-    async def fetch_all(cls, session: sessionType) -> list[Self]:
+    async def fetch_all(cls, session: sessionType) -> list[any]:
         """
             Returns a complete list of users
         :param session:

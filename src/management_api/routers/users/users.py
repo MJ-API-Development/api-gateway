@@ -63,6 +63,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
         message_dict = dict(verification_link=verification_link, sender_email=sender_email,
                             recipient_email=recipient_email, client_name=client_name)
         try:
+            users_logger.info(f'Sending confirmation email : {message_dict}')
             await email_process.send_account_confirmation_email(**message_dict)
         except Exception as e:
             users_logger.info(f'Failed to send confirmation email : {message_dict}')
