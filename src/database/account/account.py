@@ -43,6 +43,7 @@ class Account(Base):
         self.cell = cell
         self.password = password
 
+
     def __bool__(self) -> bool:
         return bool(self.uuid)
 

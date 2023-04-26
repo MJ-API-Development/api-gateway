@@ -62,8 +62,11 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
         client_name = new_user_instance.names
         message_dict = dict(verification_link=verification_link, sender_email=sender_email,
                             recipient_email=recipient_email, client_name=client_name)
+        try:
+            await email_process.send_account_confirmation_email(**message_dict)
+        except Exception as e:
+            users_logger.info(f'Failed to send confirmation email : {message_dict}')
 
-        await email_process.send_account_confirmation_email(**message_dict)
         payload = dict(status=True, payload=_payload, message="Successfully Created Account - Please Login to Proceed")
         _headers = await get_headers(user_data=payload)
         return JSONResponse(content=payload, status_code=201, headers=_headers)
