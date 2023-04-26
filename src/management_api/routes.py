@@ -48,7 +48,7 @@ async def check_if_valid_request(request: Request, call_next):
     path = request.url
     management_logger.info(f"on entry into Management API : {path} method: {request.method}")
     response = await call_next(request)
-    management_logger.info(f"on exit from Management API : {response.status_code} {response.text}")
+    management_logger.info(f"on exit from Management API : {response.status_code} {response}")
     return response
 
 
