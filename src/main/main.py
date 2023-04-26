@@ -37,7 +37,7 @@ cf_firewall = EODAPIFirewall()
 # API Servers
 # TODO NOTE will add more Server URLS Later
 #  TODO just use a server list straight from config
-api_server_urls = [config_instance().API_SERVERS.MASTER_API_SERVER, config_instance().API_SERVERS.SLAVE_API_SERVER]
+api_server_urls = config_instance().API_SERVERS.SERVERS_LIST.split(',')
 api_server_counter = 0
 
 # used to logging debug information for the application

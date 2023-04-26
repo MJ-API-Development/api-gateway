@@ -15,6 +15,7 @@ class DatabaseSettings(BaseSettings):
 class ApiServers(BaseSettings):
     MASTER_API_SERVER: str = Field(..., env='MASTER_API_SERVER')
     SLAVE_API_SERVER: str = Field(..., env='SLAVE_API_SERVER')
+    SERVERS_LIST: str = Field(..., env='SERVERS_LIST')
     X_API_KEY: str = Field(..., env='X_API_KEY')
     X_SECRET_TOKEN: str = Field(..., env='X_SECRET_TOKEN')
     X_RAPID_SECRET: str = Field(..., env='X_RAPID_SECRET')
