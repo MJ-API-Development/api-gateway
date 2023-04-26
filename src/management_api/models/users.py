@@ -25,7 +25,7 @@ class AccountCreate(BaseModel):
     second_name: str | None
     surname: str | None
     email: str | None
-    cell: str   | None
+    cell: str | None
     password: str | None
 
     class Config:
