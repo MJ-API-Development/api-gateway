@@ -1,3 +1,6 @@
+import re
+
+import pymysql.err
 from fastapi import APIRouter, Request
 from starlette.responses import JSONResponse
 
@@ -46,8 +49,16 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
             return JSONResponse(content=payload, status_code=401, headers=_headers)
 
         users_logger.info(f'Saving User To DATABASE: ')
-        session.add(new_user_instance)
-        session.commit()
+        try:
+            session.add(new_user_instance)
+            session.commit()
+        except pymysql.err.IntegrityError as e:
+            duplicate_data = re.findall(re.findall(r"\+(\d+)", e)[0])
+            message: str = f"Cannot Accept  {duplicate_data} as it is already used, by another user"
+            payload = dict(status=False, payload={}, message=message)
+            _headers = await get_headers(user_data=payload)
+            return JSONResponse(content=payload, status_code=401, headers=_headers)
+
         session.flush()
 
         users_logger.info(f'Converting to dict: ')
