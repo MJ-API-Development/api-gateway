@@ -21,12 +21,12 @@ class AccountUpdate(BaseModel):
 
 class AccountCreate(BaseModel):
     uuid: str | None = Field(default_factory=create_id)
-    first_name: str
-    second_name: str | None = None
-    surname: str
-    email: str
-    cell: str
-    password: str
+    first_name: str | None
+    second_name: str | None
+    surname: str | None
+    email: str | None
+    cell: str   | None
+    password: str | None
 
     class Config:
         title = "Account Created Schema"
