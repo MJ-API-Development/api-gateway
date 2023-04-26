@@ -36,7 +36,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
             users_logger.info(f'User Found: ')
             payload = dict(status=False, payload={}, message="Error User Already Exists - Please login to proceed")
             _headers = await get_headers(user_data=payload)
-            return JSONResponse(content=payload, status_code=401, headers=_headers)
+            return JSONResponse(content=payload, status_code=201, headers=_headers)
 
         new_user_instance: Account = Account(**new_user.dict())
         if not bool(new_user_instance):
@@ -55,7 +55,6 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
         users_logger.info(f"Created NEW USER : {_payload}")
 
         # this will schedule an account confirmation email to be sent
-        # TODO look at this - Make this an ephemeral link, it other words it should expire after sometime
         verification_link = f"https://gateway.eod-stock-api.site/_admin/account/confirm/{new_user_instance.uuid}"
 
         sender_email = config_instance().EMAIL_SETTINGS.ADMIN
