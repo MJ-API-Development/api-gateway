@@ -53,7 +53,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
             session.add(new_user_instance)
             session.commit()
         except pymysql.err.IntegrityError as e:
-            duplicate_data = re.findall(re.findall(r"\+(\d+)", e)[0])
+            duplicate_data = re.findall(r"\+(\d+)", e)[0]
             message: str = f"Cannot Accept  {duplicate_data} as it is already used, by another user"
             payload = dict(status=False, payload={}, message=message)
             _headers = await get_headers(user_data=payload)
