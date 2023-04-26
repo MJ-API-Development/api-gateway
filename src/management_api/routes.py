@@ -48,7 +48,7 @@ async def check_if_valid_request(request: Request, call_next):
     path = request.url
     management_logger.info(f"on entry into Management API : {path} method: {request.method}")
     response = await call_next(request)
-    management_logger.info(f"on exit from Management API : {response.status_code}")
+    management_logger.info(f"on exit from Management API : {response.status_code} {response.text}")
     return response
 
 
@@ -113,6 +113,7 @@ async def admin_not_authorized(request: Request, exc: NotAuthorized):
     :return:
     """
     user_data = {"message": exc.message}
+    management_logger.info(f"Error occurred: {str(exc)}")
     return JSONResponse(
         status_code=exc.status_code,
         content=user_data, headers=await get_headers(user_data))
@@ -121,7 +122,7 @@ async def admin_not_authorized(request: Request, exc: NotAuthorized):
 # noinspection PyUnusedLocal
 @admin_app.exception_handler(Exception)
 async def handle_all_exceptions(request: Request, exc: Exception):
-    management_logger.error(f"Error processing request : {str(exc)}")
+    management_logger.info(f"Error processing request : {str(exc)}")
     error_data = {'message': 'error processing request'}
     return JSONResponse(content=error_data,
                         status_code=500,
