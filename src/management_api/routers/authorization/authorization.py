@@ -37,8 +37,8 @@ async def login(login_data: LoginData, request: Request):
     auth_logger.info(f"login into account : {email}")
     with next(sessions) as session:
         user_instance = await Account.login(username=email, password=password, session=session)
-        auth_logger.info(f"user instance : {user_instance.to_dict()}")
         if user_instance:
+            auth_logger.info(f"user instance : {user_instance.to_dict()}")
             # Once the user is logged in generate and send two factor auth
             code = await generate_and_send_two_factor_code(email=email)
             two_factor_key = f"two_factor_code_{user_instance.to_dict().get('uuid')}"
@@ -47,7 +47,7 @@ async def login(login_data: LoginData, request: Request):
 
             payload = dict(status=True, payload=user_instance.to_dict(), message="successfully logged in")
         else:
-            payload = dict(status=False, payload={}, message="user not found")
+            payload = dict(status=False, payload={}, message="User not found")
     headers = await get_headers(user_data=user_instance.to_dict())
 
     return JSONResponse(content=payload, status_code=200, headers=headers)

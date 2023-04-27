@@ -30,7 +30,7 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
 
     :return: status payload, message -> see Responses
     """
-    users_logger.info(f"creating user : {new_user.dict()}")
+    users_logger.info(f"Creating user : {new_user.dict()}")
     with next(sessions) as session:
         email: str = new_user.email
         user_instance: Account | None = await Account.get_by_email(email=email, session=session)
@@ -66,20 +66,20 @@ async def create_user(new_user: AccountCreate, request: Request) -> UserResponse
         users_logger.info(f"Created NEW USER : {_payload}")
 
         # this will schedule an account confirmation email to be sent
-        verification_link = f"https://gateway.eod-stock-api.site/_admin/account/confirm/{new_user_instance.uuid}"
+        verification_link: str = f"https://gateway.eod-stock-api.site/_admin/account/confirm/{new_user_instance.uuid}"
 
-        sender_email = config_instance().EMAIL_SETTINGS.ADMIN
-        recipient_email = new_user_instance.email
-        client_name = new_user_instance.names
-        message_dict = dict(verification_link=verification_link, sender_email=sender_email,
-                            recipient_email=recipient_email, client_name=client_name)
+        sender_email: str = config_instance().EMAIL_SETTINGS.ADMIN
+        recipient_email: str = new_user_instance.email
+        client_name: str = new_user_instance.names
+        message_dict: dict[str, str] = dict(verification_link=verification_link, sender_email=sender_email,
+                                            recipient_email=recipient_email, client_name=client_name)
         try:
             users_logger.info(f'Sending confirmation email : {message_dict}')
             await email_process.send_account_confirmation_email(**message_dict)
         except Exception as e:
             users_logger.info(f'Failed to send confirmation email : {message_dict}')
 
-        payload = dict(status=True, payload=_payload, message="Successfully Created Account - Please Login to Proceed")
+        payload: dict[str, str] = dict(status=True, payload=_payload, message="Successfully Created Account - Please Login to Proceed")
         _headers = await get_headers(user_data=payload)
         return JSONResponse(content=payload, status_code=201, headers=_headers)
 

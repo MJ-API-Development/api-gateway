@@ -71,7 +71,7 @@ class Account(Base):
         """
         Hashes and sets the user's password
         """
-        self.password_hash = hashlib.sha256(plaintext_password.encode()).hexdigest()
+        self.password_hash = hashlib.sha256(plaintext_password.encode('utf-8')).hexdigest()
 
     def to_dict(self) -> dict[str, str]:
         init_dict = {
@@ -98,13 +98,13 @@ class Account(Base):
     @classmethod
     async def login(cls, username: str, password: str, session: sessionType):
         # Get the user with the specified email address
-        user: Account = session.query(cls).filter(cls.email == username).first()
+        user: Account = session.query(cls).filter(cls.email == username.casefold()).first()
 
         if (user is None) or user.is_deleted:
             raise NotAuthorized(message="You are not authorized to login to this account")
 
         # Hash the entered password using a secure hash function (SHA-256 in this example)
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
         # Compare the hashed password to the stored hash using secrets.compare_digest,
         # and return either the user object or None depending on the result
         return user if user and secrets.compare_digest(password_hash, user.password) else None
