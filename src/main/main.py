@@ -450,33 +450,16 @@ async def v1_gateway(request: Request, path: str):
             return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
     app_logger.info(msg="All cached responses not found- Must Be a Slow Day")
-
-    try:
-        # 5 minutes timeout on resource fetching from backend - some resources may take very long
-        tasks = [requester(api_url=api_url, timeout=9600) for api_url in api_urls]
-        responses = await asyncio.gather(*tasks)
-
-    except httpx.HTTPError as http_err:
-        app_logger.info(msg=f"Errors when making requests : {str(http_err)}")
-        responses = []
-
-    app_logger.info(msg=f"Request Responses returned : {len(responses)}")
-
-    for i, response in enumerate(responses):
-        if response and response.get("status", False) and response.get('payload'):
-            api_url = api_urls[i]
-            # NOTE, Cache is being set to a ttl of one hour here
-            await redis_cache.set(key=api_url, value=response, ttl=60 * 60)
-            app_logger.info(msg=f"Server Responded for this Resource {api_url}")
-            return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
-        else:
-            # The reason for this algorithm is because sometimes the cron server is busy this way no matter
-            # what happens a response is returned
-            app_logger.warning(msg=f"""
-            Server Failed To Respond - Or Data Not Found
-                Original Request URL : {api_urls[i]}
-                Actual Response : {response}          
-            """)
+    for api_url in api_urls:
+        try:
+            # 5 minutes timeout on resource fetching from backend - some resources may take very long
+            response = await requester(api_url=api_url, timeout=9600)
+            if response and response.get("status", False) and response.get('payload'):
+                # NOTE, Cache is being set to a ttl of one hour here
+                await redis_cache.set(key=api_url, value=response, ttl=60 * 60)
+                return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
+        except httpx.HTTPError as http_err:
+            app_logger.info(msg=f"Errors when making requests : {str(http_err)}")
 
     mess = "All API Servers failed to respond - Or there is no Data for the requested resource and parameters"
     app_logger.warning(msg=mess)
