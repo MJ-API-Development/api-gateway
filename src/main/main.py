@@ -29,7 +29,7 @@ from src.management_api.email.email import email_process
 from src.management_api.routes import admin_app
 from src.prefetch import prefetch_endpoints
 from src.ratelimit import ip_rate_limits, RateLimit
-from src.requests import requester
+from src.requests import requester, ServerMonitor
 from src.utils.my_logger import init_logger
 from src.utils.utils import is_development
 
@@ -340,9 +340,14 @@ async def validate_request_middleware(request, call_next):
     return response
 
 
+#######################################################################################################################
+
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # STARTUP EVENTS
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+remote_servers = ServerMonitor()
+
 
 # On Start Up Run the following Tasks
 @app.on_event('startup')
@@ -390,10 +395,16 @@ async def startup_event():
 
     async def clean_up_memcache():
         while True:
-            # This cleans up the cache every ten minutes
+            # This cleans up the cache every 30 minutes
             total_cleaned = await redis_cache.memcache_ttl_cleaner()
             app_logger.info(f"Cleaned Up {total_cleaned} Expired Mem Cache Values")
             await asyncio.sleep(delay=60 * 30)
+
+    async def monitor_servers():
+        """will prioritize servers which are responsive and also available"""
+        while True:
+            await remote_servers.sort_api_servers_by_health()
+            await asyncio.sleep(delay=60 * 5)
 
     asyncio.create_task(setup_cf_firewall())
     asyncio.create_task(backup_cf_firewall_data())
@@ -402,6 +413,7 @@ async def startup_event():
     asyncio.create_task(process_credit_queue())
     asyncio.create_task(email_process.process_message_queues())
     asyncio.create_task(clean_up_memcache())
+    asyncio.create_task(monitor_servers())
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -437,7 +449,7 @@ async def v1_gateway(request: Request, path: str):
     _path = f"/api/v1/{path}"
     await create_take_credit_args(api_key=api_key, path=_path)
 
-    api_urls = [f'{api_server_url}/api/v1/{path}' for api_server_url in api_server_urls]
+    api_urls = [f'{api_server_url}/api/v1/{path}' for api_server_url in remote_servers.healthy_server_urls]
 
     # Will Take at least six second on the cache if it finds nothing will return None
     # need an improved get timeout for the articles
@@ -450,7 +462,7 @@ async def v1_gateway(request: Request, path: str):
             return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
     app_logger.info(msg="All cached responses not found- Must Be a Slow Day")
-    for api_url in api_urls:
+    for api_url in remote_servers.healthy_server_urls:
         try:
             # 5 minutes timeout on resource fetching from backend - some resources may take very long
             response = await requester(api_url=api_url, timeout=9600)
