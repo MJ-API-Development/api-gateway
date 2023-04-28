@@ -462,12 +462,14 @@ async def v1_gateway(request: Request, path: str):
             return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
 
     app_logger.info(msg="All cached responses not found- Must Be a Slow Day")
-    for api_url in remote_servers.healthy_server_urls:
+    for api_url in api_urls:
         try:
             # 5 minutes timeout on resource fetching from backend - some resources may take very long
             response = await requester(api_url=api_url, timeout=9600)
+
             if response and response.get("status", False) and response.get('payload'):
                 # NOTE, Cache is being set to a ttl of one hour here
+
                 await redis_cache.set(key=api_url, value=response, ttl=60 * 60)
                 return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
         except httpx.HTTPError as http_err:
