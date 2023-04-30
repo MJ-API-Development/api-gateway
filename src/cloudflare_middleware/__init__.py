@@ -173,7 +173,7 @@ class EODAPIFirewall:
             ipv6_cidrs = response.get('result', {}).get('ipv6_cidrs', [])
             return ipv4_cidrs, ipv6_cidrs
 
-        except CloudFlareAPIError as e:
+        except CloudFlareAPIError:
             return [], []
 
     async def path_matches_known_route(self, path: str):
