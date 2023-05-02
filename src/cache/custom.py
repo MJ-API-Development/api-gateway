@@ -19,6 +19,9 @@ EXPIRATION_TIME = config_instance().CACHE_SETTINGS.CACHE_DEFAULT_TIMEOUT
 
 
 class RedisErrorManager:
+    """
+        Custom Circuit Breaker Error manager for redis cache management
+    """
     def __init__(self, use_redis: bool = True):
         self.use_redis: bool = use_redis
         self._permanent_off = use_redis
