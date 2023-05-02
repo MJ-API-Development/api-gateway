@@ -580,8 +580,12 @@ async def check_all_services():
 
 
 # noinspection PyUnusedLocal
-@app.get("/_ah/warmup", include_in_schema=False)
+@app.get("/_ah/warmup", include_in_schema=True)
 async def status_check(request: Request):
+    """
+    **status_check**
+        used as a way to monitor if the gateway is up - will have a side effect of also checking all API Servers
+    """
     _payload = await check_all_services()
     response = dict(payload=_payload)
     return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
