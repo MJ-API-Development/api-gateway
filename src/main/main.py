@@ -14,7 +14,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import true
+
 from starlette.responses import HTMLResponse, RedirectResponse
 
 from src.authorize.authorize import auth_and_rate_limit, create_take_credit_args, process_credit_queue, NotAuthorized, \
@@ -526,7 +526,7 @@ async def redoc_html(request: Request):
         openapi_url='https://gateway.eod-stock-api.site/open-api',
         title=app.title + " - ReDoc",
         redoc_js_url="https://gateway.eod-stock-api.site/static/redoc.standalone.js",
-        with_google_fonts=true
+        with_google_fonts=True
     )
 
 
