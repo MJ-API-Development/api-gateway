@@ -35,36 +35,25 @@ from src.utils.utils import is_development
 
 cf_firewall = EODAPIFirewall()
 # API Servers
-# TODO NOTE will add more Server URLS Later
-#  TODO just use a server list straight from config
 api_server_urls = config_instance().API_SERVERS.SERVERS_LIST.split(',')
 api_server_counter = 0
 
 # used to logging debug information for the application
 app_logger = init_logger("eod_stock_api_gateway")
 
-description = """
-**Stock Marketing & Financial News API**,
-
-    provides end-of-day stock information for multiple exchanges around the world. 
-    With this API, you can retrieve data for a specific stock at a given date, or for a range of dates. and also get access
-    to companies fundamental data, financial statements, social media trending stocks by sentiment, and also the ability to create a summary of the Financial 
-    News Related to a certain stock or company and its sentiment.
-"""
-
 app = FastAPI(
-    title="EOD-STOCK-API - API GATEWAY",
-    description=description,
-    version="1.0.0",
-    terms_of_service="https://eod-stock-api.site/terms",
+    title=config_instance().APP_SETTINGS.app_name,
+    description=config_instance().APP_SETTINGS.app_description,
+    version=config_instance().APP_SETTINGS.version,
+    terms_of_service=config_instance().APP_SETTINGS.terms_of_service,
     contact={
-        "name": "EOD-STOCK-API",
-        "url": "https://eod-stock-api.site/contact",
-        "email": "info@eod-stock-api.site"
+        "name": config_instance().APP_SETTINGS.contact_name,
+        "url": config_instance().APP_SETTINGS.contact_url,
+        "email": config_instance().APP_SETTINGS.contact_email
     },
     license_info={
-        "name": "Apache 2.0",
-        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+        "name": config_instance().APP_SETTINGS.license_name,
+        "url": config_instance().APP_SETTINGS.license_url,
     },
     docs_url=None,
     openapi_url=None,

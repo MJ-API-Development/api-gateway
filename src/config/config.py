@@ -1,5 +1,5 @@
 import functools
-from pydantic import BaseSettings, Field
+from pydantic import BaseSettings, Field, AnyHttpUrl, EmailStr
 
 
 class DatabaseSettings(BaseSettings):
@@ -98,6 +98,32 @@ class CloudflareSettings(BaseSettings):
         env_file_encoding = 'utf-8'
 
 
+class AppSettings(BaseSettings):
+    app_name: str = "EOD-STOCK-API - API GATEWAY"
+    app_description: str = """
+        **Stock Marketing & Financial News API**,
+
+        provides end-of-day stock information for multiple exchanges around the world. 
+        With this API, you can retrieve data for a specific stock at a given date, or for a range of dates. and also get access
+        to companies fundamental data, financial statements, social media trending stocks by sentiment, and also the ability to create a summary of the Financial 
+        News Related to a certain stock or company and its sentiment.
+    """
+    version: str = "1.0.0"
+    terms_of_service: AnyHttpUrl = "https://eod-stock-api.site/terms"
+    contact_name: str = "EOD-STOCK-API"
+    contact_url: AnyHttpUrl = "https://eod-stock-api.site/contact"
+    contact_email: EmailStr = "info@eod-stock-api.site"
+    license_name: str = "Apache 2.0"
+    license_url: AnyHttpUrl = "https://www.apache.org/licenses/LICENSE-2.0.html"
+    docs_url: str = None
+    openapi_url: str = None
+    redoc_url: str = None
+
+    class Config:
+        env_file = '.env.development'
+        env_file_encoding = 'utf-8'
+
+
 class Settings(BaseSettings):
     SECRET_KEY: str = Field(..., env="SECRET_TOKEN")
     DATABASE_SETTINGS: DatabaseSettings = DatabaseSettings()
@@ -112,6 +138,7 @@ class Settings(BaseSettings):
     PAYPAL_SETTINGS: PayPalSettings = PayPalSettings()
     CLOUDFLARE_SETTINGS: CloudflareSettings = CloudflareSettings()
     FERNET_KEY: bytes = Field(..., env="FERNET_KEY")
+    APP_SETTINGS: AppSettings = AppSettings()
 
     class Config:
         case_sensitive = True
