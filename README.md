@@ -211,5 +211,10 @@ If you want to contribute to **api-gateway**, please follow these steps:
 - [EOD STOCK API - Gateway Server](https://gateway.eod-stock-api.site)
 - [EOD Stock API - Redoc Documentations](https://eod-stock-api.site/redoc)
 
+## Community
+- [Slack Channel](https://join.slack.com/t/eod-stock-apisite/shared_invite/zt-1uelcf229-c_6QAgWFNyVfXKZr1hYYoQ)
+- [StackOverflow](https://stackoverflowteams.com/c/eod-stock-market-api)
+- [Quora](https://eodstockmarketapi.quora.com/)
+
 ## License
 **api-gateway** is licensed under the MIT License. See the `LICENSE` file for details. 
