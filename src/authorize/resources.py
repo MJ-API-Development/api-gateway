@@ -138,9 +138,3 @@ resource_name_request_size: dict[str, int] = {
     "sentiment_analysis.tweeter.stock_code": 3,  # x result size
     "social.trend_setters.stock_code": 3,  # X result size,
 }
-
-# TODO need to create a passive method which will automatically substract the credit
-# from plan limit
-
-if __name__ == "__main__":
-    print(path_to_resource())

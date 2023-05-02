@@ -13,7 +13,7 @@ from src.database.plans.plans import Subscriptions, Plans, PlanType
 from src.utils.my_logger import init_logger
 
 lock = asyncio.Lock()
-# TODO convert api_keys_lookup to a function that looksup api_keys from a redis cache
+
 api_keys_lookup = api_keys.get
 cache_api_keys_func = cache_api_keys
 
@@ -160,7 +160,7 @@ async def take_credit_method(api_key: str, path: str):
 
     with next(sessions) as session:
         # TO Update subscription Model
-        # TODO create a queue and put this in
+        # TODO create a queue and put this in will make sense as demand for services increases
         await Subscriptions.update_subscription(subscription_data=subscription_dict, session=session)
 
 
@@ -188,7 +188,15 @@ def auth_and_rate_limit(func):
         return api_key, path
 
     async def rate_limiter(api_key):
-        """this method applies the actual rate_limiter"""
+        """
+        **rate_limiter**
+            this only rate limits clients by api keys,
+            there is also a regional rate limiter and a global rate limit both created so that the gateway
+            does not end up taking too much traffic and is able to recover from DDOS attacks easily.
+
+        --> the rate_limiter has a side effect of also authorizing the client based on API Keys
+
+        this method applies the actual rate_limiter per client basis"""
         # Rate Limiting Section
         async with apikeys_lock:
             api_keys_model_dict: dict[str, str | int] = api_keys_lookup(api_key)
@@ -200,7 +208,6 @@ def auth_and_rate_limit(func):
             if now - last_request_timestamp > duration:
                 api_keys_model_dict['requests_count'] = 0
             if api_keys_model_dict['requests_count'] >= limit:
-                # TODO consider returning a JSON String with data on the rate rate_limit and how long to wait
                 time_left = last_request_timestamp + duration - now
                 mess: str = f"EOD Stock API - Rate Limit Exceeded. Please wait {time_left:.0f} seconds before making " \
                             f"another request, or upgrade your plan to better take advantage of extra resources " \
