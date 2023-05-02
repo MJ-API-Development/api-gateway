@@ -152,8 +152,12 @@ Regex based request filtering ensures that only whitelisted requests can reach t
 the request URL against a list of regular expressions and rejects any requests that do not match any of the 
 regular expressions. The regular expressions matches pre configured url routes
 ```python
-# list of Known Routes being serviced by the gateway 
-route_regexes = []
+# dicts of Known Routes being serviced by the gateway example 
+route_regexes = {
+    "home": "^/$",
+    "all_general_fundamentals": "^/api/v1/fundamental/general$",
+    ...}
+ 
     def __init__(self):
         ...
         self.compiled_patterns = [re.compile(_regex) for _regex in route_regexes.values()]
