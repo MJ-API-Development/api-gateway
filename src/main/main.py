@@ -491,10 +491,12 @@ async def v1_gateway(request: Request, path: str):
 async def open_api(request: Request):
     """
     **open_api**
-        will return a json open api specification for the main API
+        will return a json open api specification for the servers loaded from GitHub repo
     :param request:
     :return:
     """
+    # NOTE this allows me to load openapi specifications from another repo in GitHub therefore do not have to update
+    # API Specifications on the gateway
     spec_url = "https://raw.githubusercontent.com/MJ-API-Development/open-api-spec/main/open-api.json"
     response = await redis_cache.get(key=spec_url, timeout=1)
     if response is None:
@@ -563,6 +565,7 @@ async def check_all_services():
         compile a full list of services and show if they are available
     :return:
     """
+    # TODO update this to use the gateway server monitor method specifically this one = remote_servers.sort_api_servers_by_health()
     ping_master = requests.get('https://stock-eod-api.site/_ah/warmup')
     master = "Offline"
 
