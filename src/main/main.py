@@ -400,6 +400,12 @@ async def startup_event():
             app_logger.info(f"Cleaned Up {total_cleaned} Expired Mem Cache Values")
             await asyncio.sleep(delay=60 * 30)
 
+    async def check_redis_errors():
+        """will check if redis is making too many errors then switch redis off if it's the case"""
+        while True:
+            await redis_cache.redis_errors.check_error_threshold()
+            await asyncio.sleep(delay=60*10)
+
     async def monitor_servers():
         """will prioritize servers which are responsive and also available"""
         while True:
@@ -414,6 +420,7 @@ async def startup_event():
     asyncio.create_task(email_process.process_message_queues())
     asyncio.create_task(clean_up_memcache())
     asyncio.create_task(monitor_servers())
+    asyncio.create_task(check_redis_errors())
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #

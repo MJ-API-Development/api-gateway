@@ -18,6 +18,50 @@ MEM_CACHE_SIZE = config_instance().CACHE_SETTINGS.MAX_CACHE_SIZE
 EXPIRATION_TIME = config_instance().CACHE_SETTINGS.CACHE_DEFAULT_TIMEOUT
 
 
+class RedisErrorManager:
+    def __init__(self, use_redis: bool = True):
+        self.use_redis: bool = use_redis
+        self._permanent_off = use_redis
+
+        self.cache_errors: int = 0
+
+        self.error_threshold: int = 10
+        self.min_error_threshold: int = 5
+        self.initial_off_time: int = 60
+        self.max_off_time: int = 3600
+        self.time_since_last_error: int = 0
+
+    async def turn_off_redis(self, off_time: int):
+        self.use_redis = False
+        self.time_since_last_error = 0
+        # additional code to shut down Redis or perform other tasks
+        if off_time == 0:
+            self._permanent_off = False
+            return
+
+        await asyncio.sleep(off_time)
+
+    async def turn_on_redis(self):
+        self.use_redis = True
+        # additional code to initialize Redis or perform other tasks
+
+    async def check_error_threshold(self):
+        if self.cache_errors >= self.error_threshold and self.time_since_last_error <= self.max_off_time:
+            off_time = self.initial_off_time * 2 ** (self.cache_errors - self.min_error_threshold)
+            off_time = min(off_time, self.max_off_time)
+            await self.turn_off_redis(off_time)
+        elif self.cache_errors < self.min_error_threshold and not self.use_redis:
+            await self.turn_on_redis()
+        else:
+            self.time_since_last_error += 1
+
+    async def increment_cache_errors(self):
+        self.cache_errors += 1
+
+    async def can_use_redis(self):
+        return self.use_redis and self._permanent_off
+
+
 class Cache:
     """
         A class to handle caching of data, both in-memory and in Redis.
@@ -38,12 +82,13 @@ class Cache:
         self.max_size = max_size
         self.expiration_time = expiration_time
         self._cache_name = cache_name
+        self.redis_errors = RedisErrorManager(use_redis=use_redis)
         self._cache = {}
         self._cache_lock = threading.Lock()
-        self._use_redis = use_redis
+
         self._logger = init_logger(camel_to_snake(self.__class__.__name__))
 
-        if self._use_redis:
+        if self.redis_errors.use_redis:
             redis_host = config_instance().REDIS_CACHE.CACHE_REDIS_HOST
             redis_port = config_instance().REDIS_CACHE.CACHE_REDIS_PORT
             password = config_instance().REDIS_CACHE.REDIS_PASSWORD
@@ -58,14 +103,11 @@ class Cache:
                 config_instance().DEBUG and self._logger.info("Cache -- Redis connected")
             except (ConnectionError, AuthenticationError):
                 config_instance().DEBUG and self._logger.error(msg="Redis failed to connect....")
-                self.turn_off_redis()
+                self.redis_errors.turn_off_redis(off_time=0)
 
     @property
-    async def can_use_redis(self):
-        return self._use_redis
-
-    async def turn_off_redis(self):
-        self._use_redis = False
+    async def can_use_redis(self) -> bool:
+        return await self.redis_errors.can_use_redis()
 
     async def on_delete(self):
         """
@@ -87,7 +129,7 @@ class Cache:
         except (JSONDecodeError, pickle.PicklingError):
             config_instance().DEBUG and self._logger.error(f"Serializer Error")
             return default
-        except TypeError as e:
+        except TypeError:
             config_instance().DEBUG and self._logger.error(f"Serializer Error")
             return default
 
@@ -142,10 +184,11 @@ class Cache:
             await self._remove_oldest_entry()
 
         try:
-            if self._use_redis:
+            if await self.redis_errors.can_use_redis():
                 self._redis_client.set(key, value, ex=exp_time)
         except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError):
             # TODO -- keep a count of redis errors if they pass a thresh-hold then switch-off redis
+            await self.redis_errors.increment_cache_errors()
             pass
         try:
             await self._set_mem_cache(key=key, value=value, ttl=exp_time)
@@ -187,10 +230,11 @@ class Cache:
             value = await asyncio.wait_for(self._get_memcache(key=key), timeout=timeout)
         except (asyncio.TimeoutError, KeyError):
             # Timed out waiting for the memcache lookup, or KeyError - as a result of cache eviction
+            await self.redis_errors.increment_cache_errors()
             value = None
 
         # will only try and return a value in redis if memcache value does not exist
-        if self._use_redis and (value is None):
+        if await self.redis_errors.can_use_redis() and (value is None):
             try:
                 # Wait for the result of the redis lookup with a timeout
                 redis_get = functools.partial(_async_redis_get, get=self._redis_client.get)
@@ -198,9 +242,11 @@ class Cache:
             except (redis.exceptions.TimeoutError, asyncio.TimeoutError):
                 # Timed out waiting for the redis lookup
                 config_instance().DEBUG and self._logger.error("Timeout Error Reading from redis")
+                await self.redis_errors.increment_cache_errors()
                 value = None
             except redis.exceptions.ConnectionError:
                 config_instance().DEBUG and self._logger.error("ConnectionError Reading from redis")
+                await self.redis_errors.increment_cache_errors()
                 value = None
 
         return await self._deserialize_value(value, value) if value else None
