@@ -1,11 +1,12 @@
 import hashlib
-from functools import wraps
-from fastapi import Request
 import hmac
-from src.config import config_instance
-from src.database.account.account import Account
-from src.database.apikeys.keys import ApiKeyModel, sessions
+from functools import wraps
+
+from fastapi import Request
+
 from src.authorize.authorize import NotAuthorized
+from src.config import config_instance
+from src.database.apikeys.keys import ApiKeyModel, sessions
 
 
 # TODO find a way to cache the results of this methods
