@@ -90,9 +90,9 @@ async def admin_startup():
 async def init_cloudflare_gateway():
     """
     **init_cloudflare_gateway**
-        at the gateway -
-        **init_cloudflare_gateway**
-                initialize cloudflare
+        at the gateway - initialize cloudflare by allowing the retrieval of known api keys
+        so they can be tested for validity from the edge server
+
     :return:
     """
     with next(sessions) as session:
