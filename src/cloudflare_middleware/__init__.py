@@ -188,7 +188,8 @@ class EODAPIFirewall:
         # NOTE: that at this stage if this request is not a get then it has already been rejected
         # NOTE: this will return true if there is at least one route that matches with the requested path.
         # otherwise it will return false and block the request
-        return any(pattern.match(path) for pattern in self.compiled_patterns)
+        return True
+        # return any(pattern.match(path) for pattern in self.compiled_patterns)
 
     async def is_request_malicious(self, headers: dict[str, str], url: Request.url, body: str | bytes):
         # Check request for malicious patterns
