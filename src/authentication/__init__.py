@@ -9,7 +9,6 @@ from src.config import config_instance
 from src.database.apikeys.keys import ApiKeyModel, sessions
 
 
-# TODO find a way to cache the results of this methods
 def authenticate_admin(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
@@ -34,14 +33,10 @@ def authenticate_app(func):
 
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        # TODO find a way of authenticating APPS, not BASED on API, Suggestion SECRET_KEY
         request: Request = kwargs.get('request')
         if await verify_signature(request=request):
-            print("Signature Verified")
             return await func(*args, **kwargs)
-
         raise NotAuthorized(message="This Resource is only Accessible to Admins")
-
     return wrapper
 
 
@@ -66,5 +61,4 @@ async def verify_signature(request):
     data_str, signature_header = request_header.split('|')
     _signature = hmac.new(secret_key.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
     result = hmac.compare_digest(_signature, signature_header)
-    print(f"comparison result is {result}")
     return result
