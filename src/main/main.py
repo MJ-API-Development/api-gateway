@@ -399,7 +399,7 @@ async def startup_event():
         """will prioritize servers which are responsive and also available"""
         while True:
             await remote_servers.sort_api_servers_by_health()
-            await asyncio.sleep(delay=60 * 5)
+            await asyncio.sleep(delay=60 * 30)
 
     asyncio.create_task(setup_cf_firewall())
     asyncio.create_task(backup_cf_firewall_data())
