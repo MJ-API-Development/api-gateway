@@ -23,7 +23,6 @@ DEFAULT_IPV4 = ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31
                 '198.41.128.0/17',
                 '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22']
 
-
 # Patterns for known publicly acceptable routes
 route_regexes = {
     "home": "^/$",
@@ -88,12 +87,13 @@ route_regexes = {
 malicious_patterns = {
     "buffer_overflow": "^\?unix:A{1000,}",  # pattern for buffer overflow attack
     "SQL_injection": "'?([\w\s]+)'?\s*OR\s*'?([\w\s]+)'?\s*=\s*'?([\w\s]+)'?",  # pattern for SQL injection attack
-    "SQL_injection_Commands": "\b(ALTER|CREATE|DELETE|DROP|EXEC(UTE){0,1}|INSERT( +INTO){0,1}|MERGE|REPLACE|SELECT|UPDATE)\b", # Match SQL Commands
-    "SQL_injection_Comments": "(--|#|\/\*)[\w\d\s]*", # Match SQL Comments
-    "SQL_Injection_syntax": "\b(AND|OR)[\s]*[^\s]*=[^\s]*", # Match SQL Injection Syntax
-    "SQL_Union_select_attack": "(?i)\bselect\b.*\bfrom\b.*\bunion\b.*\bselect\b", # UNION Select Attack
-    "SQL_BLIND_SQL_Injection": "(?i)\b(if|case).*\blike\b.*\bthen\b", # blind SQL Injection attack
-    "SQL_TIMEBASED_Injection": "(?i)\b(select|and)\b.*\bsleep\(\d+\)\b", # Time based injection attacks
+    "SQL_injection_Commands": "\b(ALTER|CREATE|DELETE|DROP|EXEC(UTE){0,1}|INSERT( +INTO){0,1}|MERGE|REPLACE|SELECT|UPDATE)\b",
+    # Match SQL Commands
+    "SQL_injection_Comments": "(--|#|\/\*)[\w\d\s]*",  # Match SQL Comments
+    "SQL_Injection_syntax": "\b(AND|OR)[\s]*[^\s]*=[^\s]*",  # Match SQL Injection Syntax
+    "SQL_Union_select_attack": "(?i)\bselect\b.*\bfrom\b.*\bunion\b.*\bselect\b",  # UNION Select Attack
+    "SQL_BLIND_SQL_Injection": "(?i)\b(if|case).*\blike\b.*\bthen\b",  # blind SQL Injection attack
+    "SQL_TIMEBASED_Injection": "(?i)\b(select|and)\b.*\bsleep\(\d+\)\b",  # Time based injection attacks
     "XSS": "<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>",  # pattern for cross-site scripting (XSS) attack
     "path_traversal": "\.\.[\\\/]?|\.[\\\/]{2,}",  # pattern for path traversal attack
     # "LDAP_injection": "[()\\\/*\x00-\x1f\x80-\xff]",  # pattern for LDAP injection attack
