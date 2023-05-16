@@ -74,11 +74,15 @@ def path_to_resource() -> dict[str, str]:
 
 async def get_resource_name(path: str) -> str:
     path_dict = path_to_resource()
-    while path:
+    i = 1
+    while len(path.split("/")) > 2:
         try:
+            print(path)
             return path_dict[path]
         except KeyError:
-            path = "/".join(path.split("/")[:-1])
+            path = "/".join(path.split("/")[:-i])
+            i += 1
+            path = f"{path}/"
     return None
 
 resource_name_request_size: dict[str, int] = {
