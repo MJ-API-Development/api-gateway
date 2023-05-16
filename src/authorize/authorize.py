@@ -185,6 +185,7 @@ def auth_and_rate_limit(func):
         request: Request = kwargs.get('request')
         api_key = request.query_params.get('api_key')
         path = kwargs.get('path')
+        auth_logger.info(f"path : {path}, api_key : {api_key}")
         return api_key, path
 
     async def rate_limiter(api_key):
@@ -226,7 +227,7 @@ def auth_and_rate_limit(func):
     async def wrapper(*args, **kwargs):
         """main wrapper"""
         api_key, path = await return_kwargs(kwargs)
-
+        auth_logger.info(f"path: {path}, api_key: {api_key}")
         path = f"/api/v1/{path}"
         api_key_found = api_key in api_keys
         if not api_key_found:
@@ -244,9 +245,11 @@ def auth_and_rate_limit(func):
         # Authorization Section
         # Use asyncio.gather to run is_resource_authorized and monthly_credit_available concurrently
         is_authorized_task = asyncio.create_task(is_resource_authorized(path_param=path, api_key=api_key))
-        monthly_credit_task = asyncio.create_task(monthly_credit_available(api_key=api_key))
-        is_authorized, monthly_credit = await asyncio.gather(is_authorized_task, monthly_credit_task)
 
+        monthly_credit_task = asyncio.create_task(monthly_credit_available(api_key=api_key))
+
+        is_authorized, monthly_credit = await asyncio.gather(is_authorized_task, monthly_credit_task)
+        auth_logger.info(f"is authorized: {is_authorized}, monthly credit: {monthly_credit}")
         if is_authorized and monthly_credit:
             return await func(*args, **kwargs)
 

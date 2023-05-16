@@ -49,11 +49,14 @@ resource_paths: dict[str, str] = {
     "news.articles.date": "/api/v1/news/articles-by-date/",
     "news.articles.publisher": "/api/v1/news/articles-by-publisher/",
     "news.articles.stock_code": "/api/v1/news/articles-by-ticker/",
+    "news.articles.paged": "/api/v1/news/articles-by-page/",
 
     "social.trend_setters.stock_code": "/api/v1/sentiment/trend-setters/stock/",
 
     "sentiment_analysis.stock_code": "/api/v1/sentiment/trending/stock/",
-    "sentiment_analysis.tweeter.stock_code": "/api/v1/sentiment/tweet/stock/"}
+    "sentiment_analysis.tweeter.stock_code": "/api/v1/sentiment/tweet/stock/",
+
+}
 
 
 def path_to_resource() -> dict[str, str]:
@@ -77,10 +80,11 @@ async def get_resource_name(path: str) -> str:
             resource = path_dict[_path]
             return resource
         except KeyError:
-            _path = "/".join(_path.split("/")[:-1])
-            if not _path:
+            new_path = "/".join(_path.split("/")[:-1])
+
+            if new_path == _path:
                 raise KeyError(f"No Resource found for path: {path}")
-            _path = f"{_path}/"
+            _path = new_path + "/"
 
 
 resource_name_request_size: dict[str, int] = {
@@ -133,6 +137,7 @@ resource_name_request_size: dict[str, int] = {
     "news.articles.date": 3,
     "news.articles.publisher": 5,
     "news.articles.stock_code": 5,
+    "news.articles.paged": 5,
 
     "sentiment_analysis.stock_code": 3,  # X result size
     "sentiment_analysis.tweeter.stock_code": 3,  # x result size

@@ -174,7 +174,7 @@ async def add_security_headers(request: Request, call_next):
 
 
 if is_development(config_instance=config_instance):
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["gateway.eod-stock-api.site", "localhost", "127.0.0.1"])
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["eod-stock-api.local", "localhost", "127.0.0.1"])
 else:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["master-gateway.eod-stock-api.site", "gateway.eod-stock-api.site"])
 
@@ -254,7 +254,7 @@ async def validate_request_middleware(request, call_next):
     # You can modify the request here, or perform any other
     # pre-processing that you need.
     # allowedPaths = ["/", "/api/", "/redoc", "/docs", "/_admin/"]
-
+    app_logger.info("validate_request")
     async def compare_tokens():
         """will check headers to see if the request comes from cloudflare"""
         _cf_secret_token = request.headers.get('X-SECRET-TOKEN')
@@ -281,7 +281,7 @@ async def validate_request_middleware(request, call_next):
             "message": "Request Contains Suspicious patterns cannot continue"}
         response = JSONResponse(content=mess, status_code=404)
         return response
-
+    app_logger.info(f"Request is not malicios")
     if path.startswith("/_admin") or path.startswith("/redoc") or path.startswith("/docs") or path.startswith(
             "/static"):
         app_logger.info("starts with admin going in ")
@@ -293,6 +293,7 @@ async def validate_request_middleware(request, call_next):
         response = await call_next(request)
 
     elif is_development(config_instance=config_instance):
+        app_logger.info(f"Development")
         response = await call_next(request)
 
     elif not await compare_tokens():
@@ -443,6 +444,7 @@ async def v1_gateway(request: Request, path: str):
 
     api_key: dict = request.query_params.get('api_key')
     _path = f"/api/v1/{path}"
+    app_logger.info(f"Gateway")
     await create_take_credit_args(api_key=api_key, path=_path)
 
     api_urls = [f'{api_server_url}/api/v1/{path}' for api_server_url in remote_servers.healthy_server_urls]
@@ -450,8 +452,9 @@ async def v1_gateway(request: Request, path: str):
     # Will Take at least six second on the cache if it finds nothing will return None
     # need an improved get timeout for the articles
     tasks = [redis_cache.get(key=api_url, timeout=60 * 5) for api_url in api_urls]
+    app_logger.info("fetching responses")
     cached_responses = await asyncio.gather(*tasks)
-
+    app_logger.info("fetched records")
     for i, response in enumerate(cached_responses):
         if response and response.get('payload'):
             app_logger.info(msg=f"Found cached response from {api_urls[i]}")

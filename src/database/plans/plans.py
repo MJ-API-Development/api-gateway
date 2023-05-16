@@ -204,6 +204,10 @@ class Plans(Base):
         :param resource_name:
         :return:
         """
+        # TODO Upgrade this on database
+        _new_resources = ["news.articles.paged"]
+        if resource_name in _new_resources:
+            return True
         return resource_name in self.resource_set
 
     @classmethod
