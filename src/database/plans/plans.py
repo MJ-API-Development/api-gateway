@@ -200,7 +200,8 @@ class Plans(Base):
 
     def resource_exist(self, resource_name: str) -> bool:
         """
-
+            **resource_exist**
+                checks if a specific resource exist on client plan
         :param resource_name:
         :return:
         """
