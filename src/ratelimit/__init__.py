@@ -13,7 +13,7 @@ class RateLimit:
          requests to less than 100 per second for each edge server in cloudflare
          makes sense. should leave room enough to service other regions
     """
-    def __init__(self, max_requests: int = 100, duration: int = 1):
+    def __init__(self, max_requests: int = 1000, duration: int = 1):
         self.max_requests = max_requests
         self.duration_seconds = duration
         self.requests = []

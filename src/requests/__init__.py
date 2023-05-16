@@ -56,7 +56,8 @@ async def requester(api_url: str, timeout: int = 30):
 class ServerMonitor:
 
     def __init__(self):
-        self.response_time_thresh_hold: int = 900 # 900 milliseconds
+        # 900 milliseconds
+        self.response_time_thresh_hold: int = 900
         self.healthy_server_urls: list[str] = config_instance().API_SERVERS.SERVERS_LIST.split(",")
         # Define the health check endpoint for each server
         self._server_monitor_endpoint = '/_ah/warmup'
@@ -67,8 +68,7 @@ class ServerMonitor:
         health_check_url = f"{api_url}{self._server_monitor_endpoint}"
         request_logger.info(f"Server Health Probe: {health_check_url}")
         try:
-            async with httpx.AsyncClient() as client:
-                response = await async_client.get(url=health_check_url)
+            response = await async_client.get(url=health_check_url)
             if response.status_code == 200:
                 request_logger.info(f"server still healthy : {api_url}")
                 return api_url, True
@@ -79,7 +79,7 @@ class ServerMonitor:
 
         except (ConnectionError, TimeoutError):
             return api_url, False
-        except httpx.HTTPError as http_err:
+        except httpx.HTTPError:
             return api_url, False
 
     # Sort the healthy servers by their response time
@@ -87,21 +87,20 @@ class ServerMonitor:
         try:
             check_url: str = f"{api_url}{self._server_monitor_endpoint}"
             request_logger.info(f"Server Health Probe: {check_url}")
-            async with httpx.AsyncClient() as client:
-                start_time = time.perf_counter()
-                response = await async_client.get(url=check_url)
-                if response.status_code == 200:
-                    elapsed_time = int((time.perf_counter() - start_time) * 1000)
-                    request_logger.info(f"server : {api_url} latency : {elapsed_time}")
-                    return api_url, elapsed_time
-                else:
-                    request_logger.info(f"server : {api_url} Not healthy")
-                    request_logger.info(f"Response : {response.text}")
-                    return api_url, None
+            start_time = time.perf_counter()
+            response = await async_client.get(url=check_url)
+            if response.status_code == 200:
+                elapsed_time = int((time.perf_counter() - start_time) * 1000)
+                request_logger.info(f"server : {api_url} latency : {elapsed_time}")
+                return api_url, elapsed_time
+            else:
+                request_logger.info(f"server : {api_url} Not healthy")
+                request_logger.info(f"Response : {response.text}")
+                return api_url, None
 
         except (ConnectionError, TimeoutError):
             return api_url, None
-        except httpx.HTTPError as http_err:
+        except httpx.HTTPError:
             return api_url, None
 
     async def sort_api_servers_by_health(self) -> None:
@@ -117,4 +116,3 @@ class ServerMonitor:
         sorted_response_times = sorted(response_time_results, key=lambda x: x[1])
         within_threshold = [api_url for api_url, response_time in sorted_response_times if response_time < self.response_time_thresh_hold]
         self.healthy_server_urls = within_threshold if within_threshold else [config_instance().API_SERVERS.SLAVE_API_SERVER]
-

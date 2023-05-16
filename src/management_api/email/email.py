@@ -14,7 +14,7 @@ class Emailer:
         NOTE The Message Queue will send out messages every 5 minutes
         Emailing Class, used to create email servers and manage sending emails
     """
-
+    # TODO create your Own SMTP server to handle emails
     def __init__(self):
         self.email_queues = Queue(maxsize=1024)
         self._dev_messages_queue = Queue(maxsize=100)
