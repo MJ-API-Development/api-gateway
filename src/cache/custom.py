@@ -100,7 +100,7 @@ class Cache:
             # noinspection PyUnusedLocal
             username = config_instance().REDIS_CACHE.REDIS_USERNAME
             try:
-                self._redis_client = redis.StrictRedis(host=redis_host, port=redis_port, password=password)
+                self._redis_client = redis.Redis(host=redis_host, port=redis_port, password=password)
                 self._redis_pool: asyncio_redis.Pool = None
                 # self._redis_client = redis.Redis(host=redis_host, port=redis_port, username=username, password=password)
                 config_instance().DEBUG and self._logger.info("Cache -- Redis connected")
