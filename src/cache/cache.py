@@ -54,4 +54,3 @@ def redis_cached_ttl(ttl: int = 60 * 60 * 1):
 redis_cache = Cache(cache_name="redis", use_redis=True)
 # asyncio.run(redis_cache.create_redis_pool())
 # mem_cache = Cache(cache_name="mem_cache", use_redis=False)
-
