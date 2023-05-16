@@ -73,19 +73,13 @@ def path_to_resource() -> dict[str, str]:
 
 
 async def get_resource_name(path: str) -> str:
-    _path = path
     path_dict = path_to_resource()
-    while True:
+    while path:
         try:
-            resource = path_dict[_path]
-            return resource
+            return path_dict[path]
         except KeyError:
-            new_path = "/".join(_path.split("/")[:-1])
-
-            if new_path == _path:
-                raise KeyError(f"No Resource found for path: {path}")
-            _path = new_path + "/"
-
+            path = "/".join(path.split("/")[:-1])
+    return None
 
 resource_name_request_size: dict[str, int] = {
 
