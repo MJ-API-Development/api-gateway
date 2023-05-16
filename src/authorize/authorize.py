@@ -185,7 +185,6 @@ def auth_and_rate_limit(func):
         request: Request = kwargs.get('request')
         api_key = request.query_params.get('api_key')
         path = kwargs.get('path')
-        auth_logger.info(f"path : {path}, api_key : {api_key}")
         return api_key, path
 
     async def rate_limiter(api_key):
@@ -260,7 +259,7 @@ def auth_and_rate_limit(func):
 
         if not monthly_credit:
             mess: str = f"EOD Stock API - Your Monthly plan request limit has been reached. " \
-                        f"please upgrade your plan, to take advantage of our soft limits"
+                        f"please upgrade your plan, or buy extra Credits"
             raise NotAuthorized(message=mess)
 
     return wrapper

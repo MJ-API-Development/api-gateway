@@ -254,7 +254,6 @@ async def validate_request_middleware(request, call_next):
     # You can modify the request here, or perform any other
     # pre-processing that you need.
     # allowedPaths = ["/", "/api/", "/redoc", "/docs", "/_admin/"]
-    app_logger.info("validate_request")
     async def compare_tokens():
         """will check headers to see if the request comes from cloudflare"""
         _cf_secret_token = request.headers.get('X-SECRET-TOKEN')
@@ -281,7 +280,7 @@ async def validate_request_middleware(request, call_next):
             "message": "Request Contains Suspicious patterns cannot continue"}
         response = JSONResponse(content=mess, status_code=404)
         return response
-    app_logger.info(f"Request is not malicios")
+
     if path.startswith("/_admin") or path.startswith("/redoc") or path.startswith("/docs") or path.startswith(
             "/static"):
         app_logger.info("starts with admin going in ")
