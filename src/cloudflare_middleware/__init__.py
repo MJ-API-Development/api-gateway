@@ -63,6 +63,7 @@ route_regexes = {
     "get_news_articles_by_publisher": "^/api/v1/news/articles-by-publisher/[a-zA-Z0-9_-]{2,128}(?<!/)$",
     "get_news_articles_by_ticker": "^/api/v1/news/articles-by-ticker/[a-zA-Z0-9_-]{1,16}(?<!/)$",
     "get_news_articles_by_page": "^/api/v1/news/articles-by-page/[1-9][0-9]?$",
+    "list_publishers": "^/api/v1/news/list-publishers",
     "get_stock_by_code": "^/api/v1/stock/code/[a-zA-Z0-9_-]{1,16}(?<!/)$",
     "get_stock_option": "^/api/v1/stocks/options/stock/[a-zA-Z0-9_-]{1,16}(?<!/)$",
     "get_update_delete_by_fundamental_id_company_details": "^/api/v1/fundamentals/company-details/id/[a-zA-Z0-9_-]{16}(?<!/)$",

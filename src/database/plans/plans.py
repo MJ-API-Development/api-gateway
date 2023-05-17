@@ -206,7 +206,7 @@ class Plans(Base):
         :return:
         """
         # TODO Upgrade this on database
-        _new_resources = ["news.articles.paged"]
+        _new_resources = ["news.articles.paged", "news.publishers"]
         if resource_name in _new_resources:
             return True
         return resource_name in self.resource_set
