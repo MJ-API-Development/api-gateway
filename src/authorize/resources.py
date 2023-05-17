@@ -51,6 +51,7 @@ resource_paths: dict[str, str] = {
     "news.articles.stock_code": "/api/v1/news/articles-by-ticker/",
     "news.articles.paged": "/api/v1/news/articles-by-page/",
     "news.publishers": "/api/v1/news/list-publishers",
+    "news.articles.exchange.paged": "/api/v1/news/articles-by-exchange/",
 
     "social.trend_setters.stock_code": "/api/v1/sentiment/trend-setters/stock/",
 
@@ -138,6 +139,7 @@ resource_name_request_size: dict[str, int] = {
     "news.articles.stock_code": 5,
     "news.articles.paged": 5,
     "news.publishers": 3,
+    "news.articles.exchange.paged": 25,
 
     "sentiment_analysis.stock_code": 3,  # X result size
     "sentiment_analysis.tweeter.stock_code": 3,  # x result size
