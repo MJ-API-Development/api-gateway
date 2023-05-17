@@ -1,10 +1,11 @@
 import functools
 import logging
-import os
 import socket
 import sys
-from src.config import config_instance
+
 from cryptography.fernet import Fernet
+
+from src.config import config_instance
 
 
 class EncryptedFormatter(logging.Formatter):
@@ -62,5 +63,3 @@ def init_logger(name: str = "eod-stock-api"):
     is_development = socket.gethostname() == config_instance().DEVELOPMENT_SERVER_NAME
     logger = AppLogger(name=name, is_file_logger=not is_development, log_level=logging.INFO)
     return logger.logger
-
-

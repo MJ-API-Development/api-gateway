@@ -1,11 +1,12 @@
 import hashlib
-from functools import wraps
-from fastapi import Request, requests
 import hmac
-from src.config import config_instance
+from functools import wraps
 
-from src.database.apikeys.keys import ApiKeyModel, sessions
+from fastapi import Request
+
 from src.authorize.authorize import NotAuthorized
+from src.config import config_instance
+from src.database.apikeys.keys import ApiKeyModel, sessions
 from src.utils.my_logger import init_logger
 
 authenticate_logger = init_logger("authenticate_logger")
