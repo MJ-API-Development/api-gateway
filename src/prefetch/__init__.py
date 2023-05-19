@@ -9,12 +9,12 @@ async def prefetch_endpoints() -> int:
     """will fetch the endpoints causing the endpoints to be cached"""
     urls = await build_dynamic_urls()
     # will wait for a maximum of 30 seconds for a response
-    responses = await asyncio.gather(*[requester(_url, timeout=25) for _url in urls])
-
-    for response, url in zip(responses, urls):
+    i = 0
+    for url in urls:
+        response = await requester(api_url=url, timeout=60*5)
         if response and response.get("status", False):
             await redis_cache.set(key=url, value=response)
         #  this enables the gateway to process other requests while still prefetching urls
-        await asyncio.sleep(delay=10)
-
-    return len(responses)
+        await asyncio.sleep(delay=3)
+        i += 1
+    return i

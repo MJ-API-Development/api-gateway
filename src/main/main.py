@@ -371,8 +371,8 @@ async def startup_event():
                 total_prefetched = await prefetch_endpoints()
                 app_logger.info(f"Cache Pre Fetched {total_prefetched} endpoints")
 
-            #  wait for one hour 30 minutes then prefetch urls again
-            await asyncio.sleep(60 * 60 * 3)
+            #  wait for 3 hours minutes then prefetch urls again
+            await asyncio.sleep(60 * 60 * 3.5)
 
     async def backup_cf_firewall_data():
         while True:
@@ -404,12 +404,12 @@ async def startup_event():
     asyncio.create_task(setup_cf_firewall())
     asyncio.create_task(backup_cf_firewall_data())
     asyncio.create_task(update_api_keys_background_task())
-    # asyncio.create_task(prefetch())
     asyncio.create_task(process_credit_queue())
     asyncio.create_task(email_process.process_message_queues())
     asyncio.create_task(clean_up_memcache())
     asyncio.create_task(monitor_servers())
     asyncio.create_task(check_redis_errors())
+    asyncio.create_task(prefetch())
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -451,7 +451,7 @@ async def v1_gateway(request: Request, path: str):
     # Will Take at least six second on the cache if it finds nothing will return None
     # need an improved get timeout for the articles
     tasks = [redis_cache.get(key=api_url, timeout=60 * 5) for api_url in api_urls]
-    app_logger.info("fetching responses")
+    app_logger.info(f"fetching responses for {api_urls}")
     cached_responses = await asyncio.gather(*tasks)
     app_logger.info("fetched records")
     for i, response in enumerate(cached_responses):
