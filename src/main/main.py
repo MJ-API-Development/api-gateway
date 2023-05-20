@@ -317,12 +317,6 @@ async def validate_request_middleware(request, call_next):
         # raise NotAuthorized(message="Route Not Allowed, if you think this maybe an error please contact admin")
         response = JSONResponse(content="Request Does not Match Any Known Route", status_code=404)
 
-    # This code will be executed for each outgoing response
-    # before it is sent back to the client.
-    # You can modify the response here, or perform any other
-    # post-processing that you need.
-    # _out_signature = await cf_firewall.create_signature(response=response, secret=_secret)
-    # response.headers.update({'X-Signature': _out_signature})
     end_time = time.monotonic()
     app_logger.info(f"Elapsed Time Validate Request : {end_time - start_time}")
     app_logger.info("Cleared Request Validation")
@@ -464,10 +458,8 @@ async def v1_gateway(request: Request, path: str):
         try:
             # 5 minutes timeout on resource fetching from backend - some resources may take very long
             response = await requester(api_url=api_url, timeout=9600)
-
             if response and response.get("status", False) and response.get('payload'):
                 # NOTE, Cache is being set to a ttl of one hour here
-
                 await redis_cache.set(key=api_url, value=response, ttl=60 * 60)
                 return JSONResponse(content=response, status_code=200, headers={"Content-Type": "application/json"})
         except httpx.HTTPError as http_err:
