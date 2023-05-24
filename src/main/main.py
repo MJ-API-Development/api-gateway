@@ -300,7 +300,7 @@ async def validate_request_middleware(request, call_next):
             "message": "Request Is not valid Bad Token please ensure you are routing this request through our gateway"}
         response = JSONResponse(content=mess, status_code=404)
 
-    # Going to API
+    # ---
     elif await cf_firewall.path_matches_known_route(path=path):
         response = await call_next(request)
     else:
