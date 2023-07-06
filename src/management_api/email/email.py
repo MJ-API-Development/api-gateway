@@ -16,6 +16,7 @@ class Emailer:
     """
     # TODO create your Own SMTP server to handle emails
     def __init__(self):
+        # TODO add resend email server to send emails - its compatible with present templates
         self.email_queues = Queue(maxsize=1024)
         self._dev_messages_queue = Queue(maxsize=100)
         self.server = SendGridAPIClient(config_instance().EMAIL_SETTINGS.SENDGRID_API_KEY)
