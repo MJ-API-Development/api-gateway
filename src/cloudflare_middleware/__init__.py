@@ -3,6 +3,7 @@ import hmac
 import ipaddress
 import re
 
+import requests.exceptions
 from CloudFlare import CloudFlare
 from CloudFlare.exceptions import CloudFlareAPIError
 from starlette.requests import Request
@@ -175,7 +176,8 @@ class EODAPIFirewall:
             ipv4_cidrs = response.get('result', {}).get('ipv4_cidrs', DEFAULT_IPV4)
             ipv6_cidrs = response.get('result', {}).get('ipv6_cidrs', [])
             return ipv4_cidrs, ipv6_cidrs
-
+        except requests.exceptions.ConnectionError:
+            return [], []
         except CloudFlareAPIError:
             return [], []
 
